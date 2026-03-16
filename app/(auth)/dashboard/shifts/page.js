@@ -1,329 +1,137 @@
 'use client'
 
-import React from 'react'
-import { useState, useEffect } from 'react'
-import TeamSelector from '@/app/components/TeamSelector'
-import PageHeader from '@/app/components/PageHeader'
-import Button from '@/app/components/Button'
-import Badge from '@/app/components/Badge'
+import { useState, useMemo, useCallback } from 'react'
+import { useShifts } from './hooks/useShifts'
+import { DAYS, getTeamGaps, decimalToLabel } from './utils/shifthelpers'
+import ShiftFilterBar from './components/ShiftFilterBar'
+import WarningBar from './components/WarningBar'
+import ShiftPatternList from './components/ShiftPatternList'
+import WeekAtAGlance from './components/WeekAtAGlance'
+import FixGapsModal from './components/FixGapsModal'
 
 export default function ShiftsPage() {
-  const [showModal, setShowModal] = useState(false)
-  const [editingShift, setEditingShift] = useState(null)
-  const [editingGroup, setEditingGroup] = useState(null)
-  const [shifts, setShifts] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [selectedTeamId, setSelectedTeamId] = useState(null)
-  const [expandedGroups, setExpandedGroups] = useState({})
-  const [selectedShifts, setSelectedShifts] = useState(new Set())
-  const [formData, setFormData] = useState({
-    shift_name: '',
-    day_of_week: [],
-    start_time: '',
-    end_time: '',
-    staff_required: ''
+  const {
+    shifts, teams, loading, error,
+    openTime, closeTime, shiftLengths,
+    addShift, updateShift, deleteShift, addRecommendedShifts,
+  } = useShifts()
+
+  const [filterTeamId, setFilterTeamId] = useState('all')
+  const [openShiftId, setOpenShiftId] = useState(null)
+  const [scrollToId, setScrollToId] = useState(null)
+  const [selectedDay, setSelectedDay] = useState(() => {
+    const d = new Date().getDay()
+    return d === 0 ? 6 : d - 1
   })
+  const [fixedLocks, setFixedLocks] = useState({})
+  const [showFixModal, setShowFixModal] = useState(false)
+  const [selectedRecs, setSelectedRecs] = useState({})
 
-  const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+  const filteredShifts = useMemo(() =>
+    filterTeamId === 'all' ? shifts : shifts.filter(s => s.team_id === parseInt(filterTeamId))
+  , [shifts, filterTeamId])
 
-  useEffect(() => {
-    if (selectedTeamId) {
-      loadShifts()
-    }
-  }, [selectedTeamId])
+  const teamsToCheck = useMemo(() =>
+    filterTeamId === 'all' ? teams : teams.filter(t => t.id === parseInt(filterTeamId))
+  , [teams, filterTeamId])
 
-  const loadShifts = async () => {
-    if (!selectedTeamId) return
-    
-    setLoading(true)
+  const warnings = useMemo(() => {
+    const w = []
+    DAYS.forEach((day, di) => {
+      teamsToCheck.forEach(team => {
+        getTeamGaps(shifts, team.id, di).forEach(g => {
+          w.push({ teamId: team.id, teamName: team.team_name, teamColor: team.color, day, di, from: decimalToLabel(g.s), to: decimalToLabel(g.e) })
+        })
+      })
+    })
+    return w
+  }, [shifts, teamsToCheck])
+
+  const handleAddShift = useCallback(async () => {
     try {
-      const response = await fetch(`/api/shifts?team_id=${selectedTeamId}`)
-      if (!response.ok) throw new Error('Failed to load shifts')
-      const data = await response.json()
-      setShifts(data)
-    } catch (error) {
-      console.error('Error loading shifts:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const calculateTotalHours = () => {
-    let totalHours = 0
-    
-    shifts.forEach(shift => {
-      const [startHour, startMin] = shift.start_time.split(':').map(Number)
-      const [endHour, endMin] = shift.end_time.split(':').map(Number)
-      
-      let minutes = (endHour * 60 + endMin) - (startHour * 60 + startMin)
-      
-      if (minutes < 0) {
-        minutes += 24 * 60
+      const newShift = await addShift(filterTeamId)
+      if (newShift) {
+        setOpenShiftId(newShift.id)
+        setScrollToId(newShift.id)
+        setTimeout(() => setScrollToId(null), 300)
       }
-      
-      const hours = minutes / 60
-      totalHours += hours * shift.staff_required
-    })
-    
-    return totalHours.toFixed(1)
-  }
+    } catch (err) { console.error('Failed to add shift:', err) }
+  }, [addShift, filterTeamId])
 
-  const groupedShifts = () => {
-    const groups = {}
-    
-    shifts.forEach(shift => {
-      const key = `${shift.shift_name}-${shift.start_time}-${shift.end_time}-${shift.staff_required}`
-      
-      if (!groups[key]) {
-        groups[key] = {
-          key,
-          shift_name: shift.shift_name,
-          start_time: shift.start_time,
-          end_time: shift.end_time,
-          staff_required: shift.staff_required,
-          shifts: []
-        }
-      }
-      
-      groups[key].shifts.push(shift)
-    })
-    
-    return Object.values(groups)
-  }
+  const handleToggleShift = useCallback((id) => {
+    setOpenShiftId(prev => prev === id ? null : id)
+  }, [])
 
-  const formatDays = (shifts) => {
-    const days = shifts.map(s => s.day_of_week)
-    const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-    const sortedDays = days.sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b))
-    
-    if (sortedDays.length === 7) return 'Every day'
-    
-    return `${sortedDays.length} days`
-  }
+  const handleClickShiftCard = useCallback((id) => {
+    setOpenShiftId(prev => prev === id ? null : id)
+    setScrollToId(id)
+    setTimeout(() => setScrollToId(null), 300)
+  }, [])
 
-  const sortDays = (shifts) => {
-    const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-    return [...shifts].sort((a, b) => 
-      dayOrder.indexOf(a.day_of_week) - dayOrder.indexOf(b.day_of_week)
+  const handleSetFixedLock = useCallback((id, val) => {
+    setFixedLocks(prev => ({ ...prev, [id]: val }))
+  }, [])
+
+  const handleConfirmRecs = useCallback(async (recommendations) => {
+    try {
+      await addRecommendedShifts(recommendations, selectedRecs)
+      setShowFixModal(false)
+      setSelectedRecs({})
+    } catch (err) { console.error('Failed to add recommended shifts:', err) }
+  }, [addRecommendedShifts, selectedRecs])
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+        <div style={{ color: '#9CA3AF', fontSize: 14 }}>Loading shifts…</div>
+      </div>
     )
   }
 
-  const toggleExpand = (groupKey) => {
-    setExpandedGroups(prev => ({
-      ...prev,
-      [groupKey]: !prev[groupKey]
-    }))
+  if (error) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+        <div style={{ color: '#EF4444', fontSize: 14 }}>{error}</div>
+      </div>
+    )
   }
 
-  const toggleSelectShift = (groupKey) => {
-    const newSelected = new Set(selectedShifts)
-    if (newSelected.has(groupKey)) {
-      newSelected.delete(groupKey)
-    } else {
-      newSelected.add(groupKey)
-    }
-    setSelectedShifts(newSelected)
-  }
-
-  const toggleSelectAll = () => {
-    const grouped = groupedShifts()
-    if (selectedShifts.size === grouped.length) {
-      setSelectedShifts(new Set())
-    } else {
-      setSelectedShifts(new Set(grouped.map(g => g.key)))
-    }
-  }
-
-  const openAddModal = () => {
-    setEditingShift(null)
-    setEditingGroup(null)
-    setFormData({
-      shift_name: '',
-      day_of_week: [],
-      start_time: '',
-      end_time: '',
-      staff_required: ''
-    })
-    setShowModal(true)
-  }
-
-  const openEditModal = (shift) => {
-    setEditingShift(shift)
-    setEditingGroup(null)
-    setFormData({
-      shift_name: shift.shift_name,
-      day_of_week: [shift.day_of_week],
-      start_time: shift.start_time,
-      end_time: shift.end_time,
-      staff_required: shift.staff_required.toString()
-    })
-    setShowModal(true)
-  }
-
-  const openEditGroupModal = (group) => {
-    setEditingShift(null)
-    setEditingGroup(group)
-    setFormData({
-      shift_name: group.shift_name,
-      day_of_week: group.shifts.map(s => s.day_of_week),
-      start_time: group.start_time,
-      end_time: group.end_time,
-      staff_required: group.staff_required.toString()
-    })
-    setShowModal(true)
-  }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    
-    if (formData.day_of_week.length === 0) {
-      alert('Please select at least one day')
-      return
-    }
-    
-    try {
-      if (editingShift) {
-        const response = await fetch('/api/shifts', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            id: editingShift.id,
-            shift_name: formData.shift_name,
-            day_of_week: formData.day_of_week[0],
-            start_time: formData.start_time,
-            end_time: formData.end_time,
-            staff_required: parseInt(formData.staff_required)
-          })
-        })
-        if (!response.ok) throw new Error('Failed to update shift')
-      } else if (editingGroup) {
-        const deletePromises = editingGroup.shifts.map(s => 
-          fetch(`/api/shifts?id=${s.id}`, { method: 'DELETE' })
-        )
-        await Promise.all(deletePromises)
-
-        const shiftPromises = formData.day_of_week.map(day => 
-          fetch('/api/shifts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              team_id: selectedTeamId,
-              shift_name: formData.shift_name,
-              day_of_week: day,
-              start_time: formData.start_time,
-              end_time: formData.end_time,
-              staff_required: parseInt(formData.staff_required)
-            })
-          })
-        )
-        const responses = await Promise.all(shiftPromises)
-        if (!responses.every(r => r.ok)) throw new Error('Failed to update some shifts')
-      } else {
-        const shiftPromises = formData.day_of_week.map(day => 
-          fetch('/api/shifts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              team_id: selectedTeamId,
-              shift_name: formData.shift_name,
-              day_of_week: day,
-              start_time: formData.start_time,
-              end_time: formData.end_time,
-              staff_required: parseInt(formData.staff_required)
-            })
-          })
-        )
-        const responses = await Promise.all(shiftPromises)
-        if (!responses.every(r => r.ok)) throw new Error('Failed to add some shifts')
-      }
-
-      await loadShifts()
-      setFormData({ shift_name: '', day_of_week: [], start_time: '', end_time: '', staff_required: '' })
-      setEditingShift(null)
-      setEditingGroup(null)
-      setShowModal(false)
-    } catch (error) {
-      console.error('Error saving shift:', error)
-      alert(`Failed to ${editingShift ? 'update' : 'save'} shift. Please try again.`)
-    }
-  }
-
-  const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this shift?')) return
-    try {
-      const response = await fetch(`/api/shifts?id=${id}`, { method: 'DELETE' })
-      if (!response.ok) throw new Error('Failed to delete shift')
-      await loadShifts()
-    } catch (error) {
-      console.error('Error deleting shift:', error)
-      alert('Failed to delete shift. Please try again.')
-    }
-  }
-
-  const handleDeleteGroup = async (shifts) => {
-    const ids = shifts.map(s => s.id)
-    if (!confirm(`Are you sure you want to delete this shift pattern (${ids.length} day${ids.length > 1 ? 's' : ''})?`)) return
-    try {
-      const responses = await Promise.all(ids.map(id => fetch(`/api/shifts?id=${id}`, { method: 'DELETE' })))
-      if (!responses.every(r => r.ok)) throw new Error('Failed to delete some shifts')
-      await loadShifts()
-    } catch (error) {
-      console.error('Error deleting shifts:', error)
-      alert('Failed to delete shift pattern. Please try again.')
-    }
-  }
-
-  const handleDeleteSelected = async () => {
-    const grouped = groupedShifts()
-    const selectedGroups = grouped.filter(g => selectedShifts.has(g.key))
-    const allShifts = selectedGroups.flatMap(g => g.shifts)
-    if (!confirm(`Delete ${selectedGroups.length} shift pattern(s)?`)) return
-    try {
-      const responses = await Promise.all(allShifts.map(s => fetch(`/api/shifts?id=${s.id}`, { method: 'DELETE' })))
-      if (!responses.every(r => r.ok)) throw new Error('Failed to delete some shifts')
-      setSelectedShifts(new Set())
-      await loadShifts()
-    } catch (error) {
-      console.error('Error deleting shifts:', error)
-      alert('Failed to delete shifts. Please try again.')
-    }
-  }
-
-  const toggleDay = (day) => {
-    if (editingShift) {
-      setFormData({ ...formData, day_of_week: [day] })
-    } else {
-      if (formData.day_of_week.includes(day)) {
-        setFormData({ ...formData, day_of_week: formData.day_of_week.filter(d => d !== day) })
-      } else {
-        setFormData({ ...formData, day_of_week: [...formData.day_of_week, day] })
-      }
-    }
-  }
-
-  const selectAllDays = () => setFormData(prev => ({ ...prev, day_of_week: daysOfWeek }))
-  const deselectAllDays = () => setFormData(prev => ({ ...prev, day_of_week: [] }))
-
-  const grouped = groupedShifts()
-  const totalHours = calculateTotalHours()
+  // Shared inner layout — constrains all content to 1000px centred with 24px side padding
+  const inner = { maxWidth: 1000, margin: '0 auto', padding: '0 24px' }
 
   return (
-    <>
-      <main className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
-        <PageHeader 
-          title="Shift Patterns"
-          subtitle="Define your recurring shift templates"
-          backLink={{ href: '/dashboard', label: 'Back to Dashboard' }}
-        />
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: "'Plus Jakarta Sans', sans-serif", background: '#F9FAFB', color: '#111827' }}>
 
-        {/* Team Selector */}
-        <div className="mb-6">
-          <TeamSelector 
-            selectedTeamId={selectedTeamId}
-            onTeamChange={setSelectedTeamId}
+      {/* ── Page header ── */}
+      <div style={{ background: '#F9FAFB', paddingTop: 28, paddingBottom: 0 }}>
+        <div style={inner}>
+          <h1 style={{
+            fontFamily: "'Cal Sans', 'Plus Jakarta Sans', sans-serif",
+            fontSize: 26, fontWeight: 700, color: '#111827', margin: '0 0 4px',
+          }}>Shifts</h1>
+          <p style={{ fontSize: 13, color: '#6B7280', margin: '0 0 20px' }}>
+            Define your shift patterns — the solver uses these to build rotas automatically.
+          </p>
+        </div>
+      </div>
+
+      {/* ── Sticky filter + warning bar ── */}
+      <div style={{ background: '#F9FAFB', flexShrink: 0, position: 'sticky', top: 0, zIndex: 30, paddingBottom: 8 }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto', padding: '0 24px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #E5E7EB' }}>
+            <ShiftFilterBar
+              teams={teams} shifts={shifts} filterTeamId={filterTeamId}
+              onFilterChange={setFilterTeamId} onAddShift={handleAddShift}
+            />
+          </div>
+          <WarningBar
+            warnings={warnings} onDayClick={setSelectedDay}
+            onFixGaps={() => { setSelectedRecs({}); setShowFixModal(true) }}
           />
         </div>
+      </div>
 
+<<<<<<< HEAD
         {/* Header with Total Hours Badge */}
         <div className="mb-8 flex items-end justify-end">
           {shifts.length > 0 && (
@@ -612,9 +420,37 @@ export default function ShiftsPage() {
                 </Button>
               </div>
             </form>
+=======
+      {/* ── Body ── */}
+      <div style={{ flex: 1, overflow: 'auto', paddingTop: 16, paddingBottom: 24 }}>
+        <div style={inner}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <ShiftPatternList
+              teams={teams} shifts={shifts} filteredShifts={filteredShifts}
+              openShiftId={openShiftId} onToggleShift={handleToggleShift}
+              onUpdateShift={updateShift} onDeleteShift={deleteShift}
+              fixedLocks={fixedLocks} onSetFixedLock={handleSetFixedLock}
+              shiftLengths={shiftLengths} openTime={openTime} closeTime={closeTime}
+              scrollToId={scrollToId}
+            />
+            <WeekAtAGlance
+              teams={teamsToCheck} allShifts={shifts} filteredShifts={filteredShifts}
+              selectedDay={selectedDay} openShiftId={openShiftId} warnings={warnings}
+              onSelectDay={setSelectedDay} onClickShift={handleClickShiftCard}
+            />
+>>>>>>> V1
           </div>
         </div>
+      </div>
+
+      {showFixModal && (
+        <FixGapsModal
+          allShifts={shifts} teams={teamsToCheck} selectedRecs={selectedRecs}
+          onToggleRec={(recId) => setSelectedRecs(prev => ({ ...prev, [recId]: !prev[recId] }))}
+          onConfirm={handleConfirmRecs}
+          onClose={() => setShowFixModal(false)}
+        />
       )}
-    </>
+    </div>
   )
 }

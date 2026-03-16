@@ -1,241 +1,160 @@
 'use client'
 
-import React from 'react'
-import { useState, useEffect } from 'react'
-import TeamSelector from '@/app/components/TeamSelector'
-import PageHeader from '@/app/components/PageHeader'
-import Button from '@/app/components/Button'
-import Badge from '@/app/components/Badge'
+import { useState, useMemo, useCallback } from 'react'
+import { useStaff } from './hooks/useStaff'
+import { DAYS } from './utils/staffHelpers'
+import StaffFilterBar from './components/StaffFilterBar'
+import StaffWarningBar from './components/StaffWarningBar'
+import StaffList from './components/StaffList'
+import AvailabilityGrid from './components/AvailabilityGrid'
+import FixIssuesModal from './components/FixIssuesModal'
 
 export default function StaffPage() {
-  const [showModal, setShowModal] = useState(false)
-  const [editingStaff, setEditingStaff] = useState(null)
-  const [staff, setStaff] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [selectedTeamId, setSelectedTeamId] = useState(null)
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    role: '',
-    contracted_hours: '',
-    availability: JSON.stringify({
-      Monday: true,
-      Tuesday: true,
-      Wednesday: true,
-      Thursday: true,
-      Friday: true,
-      Saturday: true,
-      Sunday: true
-    })
+  const {
+    staff, teams, shifts, loading, error,
+    legalLimit, minWage, totalContractedHours,
+    warnings, coverageMetrics,
+    addStaff, updateStaff, deleteStaff, updateAvailabilityGrid,
+  } = useStaff()
+
+  const [filterTeamId, setFilterTeamId] = useState('all')
+  const [openStaffId, setOpenStaffId] = useState(null)
+  const [scrollToId, setScrollToId] = useState(null)
+  const [selectedDay, setSelectedDay] = useState(() => {
+    const d = new Date().getDay()
+    return d === 0 ? 6 : d - 1
   })
+  const [selectedStaffId, setSelectedStaffId] = useState(null)
+  const [showFixModal, setShowFixModal] = useState(false)
+  const [selectedFixes, setSelectedFixes] = useState({})
 
-  const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+  const filteredStaff = useMemo(() =>
+    filterTeamId === 'all' ? staff : staff.filter(s => s.team_id === parseInt(filterTeamId))
+  , [staff, filterTeamId])
 
-  useEffect(() => {
-    if (selectedTeamId) {
-      loadStaff()
-    }
-  }, [selectedTeamId])
+  const teamsToShow = useMemo(() =>
+    filterTeamId === 'all' ? teams : teams.filter(t => t.id === parseInt(filterTeamId))
+  , [teams, filterTeamId])
 
-  const loadStaff = async () => {
-    if (!selectedTeamId) return
-    
-    setLoading(true)
+  const shiftLengths = useMemo(() => {
+    const lengths = new Set()
+    teams.forEach(t => { if (Array.isArray(t.shift_lengths)) t.shift_lengths.forEach(l => lengths.add(l)) })
+    if (lengths.size === 0) return [4, 6, 8, 10, 12]
+    return Array.from(lengths).sort((a, b) => a - b)
+  }, [teams])
+
+  const handleAddStaff = useCallback(async () => {
     try {
-      const response = await fetch(`/api/staff?team_id=${selectedTeamId}`)
-      if (!response.ok) throw new Error('Failed to load staff')
-      const data = await response.json()
-      setStaff(data)
-    } catch (error) {
-      console.error('Error loading staff:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const calculateTotalHours = () => {
-    return staff.reduce((sum, member) => sum + (member.contracted_hours || 0), 0)
-  }
-
-  const openAddModal = () => {
-    setEditingStaff(null)
-    setFormData({
-      name: '',
-      email: '',
-      role: '',
-      contracted_hours: '',
-      availability: JSON.stringify({
-        Monday: true,
-        Tuesday: true,
-        Wednesday: true,
-        Thursday: true,
-        Friday: true,
-        Saturday: true,
-        Sunday: true
-      })
-    })
-    setShowModal(true)
-  }
-
-  const openEditModal = (member) => {
-    setEditingStaff(member)
-    setFormData({
-      name: member.name,
-      email: member.email,
-      role: member.role,
-      contracted_hours: member.contracted_hours.toString(),
-      availability: member.availability
-    })
-    setShowModal(true)
-  }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    
-    try {
-      if (editingStaff) {
-        const response = await fetch('/api/staff', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            id: editingStaff.id,
-            name: formData.name,
-            email: formData.email,
-            role: formData.role,
-            contracted_hours: parseInt(formData.contracted_hours),
-            availability: formData.availability
-          })
-        })
-
-        if (!response.ok) throw new Error('Failed to update staff')
-      } else {
-        const response = await fetch('/api/staff', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            team_id: selectedTeamId,
-            name: formData.name,
-            email: formData.email,
-            role: formData.role,
-            contracted_hours: parseInt(formData.contracted_hours),
-            availability: formData.availability
-          })
-        })
-
-        if (!response.ok) throw new Error('Failed to add staff')
+      const newMember = await addStaff(filterTeamId)
+      if (newMember) {
+        setOpenStaffId(newMember.id)
+        setSelectedStaffId(newMember.id)
+        setScrollToId(newMember.id)
+        setTimeout(() => setScrollToId(null), 300)
       }
+    } catch (err) { console.error('Failed to add staff:', err) }
+  }, [addStaff, filterTeamId])
 
-      await loadStaff()
-      
-      setFormData({
-        name: '',
-        email: '',
-        role: '',
-        contracted_hours: '',
-        availability: JSON.stringify({
-          Monday: true,
-          Tuesday: true,
-          Wednesday: true,
-          Thursday: true,
-          Friday: true,
-          Saturday: true,
-          Sunday: true
-        })
-      })
-      setEditingStaff(null)
-      setShowModal(false)
-    } catch (error) {
-      console.error('Error saving staff:', error)
-      alert(`Failed to ${editingStaff ? 'update' : 'add'} staff member. Please try again.`)
-    }
-  }
-
-  const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this staff member?')) return
-    
-    try {
-      const response = await fetch(`/api/staff?id=${id}`, {
-        method: 'DELETE'
-      })
-
-      if (!response.ok) throw new Error('Failed to delete staff')
-
-      await loadStaff()
-    } catch (error) {
-      console.error('Error deleting staff:', error)
-      alert('Failed to delete staff member. Please try again.')
-    }
-  }
-
-  const toggleAvailability = (day) => {
-    const availability = JSON.parse(formData.availability)
-    availability[day] = !availability[day]
-    setFormData({
-      ...formData,
-      availability: JSON.stringify(availability)
+  const handleToggleStaff = useCallback((id) => {
+    setOpenStaffId(prev => {
+      const newOpen = prev === id ? null : id
+      if (newOpen) setSelectedStaffId(id)
+      return newOpen
     })
-  }
+  }, [])
 
-  const selectAllDays = () => {
-    const availability = {}
-    daysOfWeek.forEach(day => {
-      availability[day] = true
-    })
-    setFormData(prev => ({
-      ...prev,
-      availability: JSON.stringify(availability)
-    }))
-  }
+  const handleSelectStaffInGrid = useCallback((staffId) => {
+    setSelectedStaffId(staffId)
+  }, [])
 
-  const deselectAllDays = () => {
-    const availability = {}
-    daysOfWeek.forEach(day => {
-      availability[day] = false
-    })
-    setFormData(prev => ({
-      ...prev,
-      availability: JSON.stringify(availability)
-    }))
-  }
+  const handleWarningStaffClick = useCallback((staffId) => {
+    setOpenStaffId(staffId)
+    setSelectedStaffId(staffId)
+    setScrollToId(staffId)
+    setTimeout(() => setScrollToId(null), 300)
+  }, [])
 
-  const getAvailabilityDisplay = (availabilityString) => {
-    try {
-      const availability = JSON.parse(availabilityString)
-      const availableDays = Object.entries(availability)
-        .filter(([_, isAvailable]) => isAvailable)
-        .map(([day, _]) => day)
-      
-      if (availableDays.length === 7) return 'All days'
-      if (availableDays.length === 0) return 'No availability'
-      return `${availableDays.length} days`
-    } catch {
-      return 'Not set'
+  const handleConfirmFixes = useCallback(async () => {
+    const fixKeys = Object.keys(selectedFixes).filter(k => selectedFixes[k])
+    for (const key of fixKeys) {
+      const [staffId] = key.split('-')
+      const warning = warnings.find(w => w.staffId === parseInt(staffId))
+      if (!warning) continue
+      if (warning.type === 'issue') {
+        const grid = {}
+        DAYS.forEach(d => { grid[d] = 'available' })
+        try { await updateAvailabilityGrid(parseInt(staffId), grid) } catch { /* continue */ }
+      }
     }
+    setShowFixModal(false)
+    setSelectedFixes({})
+  }, [selectedFixes, warnings, updateAvailabilityGrid])
+
+  const inner = { maxWidth: 1000, margin: '0 auto', padding: '0 24px' }
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+        <div style={{ color: '#9CA3AF', fontSize: 14 }}>Loading staff…</div>
+      </div>
+    )
   }
 
-  const totalHours = calculateTotalHours()
+  if (error) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+        <div style={{ color: '#EF4444', fontSize: 14 }}>{error}</div>
+      </div>
+    )
+  }
 
   return (
-    <>
-      <main className="max-w-7xl mx-auto px-6 lg:px-8 py-12">
-        <PageHeader 
-          title="Staff Members"
-          subtitle="Manage your team and their availability"
-          backLink={{ href: '/dashboard', label: 'Back to Dashboard' }}
-        />
+    <div style={{
+      display: 'flex', flexDirection: 'column', minHeight: '100vh',
+      fontFamily: "'Plus Jakarta Sans', sans-serif",
+      background: '#F9FAFB', color: '#111827',
+    }}>
 
-        {/* Team Selector */}
-        <div className="mb-6">
-          <TeamSelector 
-            selectedTeamId={selectedTeamId}
-            onTeamChange={setSelectedTeamId}
+      {/* ── Page header ── */}
+      <div style={{ background: '#F9FAFB', paddingTop: 28, paddingBottom: 0 }}>
+        <div style={inner}>
+          <h1 style={{
+            fontFamily: "'Cal Sans', 'Plus Jakarta Sans', sans-serif",
+            fontSize: 26, fontWeight: 700, color: '#111827', margin: '0 0 4px',
+          }}>Staff</h1>
+          <p style={{ fontSize: 13, color: '#6B7280', margin: '0 0 20px' }}>
+            Manage your team members, contracted hours, and availability for rota generation.
+          </p>
+        </div>
+      </div>
+
+      {/* ── Sticky filter + warning bar ── */}
+      <div style={{
+        background: '#F9FAFB', flexShrink: 0,
+        position: 'sticky', top: 0, zIndex: 30, paddingBottom: 8,
+      }}>
+        <div style={{ ...inner, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #E5E7EB', padding: '0 18px' }}>
+            <StaffFilterBar
+              teams={teams}
+              staff={staff}
+              filterTeamId={filterTeamId}
+              totalContractedHours={totalContractedHours}
+              coverageMetrics={coverageMetrics}
+              onFilterChange={setFilterTeamId}
+              onAddStaff={handleAddStaff}
+            />
+          </div>
+          <StaffWarningBar
+            warnings={warnings}
+            coverageMetrics={coverageMetrics}
+            onStaffClick={handleWarningStaffClick}
+            onFixIssues={() => { setSelectedFixes({}); setShowFixModal(true) }}
           />
         </div>
+      </div>
 
+<<<<<<< HEAD
         {/* Header with Total Hours Badge */}
         <div className="mb-8 flex items-end justify-end">
           {staff.length > 0 && (
@@ -518,9 +437,53 @@ export default function StaffPage() {
                 </Button>
               </div>
             </form>
+=======
+      {/* ── Body ── */}
+      <div style={{ flex: 1, overflow: 'auto', paddingTop: 8, paddingBottom: 24 }}>
+        <div style={inner}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <StaffList
+              teams={teamsToShow}
+              staff={staff}
+              filteredStaff={filteredStaff}
+              openStaffId={openStaffId}
+              onToggleStaff={handleToggleStaff}
+              onUpdateStaff={updateStaff}
+              onDeleteStaff={deleteStaff}
+              legalLimit={legalLimit}
+              minWage={minWage}
+              shiftLengths={shiftLengths}
+              scrollToId={scrollToId}
+            />
+            <AvailabilityGrid
+              teams={teamsToShow}
+              staff={staff}
+              filteredStaff={filteredStaff}
+              shifts={shifts}
+              selectedDay={selectedDay}
+              selectedStaffId={selectedStaffId}
+              warnings={warnings}
+              onSelectDay={setSelectedDay}
+              onSelectStaff={handleSelectStaffInGrid}
+              onUpdateAvailability={updateAvailabilityGrid}
+            />
+>>>>>>> V1
           </div>
         </div>
+      </div>
+
+      {/* ── Fix Issues Modal ── */}
+      {showFixModal && (
+        <FixIssuesModal
+          warnings={warnings}
+          teams={teams}
+          coverageMetrics={coverageMetrics}
+          selectedFixes={selectedFixes}
+          onToggleFix={(key) => setSelectedFixes(prev => ({ ...prev, [key]: !prev[key] }))}
+          onConfirm={handleConfirmFixes}
+          onClose={() => setShowFixModal(false)}
+        />
       )}
-    </>
+    </div>
   )
 }

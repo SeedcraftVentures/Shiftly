@@ -1,441 +1,783 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
-import BusinessHoursStep from './template/BusinessHoursStep'
-import ShiftLengthPicker from './template/ShiftLengthPicker'
-import TimelineBuilder from './template/TimelineBuilder'
-import TemplateTabs from './template/TemplateTabs'
-import WeekOverview from './template/WeekOverview'
-import CoverageGauge from './template/CoverageGauge'
-import StaffAvailabilityGrid from './template/StaffAvailabilityGrid'
-import { DAYS, PALETTE, getBlockColor, formatTime } from './template/shift-constants'
 
-const AVAILABLE_RULES = [
-  { type: 'no_double_shifts', name: 'No Double Shifts', description: 'Staff cannot work overlapping shifts on the same day', hasValue: false, defaultValue: null, defaultEnabled: true },
-  { type: 'rest_between_shifts', name: 'Rest Between Shifts', description: 'Minimum hours rest required between consecutive shifts', hasValue: true, valueLabel: 'Hours', defaultValue: 11, min: 8, max: 14, defaultEnabled: true },
-  { type: 'no_clopening', name: 'No Clopening', description: 'No closing shift followed by an opening shift next day', hasValue: false, defaultValue: null, defaultEnabled: true },
-  { type: 'fair_weekend_distribution', name: 'Fair Weekend Distribution', description: 'Weekend shifts distributed evenly among available staff', hasValue: false, defaultValue: null, defaultEnabled: true },
-  { type: 'max_consecutive_days', name: 'Max Consecutive Days', description: 'Maximum days in a row a staff member can work', hasValue: true, valueLabel: 'Days', defaultValue: 6, min: 3, max: 7, defaultEnabled: true },
-  { type: 'minimum_days_off', name: 'Minimum Days Off', description: 'Minimum days off required per week', hasValue: true, valueLabel: 'Days', defaultValue: 1, min: 1, max: 3, defaultEnabled: true }
-]
+const FONT_HEADING = "'Cal Sans', 'Plus Jakarta Sans', sans-serif"
+const FONT_BODY = "'Plus Jakarta Sans', sans-serif"
+const PINK = '#FF1F7D'
 
-const STEP_LABELS = ['Location', 'Business', 'Hours', 'Shift Lengths', 'Template Day', 'Template Week', 'Your Team']
+const PALETTE = ['#8B5CF6', '#10B981', '#3B82F6', '#F97316', '#EF4444', '#6366F1']
+const PALETTE_LIGHT = ['#F5F3FF', '#ECFDF5', '#EFF6FF', '#FFF7ED', '#FEF2F2', '#EEF2FF']
 
-function snapLen(len, lengths) {
-  return lengths.reduce((p, c) => Math.abs(c - len) < Math.abs(p - len) ? c : p)
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+const TIME_OPTIONS = Array.from({ length: 24 * 4 }, (_, i) => {
+  const h = Math.floor(i / 4)
+  const m = (i % 4) * 15
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+})
+
+const INDUSTRY_TEAMS = {
+  hospitality: [
+    { id: 'foh', label: 'Front of House' },
+    { id: 'bar', label: 'Bar' },
+    { id: 'kitchen', label: 'Kitchen' },
+    { id: 'kp', label: 'KP' },
+    { id: 'management', label: 'Management' },
+  ],
+  retail: [
+    { id: 'shopfloor', label: 'Shop Floor' },
+    { id: 'stockroom', label: 'Stock Room' },
+    { id: 'management', label: 'Management' },
+    { id: 'customerservice', label: 'Customer Service' },
+    { id: 'checkout', label: 'Checkout' },
+  ],
+  other: [],
 }
+
+const defaultHours = () => {
+  const h = {}
+  DAYS.forEach(day => {
+    h[day] = {
+      open: !['Saturday', 'Sunday'].includes(day),
+      opening: '09:00',
+      first_shift: '09:00',
+      last_shift: '17:00',
+      closing: '17:00',
+    }
+  })
+  return h
+}
+
+// ── SVG Icons ─────────────────────────────────────────────────────────────────
+
+function HospitalityIcon({ size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8h1a4 4 0 010 8h-1" />
+      <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" />
+      <line x1="6" y1="1" x2="6" y2="4" />
+      <line x1="10" y1="1" x2="10" y2="4" />
+      <line x1="14" y1="1" x2="14" y2="4" />
+    </svg>
+  )
+}
+
+function RetailIcon({ size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <path d="M16 10a4 4 0 01-8 0" />
+    </svg>
+  )
+}
+
+function OtherIcon({ size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="7" width="20" height="14" rx="2" />
+      <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" />
+      <line x1="12" y1="12" x2="12" y2="16" />
+      <line x1="10" y1="14" x2="14" y2="14" />
+    </svg>
+  )
+}
+
+function CheckIcon({ size = 12 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+    </svg>
+  )
+}
+
+function PlusIcon({ size = 12 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+    </svg>
+  )
+}
+
+function ArrowIcon({ size = 14 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+    </svg>
+  )
+}
+
+function BusinessIcon({ size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+      <polyline points="9 22 9 12 15 12 15 22" />
+    </svg>
+  )
+}
+
+function TeamIcon({ size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 00-3-3.87" />
+      <path d="M16 3.13a4 4 0 010 7.75" />
+    </svg>
+  )
+}
+
+function ClockIcon({ size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  )
+}
+
+// ── Progress bar ──────────────────────────────────────────────────────────────
+
+function ProgressBar({ step, total }) {
+  const pct = (step / total) * 100
+  return (
+    <div style={{ marginBottom: 32 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: '#9CA3AF', fontFamily: FONT_BODY }}>
+          Step {step} of {total}
+        </span>
+        <span style={{ fontSize: 12, color: '#9CA3AF', fontFamily: FONT_BODY }}>
+          {Math.round(pct)}%
+        </span>
+      </div>
+      <div style={{ height: 6, background: '#F3F4F6', borderRadius: 99, overflow: 'hidden' }}>
+        <div style={{
+          height: '100%', width: `${pct}%`,
+          background: `linear-gradient(90deg, ${PINK}, #FF5FA8)`,
+          borderRadius: 99, transition: 'width 0.4s ease',
+        }} />
+      </div>
+    </div>
+  )
+}
+
+// ── Step icon chip ────────────────────────────────────────────────────────────
+
+function StepChip({ icon, label, active }) {
+  return (
+    <div style={{
+      display: 'inline-flex', alignItems: 'center', gap: 6,
+      padding: '4px 10px', borderRadius: 8,
+      background: active ? '#FFF0F5' : '#F9FAFB',
+      border: `1px solid ${active ? '#FF1F7D44' : '#E5E7EB'}`,
+      color: active ? PINK : '#9CA3AF',
+      fontSize: 11, fontWeight: 600, marginBottom: 20,
+      fontFamily: FONT_BODY,
+    }}>
+      {icon}
+      {label}
+    </div>
+  )
+}
+
+// ── Time select ───────────────────────────────────────────────────────────────
+
+function TimeSelect({ value, onChange, disabled }) {
+  return (
+    <select
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      disabled={disabled}
+      style={{
+        height: 34, padding: '0 8px', borderRadius: 8,
+        border: `1px solid ${disabled ? '#F3F4F6' : '#E5E7EB'}`,
+        fontSize: 12, fontWeight: 600,
+        color: disabled ? '#D1D5DB' : '#111827',
+        background: disabled ? '#F9FAFB' : '#fff',
+        outline: 'none', cursor: disabled ? 'not-allowed' : 'pointer',
+        minWidth: 80, fontFamily: FONT_BODY,
+      }}
+    >
+      {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+    </select>
+  )
+}
+
+// ── Hours row ─────────────────────────────────────────────────────────────────
+
+function HoursRow({ day, data, onChange, onCopyTo, allDays }) {
+  const [showCopyTo, setShowCopyTo] = useState(false)
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 8,
+      padding: '8px 12px', borderRadius: 10,
+      background: data.open ? '#fff' : '#F9FAFB',
+      border: `1px solid ${data.open ? '#E5E7EB' : '#F3F4F6'}`,
+      opacity: data.open ? 1 : 0.6,
+      marginBottom: 5,
+    }}>
+      {/* Day toggle */}
+      <button
+        onClick={() => onChange({ ...data, open: !data.open })}
+        style={{
+          width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+          border: 'none',
+          background: data.open ? PINK : '#E5E7EB',
+          color: '#fff',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer', transition: 'all .1s',
+        }}
+      >
+        {data.open && <CheckIcon size={11} />}
+      </button>
+
+      {/* Day label */}
+      <span style={{
+        width: 36, fontSize: 11, fontWeight: 700,
+        color: data.open ? '#111827' : '#9CA3AF',
+        fontFamily: FONT_BODY, flexShrink: 0,
+      }}>
+        {day.slice(0, 3)}
+      </span>
+
+      {data.open ? (
+        <>
+          {/* Equation: Open → First shift → Last shift → Close */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, flex: 1, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <span style={{ fontSize: 8, fontWeight: 600, color: '#9CA3AF', letterSpacing: 0.4 }}>OPEN</span>
+              <TimeSelect value={data.opening} onChange={v => onChange({ ...data, opening: v })} />
+            </div>
+
+            <span style={{ color: '#D1D5DB', fontSize: 12, marginTop: 14 }}>→</span>
+
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <span style={{ fontSize: 8, fontWeight: 600, color: '#8B5CF6', letterSpacing: 0.4 }}>FIRST SHIFT</span>
+              <TimeSelect value={data.first_shift} onChange={v => onChange({ ...data, first_shift: v })} />
+            </div>
+
+            <span style={{ color: '#D1D5DB', fontSize: 12, marginTop: 14 }}>→</span>
+
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <span style={{ fontSize: 8, fontWeight: 600, color: '#8B5CF6', letterSpacing: 0.4 }}>LAST SHIFT</span>
+              <TimeSelect value={data.last_shift} onChange={v => onChange({ ...data, last_shift: v })} />
+            </div>
+
+            <span style={{ color: '#D1D5DB', fontSize: 12, marginTop: 14 }}>→</span>
+
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <span style={{ fontSize: 8, fontWeight: 600, color: '#9CA3AF', letterSpacing: 0.4 }}>CLOSE</span>
+              <TimeSelect value={data.closing} onChange={v => onChange({ ...data, closing: v })} />
+            </div>
+          </div>
+
+          {/* Copy to */}
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <button
+              onClick={() => setShowCopyTo(v => !v)}
+              style={{
+                height: 26, padding: '0 8px', borderRadius: 6,
+                border: '1px solid #E5E7EB', background: '#F9FAFB',
+                fontSize: 10, fontWeight: 600, color: '#6B7280',
+                cursor: 'pointer', whiteSpace: 'nowrap',
+              }}
+            >
+              Copy to
+            </button>
+            {showCopyTo && (
+              <div style={{
+                position: 'absolute', right: 0, top: 30, zIndex: 20,
+                background: '#fff', border: '1px solid #E5E7EB', borderRadius: 8,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                overflow: 'hidden', minWidth: 120,
+              }}>
+                <button
+                  onClick={() => { onCopyTo('all'); setShowCopyTo(false) }}
+                  style={{
+                    display: 'block', width: '100%', padding: '8px 12px',
+                    textAlign: 'left', fontSize: 11, fontWeight: 600,
+                    color: PINK, background: 'transparent', border: 'none',
+                    cursor: 'pointer', borderBottom: '1px solid #F3F4F6',
+                  }}
+                >
+                  All days
+                </button>
+                <button
+                  onClick={() => { onCopyTo('weekdays'); setShowCopyTo(false) }}
+                  style={{
+                    display: 'block', width: '100%', padding: '8px 12px',
+                    textAlign: 'left', fontSize: 11, fontWeight: 600,
+                    color: '#374151', background: 'transparent', border: 'none',
+                    cursor: 'pointer', borderBottom: '1px solid #F3F4F6',
+                  }}
+                >
+                  Weekdays
+                </button>
+                <button
+                  onClick={() => { onCopyTo('weekends'); setShowCopyTo(false) }}
+                  style={{
+                    display: 'block', width: '100%', padding: '8px 12px',
+                    textAlign: 'left', fontSize: 11, fontWeight: 600,
+                    color: '#374151', background: 'transparent', border: 'none',
+                    cursor: 'pointer', borderBottom: '1px solid #F3F4F6',
+                  }}
+                >
+                  Weekends
+                </button>
+                {allDays.filter(d => d !== day).map(d => (
+                  <button
+                    key={d}
+                    onClick={() => { onCopyTo(d); setShowCopyTo(false) }}
+                    style={{
+                      display: 'block', width: '100%', padding: '7px 12px',
+                      textAlign: 'left', fontSize: 11, color: '#374151',
+                      background: 'transparent', border: 'none', cursor: 'pointer',
+                    }}
+                  >
+                    {d.slice(0, 3)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        <span style={{ fontSize: 12, color: '#9CA3AF', fontStyle: 'italic', flex: 1 }}>Closed</span>
+      )}
+    </div>
+  )
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 export default function PreWizardOnboarding() {
   const router = useRouter()
-  const [currentStep, setCurrentStep] = useState(1)
+  const [step, setStep] = useState(1)
   const [saving, setSaving] = useState(false)
+  const TOTAL = 4
 
-  // Step 1-2
-  const [formData, setFormData] = useState({ locale_id: null, business_name: '' })
-  const [locales, setLocales] = useState([])
-  const [selectedLocale, setSelectedLocale] = useState(null)
-  const [localesLoading, setLocalesLoading] = useState(true)
+  const [businessName, setBusinessName] = useState('')
+  const [industry, setIndustry] = useState(null)
+  const [otherIndustry, setOtherIndustry] = useState('')
+  const [selectedTeams, setSelectedTeams] = useState([])
+  const [customTeam, setCustomTeam] = useState('')
+  const [hours, setHours] = useState(defaultHours())
 
-  // Step 3
-  const [hours, setHours] = useState({ openTime: 8, closeTime: 18, openBuffer: 30, closeBuffer: 30 })
+  const presetTeams = industry ? (INDUSTRY_TEAMS[industry] || []) : []
 
-  // Step 4
-  const [shiftLengths, setShiftLengths] = useState([8])
+  const toggleTeam = (id, label) => {
+    setSelectedTeams(prev => {
+      const exists = prev.find(t => t.id === id)
+      if (exists) return prev.filter(t => t.id !== id)
+      return [...prev, { id, label }]
+    })
+  }
 
-  // Step 5
-  const [templates, setTemplates] = useState({
-    Weekday: { name: 'Weekday', shifts: [], openTime: 8, closeTime: 18, openBuffer: 30, closeBuffer: 30 },
-    Weekend: { name: 'Weekend', shifts: [], openTime: 8, closeTime: 18, openBuffer: 30, closeBuffer: 30 },
-  })
-  const [activeTemplate, setActiveTemplate] = useState('Weekday')
+  const addCustomTeam = () => {
+    const trimmed = customTeam.trim()
+    if (!trimmed) return
+    const id = `custom_${Date.now()}`
+    setSelectedTeams(prev => [...prev, { id, label: trimmed }])
+    setCustomTeam('')
+  }
 
-  // Step 6
-  const [weekDays, setWeekDays] = useState({
-    Mon: { on: true, tmpl: 'Weekday' }, Tue: { on: true, tmpl: 'Weekday' },
-    Wed: { on: true, tmpl: 'Weekday' }, Thu: { on: true, tmpl: 'Weekday' },
-    Fri: { on: true, tmpl: 'Weekday' }, Sat: { on: true, tmpl: 'Weekend' },
-    Sun: { on: false, tmpl: 'Weekend' },
-  })
+  const updateDayHours = (day, data) => {
+    setHours(prev => ({ ...prev, [day]: data }))
+  }
 
-  // Step 7
-  const [staffEntries, setStaffEntries] = useState([])
-
-  // Rules
-  const [rules, setRules] = useState(AVAILABLE_RULES.map(r => ({ type: r.type, enabled: r.defaultEnabled, value: r.defaultValue })))
-
-  useEffect(() => {
-    fetch('/api/locales').then(r => r.ok ? r.json() : []).then(setLocales).catch(() => {}).finally(() => setLocalesLoading(false))
-  }, [])
-
-  // Auto-generate shifts when entering step 5 if template is empty
-  useEffect(() => {
-    if (currentStep === 5) {
-      const t = templates[activeTemplate]
-      if (t && t.shifts.length === 0) {
-        const dl = shiftLengths.includes(8) ? 8 : shiftLengths[0]
-        const opS = (t.openTime ?? hours.openTime) - (t.openBuffer ?? hours.openBuffer) / 60
-        const opE = (t.closeTime ?? hours.closeTime) + (t.closeBuffer ?? hours.closeBuffer) / 60
-        const shifts = []
-        let pos = opS, id = 0
-        while (pos < opE) {
-          const len = Math.min(dl, opE - pos)
-          if (len >= 2) shifts.push({ id: `s${id++}`, start: pos, length: snapLen(len, shiftLengths), headcount: 2 })
-          pos += dl
+  const copyTo = (sourceDay, target) => {
+    const source = hours[sourceDay]
+    setHours(prev => {
+      const updated = { ...prev }
+      const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+      const weekends = ['Saturday', 'Sunday']
+      const targets = target === 'all' ? DAYS
+        : target === 'weekdays' ? weekdays
+        : target === 'weekends' ? weekends
+        : [target]
+      targets.forEach(d => {
+        if (d !== sourceDay) {
+          updated[d] = { ...updated[d], opening: source.opening, first_shift: source.first_shift, last_shift: source.last_shift, closing: source.closing }
         }
-        setTemplates(prev => ({ ...prev, [activeTemplate]: { ...prev[activeTemplate], shifts } }))
-      }
-    }
-  }, [currentStep, activeTemplate])
-
-  // Calculations
-  const weeklyShiftHours = useMemo(() => {
-    return DAYS.reduce((sum, d) => {
-      if (!weekDays[d]?.on) return sum
-      const tmpl = templates[weekDays[d].tmpl]
-      if (!tmpl?.shifts) return sum
-      return sum + tmpl.shifts.reduce((a, s) => a + s.length * s.headcount, 0)
-    }, 0)
-  }, [weekDays, templates])
-
-  const totalContractedHours = useMemo(() => staffEntries.reduce((s, m) => s + (parseFloat(m.contracted_hours) || 0), 0), [staffEntries])
-  const totalMaxHours = useMemo(() => staffEntries.reduce((s, m) => s + (parseFloat(m.max_hours) || parseFloat(m.contracted_hours) || 0), 0), [staffEntries])
-
-  const currencySymbol = selectedLocale?.currency_code === 'GBP' ? '£' : selectedLocale?.currency_code === 'EUR' ? '€' : selectedLocale?.currency_code === 'USD' ? '$' : '£'
+      })
+      return updated
+    })
+  }
 
   const canProceed = () => {
-    switch (currentStep) {
-      case 1: return formData.locale_id !== null
-      case 2: return formData.business_name.trim().length > 0
-      case 3: return hours.closeTime > hours.openTime
-      case 4: return shiftLengths.length > 0
-      case 5: return Object.values(templates).some(t => t.shifts.length > 0)
-      case 6: return DAYS.some(d => weekDays[d]?.on)
-      case 7: return true
-      default: return false
-    }
+    if (step === 1) return businessName.trim().length > 0
+    if (step === 2) return industry !== null && (industry !== 'other' || otherIndustry.trim().length > 0)
+    if (step === 3) return selectedTeams.length > 0
+    if (step === 4) return DAYS.some(d => hours[d].open)
+    return false
   }
 
-  // Staff helpers
-  const addStaff = () => {
-    setStaffEntries(prev => [...prev, { id: `staff-${Date.now()}`, name: '', contracted_hours: '', max_hours: '40', hourly_rate: '', keyholder: false, preferred_lengths: [...shiftLengths], availability_grid: {} }])
-  }
-  const updateStaff = (id, field, value) => setStaffEntries(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s))
-  const removeStaff = (id) => setStaffEntries(prev => prev.filter(s => s.id !== id))
-  const togglePrefLength = (staffId, len) => {
-    setStaffEntries(prev => prev.map(s => {
-      if (s.id !== staffId) return s
-      const set = new Set(s.preferred_lengths)
-      if (set.has(len)) { if (set.size > 1) set.delete(len) } else set.add(len)
-      return { ...s, preferred_lengths: [...set].sort((a, b) => a - b) }
-    }))
-  }
-
-  // Template helpers
-  const addTemplate = (name) => { setTemplates(prev => ({ ...prev, [name]: { name, shifts: [], openTime: hours.openTime, closeTime: hours.closeTime, openBuffer: hours.openBuffer, closeBuffer: hours.closeBuffer } })); setActiveTemplate(name) }
-  const duplicateTemplate = (fromName, newName) => {
-    const source = templates[fromName]
-    setTemplates(prev => ({ ...prev, [newName]: { name: newName, shifts: source.shifts.map(s => ({ ...s, id: `s-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` })), openTime: source.openTime, closeTime: source.closeTime, openBuffer: source.openBuffer, closeBuffer: source.closeBuffer } }))
-    setActiveTemplate(newName)
-  }
-
-  // Rules helpers
-  const toggleRule = (type) => setRules(prev => prev.map(r => r.type === type ? { ...r, enabled: !r.enabled } : r))
-  const updateRuleValue = (type, value) => {
-    const def = AVAILABLE_RULES.find(r => r.type === type)
-    const clamped = Math.max(def.min, Math.min(def.max, parseInt(value) || 0))
-    setRules(prev => prev.map(r => r.type === type ? { ...r, value: clamped } : r))
-  }
-
-  const handleLocaleSelect = (localeId) => {
-    const locale = locales.find(l => l.id === localeId)
-    setSelectedLocale(locale)
-    setFormData(prev => ({ ...prev, locale_id: localeId }))
-  }
-
-  // Submit
   const handleSubmit = async () => {
     setSaving(true)
     try {
-      const onboardingRes = await fetch('/api/onboarding', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+      const teamsWithColors = selectedTeams.map((t, i) => ({
+        ...t,
+        color: PALETTE[i % PALETTE.length],
+        colorLight: PALETTE_LIGHT[i % PALETTE_LIGHT.length],
+      }))
+
+      const res = await fetch('/api/onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          locale_id: formData.locale_id, business_name: formData.business_name,
-          open_time: hours.openTime, close_time: hours.closeTime,
-          open_buffer: hours.openBuffer, close_buffer: hours.closeBuffer,
-          shift_lengths: shiftLengths, day_templates: templates, week_template: weekDays,
-        })
+          business_name: businessName.trim(),
+          industry: industry === 'other' ? otherIndustry.trim() : industry,
+          teams: teamsWithColors,
+          operating_hours: hours,
+        }),
       })
-      if (!onboardingRes.ok) { const d = await onboardingRes.json(); alert(d.error || 'Failed to save'); setSaving(false); return }
-      const { team_id: teamId } = await onboardingRes.json()
-      if (!teamId) { alert('Team creation failed.'); setSaving(false); return }
 
-      for (const staff of staffEntries) {
-        if (!staff.name.trim()) continue
-        const staffRes = await fetch('/api/staff', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            team_id: teamId, name: staff.name, email: '', role: 'staff',
-            contracted_hours: parseFloat(staff.contracted_hours) || 0,
-            max_hours: parseFloat(staff.max_hours) || parseFloat(staff.contracted_hours) || 0,
-            hourly_rate: parseFloat(staff.hourly_rate) || 0,
-            keyholder: staff.keyholder,
-            preferred_shift_length: staff.preferred_lengths || [shiftLengths[0]],
-            availability_grid: staff.availability_grid,
-          })
-        })
-        if (staffRes.ok && staff.hourly_rate) {
-          const saved = await staffRes.json()
-          if (saved?.id) {
-            await fetch('/api/payroll', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ staff_id: saved.id, pay_type: 'hourly', hourly_rate: parseFloat(staff.hourly_rate) || null, annual_salary: null }) })
-          }
-        }
+      if (res.ok) {
+        router.push('/dashboard?tour=start')
+      } else {
+        const d = await res.json()
+        alert(d.error || 'Failed to save — please try again')
       }
-
-      for (const rule of rules) {
-        await fetch('/api/rules', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ team_id: teamId, type: rule.type, enabled: rule.enabled, value: rule.value }) })
-      }
-
-      router.push('/dashboard/generate?tour=start')
-    } catch (error) { console.error('Error:', error); alert('Something went wrong. Please try again.') }
-    finally { setSaving(false) }
+    } catch (err) {
+      console.error(err)
+      alert('Failed to save — please try again')
+    } finally {
+      setSaving(false)
+    }
   }
 
+  const stepMeta = [
+    { icon: <BusinessIcon size={13} />, label: 'Business' },
+    { icon: <OtherIcon size={13} />, label: 'Industry' },
+    { icon: <TeamIcon size={13} />, label: 'Teams' },
+    { icon: <ClockIcon size={13} />, label: 'Hours' },
+  ]
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-pink-50 flex">
-      {/* Sidebar */}
-      <div className="w-64 bg-white border-r border-gray-200 p-6 flex flex-col flex-shrink-0">
-        <div className="inline-flex items-center gap-2.5 bg-white px-5 py-3 rounded-2xl shadow-lg mb-10">
-          <Image src="/logo.svg" alt="Shiftly" width={36} height={36} />
-          <span className="text-xl font-bold text-gray-900 font-cal">Shiftly</span>
-        </div>
+    <div style={{
+      minHeight: '100vh', fontFamily: FONT_BODY,
+      background: 'linear-gradient(135deg, #FFF0F5 0%, #fff 50%, #F5F3FF 100%)',
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      justifyContent: 'center', padding: 24,
+    }}>
 
-        <div className="flex flex-col gap-1">
-          {STEP_LABELS.map((label, i) => {
-            const step = i + 1
-            const isDone = step < currentStep
-            const isActive = step === currentStep
-            return (
-              <button
-                key={step}
-                onClick={() => { if (step <= currentStep) setCurrentStep(step) }}
-                disabled={step > currentStep}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all ${isActive ? 'bg-pink-50' : isDone ? 'hover:bg-gray-50' : ''}`}
-              >
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 border transition-all ${isDone ? 'bg-green-500 border-green-500 text-white' : isActive ? 'bg-pink-500 border-pink-500 text-white' : 'bg-gray-50 border-gray-200 text-gray-400'}`}>
-                  {isDone ? '✓' : step}
-                </div>
-                <span className={`text-sm font-medium ${isActive ? 'text-gray-900 font-semibold' : isDone ? 'text-gray-600' : 'text-gray-400'}`}>{label}</span>
-              </button>
-            )
-          })}
-        </div>
-
-        <div className="flex-1" />
-        <div className="pt-4 border-t border-gray-100">
-          <span className="text-[11px] text-gray-400">Setting up your workspace</span>
+      {/* Logo */}
+      <div style={{ marginBottom: 28, textAlign: 'center' }}>
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 8,
+          background: '#fff', padding: '10px 24px', borderRadius: 12,
+          boxShadow: '0 2px 16px rgba(0,0,0,0.08)', border: '1px solid #F3F4F6',
+        }}>
+          <span style={{ fontFamily: FONT_HEADING, fontSize: 22, fontWeight: 700, color: '#111827' }}>
+            Shift<span style={{ color: PINK }}>ly</span>
+          </span>
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 p-8 lg:p-12 overflow-y-auto flex flex-col items-center">
-        <div className={`w-full ${currentStep >= 5 ? 'max-w-5xl' : 'max-w-3xl'} transition-all`}>
+      <div style={{ width: '100%', maxWidth: 620 }}>
+        <ProgressBar step={step} total={TOTAL} />
 
-          <div className="bg-white rounded-2xl shadow-xl p-8 sm:p-10 min-h-[500px] flex flex-col">
+        <div style={{
+          background: '#fff', borderRadius: 20,
+          boxShadow: '0 8px 40px rgba(0,0,0,0.08)',
+          border: '1px solid #F3F4F6',
+          padding: '32px 36px', minHeight: 480,
+          display: 'flex', flexDirection: 'column',
+        }}>
 
-            {/* STEP 1: Location */}
-            <div className={`flex-1 flex flex-col ${currentStep === 1 ? '' : 'hidden'}`}>
-              <h1 className="text-3xl font-bold text-gray-900 mb-3 font-cal">Where is your business based?</h1>
-              <p className="text-base text-gray-600 mb-8">We'll apply the right compliance rules and formatting for your region.</p>
-              {localesLoading ? (
-                <div className="flex items-center justify-center py-12"><div className="w-8 h-8 border-4 border-gray-200 border-t-pink-500 rounded-full animate-spin" /></div>
-              ) : (
-                <div className="space-y-3">
-                  {locales.map(locale => (
-                    <button key={locale.id} onClick={() => handleLocaleSelect(locale.id)} className={`w-full p-4 rounded-xl border-2 transition-all text-left ${formData.locale_id === locale.id ? 'border-pink-500 bg-pink-50 shadow-md' : 'border-gray-200 hover:border-pink-300 hover:bg-pink-50/50'}`}>
-                      <div className="flex items-center justify-between">
-                        <span className="text-lg font-medium text-gray-900">{locale.country_name}</span>
-                        {formData.locale_id === locale.id && <div className="w-6 h-6 bg-pink-500 rounded-full flex items-center justify-center"><svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg></div>}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {selectedLocale && (
-                <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
-                  <p className="text-sm font-medium text-blue-900 mb-1">Your compliance settings</p>
-                  <div className="text-xs text-blue-700 space-y-0.5">
-                    {selectedLocale.max_weekly_hours && <div>Max {selectedLocale.max_weekly_hours} hours per week</div>}
-                    {selectedLocale.min_rest_hours && <div>Min {selectedLocale.min_rest_hours} hours rest between shifts</div>}
-                    <div>{selectedLocale.annual_leave_days} days annual leave · Currency: {selectedLocale.currency_code}</div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* STEP 2: Business Name */}
-            <div className={`flex-1 flex flex-col ${currentStep === 2 ? '' : 'hidden'}`}>
-              <h1 className="text-3xl font-bold text-gray-900 mb-3 font-cal">What's your business name?</h1>
-              <p className="text-base text-gray-600 mb-8">This will appear throughout your workspace.</p>
-              <input type="text" value={formData.business_name} onChange={(e) => setFormData(prev => ({ ...prev, business_name: e.target.value }))} placeholder="e.g., Main Street Coffee" className="w-full px-6 py-4 text-2xl border-2 border-gray-300 rounded-xl focus:border-pink-500 focus:ring-4 focus:ring-pink-100 transition-all text-gray-900 bg-white placeholder-gray-400" />
-            </div>
-
-            {/* STEP 3: Business Hours */}
-            <div className={`flex-1 flex flex-col ${currentStep === 3 ? '' : 'hidden'}`}>
-              <h1 className="text-3xl font-bold text-gray-900 mb-3 font-cal">When are you open?</h1>
-              <p className="text-base text-gray-600 mb-6">Set your operating hours and buffer time for setup & cleanup.</p>
-              <BusinessHoursStep
-                openTime={hours.openTime} closeTime={hours.closeTime}
-                openBuffer={hours.openBuffer} closeBuffer={hours.closeBuffer}
-                onChange={(patch) => {
-                  setHours(prev => ({ ...prev, ...patch }))
-                  setTemplates(prev => {
-                    const updated = {}
-                    for (const [k, v] of Object.entries(prev)) updated[k] = { ...v, shifts: [], ...patch }
-                    return updated
-                  })
+          {/* ── Step 1: Business Name ── */}
+          {step === 1 && (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <StepChip icon={<BusinessIcon size={13} />} label="Business" active />
+              <h1 style={{ fontFamily: FONT_HEADING, fontSize: 28, fontWeight: 700, color: '#111827', margin: '0 0 8px' }}>
+                What's your business called?
+              </h1>
+              <p style={{ fontSize: 14, color: '#6B7280', margin: '0 0 28px' }}>
+                This appears throughout your workspace.
+              </p>
+              <input
+                type="text"
+                value={businessName}
+                onChange={e => setBusinessName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && canProceed() && setStep(2)}
+                placeholder="e.g. The Crown, Riverside Retail..."
+                autoFocus
+                style={{
+                  width: '100%', padding: '14px 16px', fontSize: 18, fontWeight: 600,
+                  border: '2px solid #E5E7EB', borderRadius: 10, color: '#111827',
+                  background: '#fff', outline: 'none', boxSizing: 'border-box',
+                  transition: 'border-color .15s',
+                  borderColor: businessName.trim() ? PINK : '#E5E7EB',
                 }}
               />
             </div>
+          )}
 
-            {/* STEP 4: Shift Lengths */}
-            <div className={`flex-1 flex flex-col ${currentStep === 4 ? '' : 'hidden'}`}>
-              <h1 className="text-3xl font-bold text-gray-900 mb-3 font-cal">What shift lengths do you use?</h1>
-              <p className="text-base text-gray-600 mb-8">Select all that apply. Staff can work any mix of these.</p>
-              <ShiftLengthPicker selected={shiftLengths} onChange={(val) => {
-                setShiftLengths(val)
-                setTemplates(prev => {
-                  const updated = {}
-                  for (const [k, v] of Object.entries(prev)) updated[k] = { ...v, shifts: [] }
-                  return updated
-                })
-              }} />
-              <p className="text-sm text-gray-500 mt-5">You can change these later in your workspace settings.</p>
-            </div>
+          {/* ── Step 2: Industry ── */}
+          {step === 2 && (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <StepChip icon={<OtherIcon size={13} />} label="Industry" active />
+              <h1 style={{ fontFamily: FONT_HEADING, fontSize: 28, fontWeight: 700, color: '#111827', margin: '0 0 8px' }}>
+                What industry are you in?
+              </h1>
+              <p style={{ fontSize: 14, color: '#6B7280', margin: '0 0 24px' }}>
+                We'll pre-load team presets and shift templates that match your business.
+              </p>
 
-            {/* STEP 5: Template Day */}
-            <div className={`flex-1 flex flex-col ${currentStep === 5 ? '' : 'hidden'}`}>
-              <h1 className="text-3xl font-bold text-gray-900 mb-3 font-cal">Build your template day</h1>
-              <p className="text-base text-gray-600 mb-5">Drag blocks to reposition. Click the cycle button to change length. Set headcount per block.</p>
-              <div className="mb-4">
-                <TemplateTabs templates={templates} activeTemplate={activeTemplate} onSelect={setActiveTemplate} onAdd={addTemplate} onDuplicate={duplicateTemplate} />
-              </div>
-              <TimelineBuilder
-                shifts={templates[activeTemplate]?.shifts || []}
-                shiftLengths={shiftLengths}
-                openTime={templates[activeTemplate]?.openTime ?? hours.openTime}
-                closeTime={templates[activeTemplate]?.closeTime ?? hours.closeTime}
-                openBuffer={templates[activeTemplate]?.openBuffer ?? hours.openBuffer}
-                closeBuffer={templates[activeTemplate]?.closeBuffer ?? hours.closeBuffer}
-                onChange={(newShifts) => setTemplates(prev => ({ ...prev, [activeTemplate]: { ...prev[activeTemplate], shifts: newShifts } }))}
-              />
-            </div>
-
-            {/* STEP 6: Template Week */}
-            <div className={`flex-1 flex flex-col ${currentStep === 6 ? '' : 'hidden'}`}>
-              <h1 className="text-3xl font-bold text-gray-900 mb-3 font-cal">Your template week</h1>
-              <p className="text-base text-gray-600 mb-6">Assign a day template to each day. Toggle off days you're closed.</p>
-              <WeekOverview weekDays={weekDays} templates={templates} shiftLengths={shiftLengths}
-                onToggleDay={(d) => setWeekDays(prev => ({ ...prev, [d]: { ...prev[d], on: !prev[d].on } }))}
-                onAssignTemplate={(d, tmpl) => setWeekDays(prev => ({ ...prev, [d]: { ...prev[d], tmpl } }))}
-              />
-            </div>
-
-            {/* STEP 7: Your Team (split screen) */}
-            <div className={`flex-1 flex flex-col ${currentStep === 7 ? '' : 'hidden'}`}>
-              <h1 className="text-3xl font-bold text-gray-900 mb-3 font-cal">Add your team</h1>
-              <p className="text-base text-gray-600 mb-5">Your shifts need <span className="font-bold text-pink-600">{Math.round(weeklyShiftHours)}h</span> of cover per week.</p>
-
-              <CoverageGauge shiftHours={weeklyShiftHours} contractedHours={totalContractedHours} maxHours={totalMaxHours} />
-
-              <div className="flex gap-6 mt-5 flex-1">
-                {/* LEFT: Vertical week overview */}
-                <div className="w-64 flex-shrink-0 self-start sticky top-0">
-                  <div className="p-4 rounded-xl border border-gray-200 bg-gray-50">
-                    <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wide mb-3">Template Week</h3>
-                    <WeekOverview weekDays={weekDays} templates={templates} shiftLengths={shiftLengths}
-                      onToggleDay={() => {}} onAssignTemplate={() => {}} compact readOnly vertical />
-                    <div className="mt-3 p-3 rounded-lg bg-white border border-gray-200 text-xs text-gray-500 space-y-1">
-                      <div className="flex justify-between"><span>Needed</span><span className="font-bold text-gray-900">{Math.round(weeklyShiftHours)}h</span></div>
-                      <div className="flex justify-between"><span>Contracted</span><span className="font-bold text-gray-700">{Math.round(totalContractedHours)}h</span></div>
-                      <div className="flex justify-between"><span>Available (incl. overtime)</span><span className="font-bold" style={{ color: totalMaxHours >= weeklyShiftHours ? '#10B981' : '#EF4444' }}>{Math.round(totalMaxHours)}h</span></div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* RIGHT: Staff list */}
-                <div className="flex-1 min-w-0">
-                  <div className="space-y-3 overflow-y-auto max-h-[450px] pr-1">
-                    {staffEntries.map(staff => (
-                      <div key={staff.id} className="p-4 rounded-xl border border-gray-200 bg-white hover:border-pink-200 transition-colors">
-                        <div className="flex items-center gap-2 mb-3 flex-wrap">
-                          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-pink-50 to-purple-50 flex items-center justify-center text-pink-600 font-bold text-sm flex-shrink-0">
-                            {(staff.name || '?')[0].toUpperCase()}
-                          </div>
-                          <input type="text" value={staff.name} onChange={(e) => updateStaff(staff.id, 'name', e.target.value)} placeholder="Name" className="flex-1 min-w-[100px] px-3 py-2 border border-gray-300 rounded-lg text-sm font-semibold text-gray-900 focus:ring-2 focus:ring-pink-500 focus:border-transparent" />
-                          <div className="flex items-center gap-1">
-                            <input type="number" value={staff.contracted_hours} onChange={(e) => updateStaff(staff.id, 'contracted_hours', e.target.value)} placeholder="Hrs" min="0" className="w-14 px-2 py-2 border border-gray-300 rounded-lg text-sm text-center text-gray-900 focus:ring-2 focus:ring-pink-500 focus:border-transparent" />
-                            <span className="text-[10px] text-gray-400">h/wk</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <input type="number" value={staff.max_hours} onChange={(e) => updateStaff(staff.id, 'max_hours', e.target.value)} placeholder="Max" min="0" className="w-14 px-2 py-2 border border-gray-300 rounded-lg text-sm text-center text-gray-900 focus:ring-2 focus:ring-pink-500 focus:border-transparent" />
-                            <span className="text-[10px] text-gray-400">max</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className="text-[10px] text-gray-400">{currencySymbol}</span>
-                            <input type="number" value={staff.hourly_rate} onChange={(e) => updateStaff(staff.id, 'hourly_rate', e.target.value)} placeholder="Rate" step="0.01" min="0" className="w-14 px-2 py-2 border border-gray-300 rounded-lg text-sm text-center text-gray-900 focus:ring-2 focus:ring-pink-500 focus:border-transparent" />
-                            <span className="text-[10px] text-gray-400">/hr</span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs text-gray-500 font-medium">Keyholder</span>
-                            <button onClick={() => updateStaff(staff.id, 'keyholder', !staff.keyholder)} className={`relative w-10 h-[22px] rounded-full transition-colors flex-shrink-0 ${staff.keyholder ? 'bg-orange-400' : 'bg-gray-200'}`}>
-                              <div className={`absolute w-[18px] h-[18px] bg-white rounded-full top-[2px] shadow-sm transition-all ${staff.keyholder ? 'left-[20px]' : 'left-[2px]'}`} />
-                            </button>
-                          </div>
-                          <button onClick={() => removeStaff(staff.id)} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors flex-shrink-0">
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                          </button>
-                        </div>
-
-                        <div className="flex items-center gap-1.5 mb-2">
-                          <span className="text-xs text-gray-400 mr-1">Shift lengths:</span>
-                          {shiftLengths.map((len, li) => {
-                            const active = staff.preferred_lengths?.includes(len)
-                            const c = PALETTE[li % PALETTE.length]
-                            return (
-                              <button key={len} onClick={() => togglePrefLength(staff.id, len)} className="px-2 py-0.5 rounded text-[10px] font-bold border transition-all" style={{ background: active ? c.bg : '#F9FAFB', borderColor: active ? `${c.border}50` : '#E5E7EB', color: active ? c.text : '#9CA3AF' }}>
-                                {len}h
-                              </button>
-                            )
-                          })}
-                        </div>
-
-                        <StaffAvailabilityGrid weekDays={weekDays} templates={templates} shiftLengths={shiftLengths} preferredLengths={staff.preferred_lengths} availabilityGrid={staff.availability_grid} onChange={(grid) => updateStaff(staff.id, 'availability_grid', grid)} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 16 }}>
+                {[
+                  { value: 'hospitality', label: 'Hospitality', Icon: HospitalityIcon },
+                  { value: 'retail', label: 'Retail', Icon: RetailIcon },
+                  { value: 'other', label: 'Other', Icon: OtherIcon },
+                ].map(({ value, label, Icon }) => {
+                  const on = industry === value
+                  return (
+                    <button
+                      key={value}
+                      onClick={() => setIndustry(value)}
+                      style={{
+                        padding: '20px 12px', borderRadius: 10, cursor: 'pointer',
+                        border: on ? `2px solid ${PINK}` : '2px solid #E5E7EB',
+                        background: on ? '#FFF0F5' : '#F9FAFB',
+                        display: 'flex', flexDirection: 'column',
+                        alignItems: 'center', gap: 8, transition: 'all .12s',
+                      }}
+                    >
+                      <div style={{ color: on ? PINK : '#9CA3AF' }}>
+                        <Icon size={24} />
                       </div>
-                    ))}
-                  </div>
-
-                  <button onClick={addStaff} className="mt-3 w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-sm font-medium text-gray-500 hover:border-pink-400 hover:text-pink-600 transition-all">+ Add team member</button>
-                  {staffEntries.length === 0 && <p className="text-xs text-gray-400 mt-3 text-center">You can skip this and add staff later in your workspace.</p>}
-                </div>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: on ? PINK : '#374151' }}>
+                        {label}
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
-            </div>
 
-            {/* Navigation */}
-            <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200">
-              <button onClick={() => setCurrentStep(prev => prev - 1)} disabled={currentStep === 1} className="px-6 py-3 text-gray-600 hover:text-gray-900 font-medium disabled:opacity-0 disabled:cursor-default transition-all">Back</button>
-              {currentStep < STEP_LABELS.length ? (
-                <button onClick={() => setCurrentStep(prev => prev + 1)} disabled={!canProceed()} className="px-8 py-3 bg-gradient-to-r from-pink-500 to-pink-600 text-white font-semibold rounded-xl hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all">Continue</button>
-              ) : (
-                <button onClick={handleSubmit} disabled={saving} className="px-8 py-3 bg-gradient-to-r from-pink-500 to-pink-600 text-white font-semibold rounded-xl hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2">
-                  {saving ? (<><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />Setting up...</>) : 'Set up my workspace 🚀'}
-                </button>
+              {industry === 'other' && (
+                <input
+                  type="text"
+                  value={otherIndustry}
+                  onChange={e => setOtherIndustry(e.target.value)}
+                  placeholder="Tell us your industry..."
+                  autoFocus
+                  style={{
+                    width: '100%', padding: '11px 14px', fontSize: 14,
+                    border: '1.5px solid #E5E7EB', borderRadius: 8, color: '#111827',
+                    background: '#fff', outline: 'none', boxSizing: 'border-box',
+                    borderColor: otherIndustry.trim() ? PINK : '#E5E7EB',
+                  }}
+                />
               )}
             </div>
+          )}
+
+          {/* ── Step 3: Teams ── */}
+          {step === 3 && (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <StepChip icon={<TeamIcon size={13} />} label="Teams" active />
+              <h1 style={{ fontFamily: FONT_HEADING, fontSize: 28, fontWeight: 700, color: '#111827', margin: '0 0 8px' }}>
+                Select your teams
+              </h1>
+              <p style={{ fontSize: 14, color: '#6B7280', margin: '0 0 6px' }}>
+                Each team gets its own shift patterns and scheduling rules.
+              </p>
+
+              {presetTeams.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, marginTop: 16 }}>
+                  {presetTeams.map((t, i) => {
+                    const on = selectedTeams.find(s => s.id === t.id)
+                    const color = PALETTE[i % PALETTE.length]
+                    const colorLight = PALETTE_LIGHT[i % PALETTE_LIGHT.length]
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => toggleTeam(t.id, t.label)}
+                        style={{
+                          padding: '8px 16px', borderRadius: 8, cursor: 'pointer',
+                          border: on ? `2px solid ${color}` : '1.5px solid #E5E7EB',
+                          background: on ? colorLight : '#F9FAFB',
+                          color: on ? color : '#6B7280',
+                          fontSize: 12, fontWeight: 600,
+                          display: 'flex', alignItems: 'center', gap: 6,
+                          transition: 'all .12s',
+                        }}
+                      >
+                        {on && (
+                          <div style={{
+                            width: 14, height: 14, borderRadius: 3,
+                            background: color, color: '#fff',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            flexShrink: 0,
+                          }}>
+                            <CheckIcon size={9} />
+                          </div>
+                        )}
+                        {t.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Selected custom teams */}
+              {selectedTeams.filter(t => !presetTeams.find(p => p.id === t.id)).map((t, i) => {
+                const color = PALETTE[(presetTeams.length + i) % PALETTE.length]
+                const colorLight = PALETTE_LIGHT[(presetTeams.length + i) % PALETTE_LIGHT.length]
+                return (
+                  <div key={t.id} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '6px 12px', borderRadius: 8, marginBottom: 4,
+                    background: colorLight, border: `2px solid ${color}`,
+                    color, fontSize: 12, fontWeight: 600,
+                  }}>
+                    {t.label}
+                    <button
+                      onClick={() => setSelectedTeams(prev => prev.filter(s => s.id !== t.id))}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color, padding: 0, marginLeft: 2 }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                )
+              })}
+
+              {/* Custom team input */}
+              <div style={{ display: 'flex', gap: 8, marginTop: 'auto' }}>
+                <input
+                  type="text"
+                  value={customTeam}
+                  onChange={e => setCustomTeam(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && addCustomTeam()}
+                  placeholder="Add custom team..."
+                  style={{
+                    flex: 1, padding: '9px 12px', fontSize: 12, fontWeight: 500,
+                    border: '1.5px solid #E5E7EB', borderRadius: 8, color: '#111827',
+                    background: '#fff', outline: 'none',
+                  }}
+                />
+                <button
+                  onClick={addCustomTeam}
+                  disabled={!customTeam.trim()}
+                  style={{
+                    height: 38, padding: '0 14px', borderRadius: 8, border: 'none',
+                    background: customTeam.trim() ? PINK : '#F3F4F6',
+                    color: customTeam.trim() ? '#fff' : '#9CA3AF',
+                    fontSize: 12, fontWeight: 600, cursor: customTeam.trim() ? 'pointer' : 'not-allowed',
+                    display: 'flex', alignItems: 'center', gap: 5,
+                  }}
+                >
+                  <PlusIcon size={11} /> Add
+                </button>
+              </div>
+
+              {selectedTeams.length > 0 && (
+                <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 8 }}>
+                  {selectedTeams.length} team{selectedTeams.length !== 1 ? 's' : ''} selected
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Step 4: Hours ── */}
+          {step === 4 && (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <StepChip icon={<ClockIcon size={13} />} label="Hours" active />
+              <h1 style={{ fontFamily: FONT_HEADING, fontSize: 28, fontWeight: 700, color: '#111827', margin: '0 0 8px' }}>
+                When do you operate?
+              </h1>
+              <p style={{ fontSize: 14, color: '#6B7280', margin: '0 0 6px' }}>
+                Open and Close times anchor your shift patterns.{' '}
+                <span style={{ color: '#8B5CF6', fontWeight: 600 }}>First/Last shift</span>
+                {' '}set when staff rotas begin and end.
+              </p>
+
+              <div style={{ flex: 1, overflowY: 'auto', marginTop: 14 }}>
+                {DAYS.map(day => (
+                  <HoursRow
+                    key={day}
+                    day={day}
+                    data={hours[day]}
+                    onChange={data => updateDayHours(day, data)}
+                    onCopyTo={target => copyTo(day, target)}
+                    allDays={DAYS}
+                  />
+                ))}
+              </div>
+
+              <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 8 }}>
+                You can adjust these anytime in Settings. Shift patterns on the Shifts page will auto-anchor to these times.
+              </p>
+            </div>
+          )}
+
+          {/* ── Nav buttons ── */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            marginTop: 28, paddingTop: 20, borderTop: '1px solid #F3F4F6',
+          }}>
+            <button
+              onClick={() => setStep(s => s - 1)}
+              disabled={step === 1}
+              style={{
+                padding: '10px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                border: '1px solid #E5E7EB', background: '#fff', color: '#6B7280',
+                cursor: step === 1 ? 'default' : 'pointer',
+                opacity: step === 1 ? 0 : 1, transition: 'opacity .15s',
+              }}
+            >
+              Back
+            </button>
+
+            {step < TOTAL ? (
+              <button
+                onClick={() => setStep(s => s + 1)}
+                disabled={!canProceed()}
+                style={{
+                  padding: '10px 24px', borderRadius: 8, fontSize: 13, fontWeight: 700,
+                  border: 'none', background: canProceed() ? PINK : '#F3F4F6',
+                  color: canProceed() ? '#fff' : '#9CA3AF',
+                  cursor: canProceed() ? 'pointer' : 'not-allowed',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  transition: 'all .12s',
+                }}
+              >
+                Continue <ArrowIcon size={13} />
+              </button>
+            ) : (
+              <button
+                onClick={handleSubmit}
+                disabled={!canProceed() || saving}
+                style={{
+                  padding: '10px 24px', borderRadius: 8, fontSize: 13, fontWeight: 700,
+                  border: 'none', background: canProceed() && !saving ? PINK : '#F3F4F6',
+                  color: canProceed() && !saving ? '#fff' : '#9CA3AF',
+                  cursor: canProceed() && !saving ? 'pointer' : 'not-allowed',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                }}
+              >
+                {saving ? (
+                  <>
+                    <div style={{
+                      width: 14, height: 14, borderRadius: 99,
+                      border: '2px solid rgba(255,255,255,0.3)',
+                      borderTopColor: '#fff', animation: 'spin 0.6s linear infinite',
+                    }} />
+                    Saving…
+                  </>
+                ) : (
+                  <>Get Started <ArrowIcon size={13} /></>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </div>
   )
 }

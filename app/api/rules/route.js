@@ -1,102 +1,71 @@
 import { auth } from '@clerk/nextjs/server'
-import { createClient } from '@supabase/supabase-js'
+import { NextResponse } from 'next/server'
+import { supabase } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
-
-export async function GET(request) {
+export async function GET() {
   try {
     const { userId } = await auth()
-    
-    if (!userId) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { searchParams } = new URL(request.url)
-    const teamId = searchParams.get('team_id')
+    const { data: teams, error: teamsError } = await supabase
+      .from('Teams')
+      .select('id, team_name, solver_rules')
+      .eq('user_id', userId)
 
-    if (!teamId) {
-      return Response.json({ error: 'team_id is required' }, { status: 400 })
-    }
+    if (teamsError) throw teamsError
 
-    const { data, error } = await supabase
-      .from('Rules')
-      .select('*')
-      .eq('team_id', teamId)
+    // Return rules per team, with defaults if not set
+    const result = (teams || []).map(t => ({
+      team_id: t.id,
+      team_name: t.team_name,
+      rules: t.solver_rules || getDefaultRules(),
+    }))
 
-    if (error) {
-      console.error('Error fetching rules:', error)
-      throw error
-    }
-
-    return Response.json(data || [])
+    return NextResponse.json(result)
   } catch (error) {
-    console.error('Error in GET /api/rules:', error)
-    return Response.json({ error: error.message }, { status: 500 })
+    console.error('Error fetching rules:', error)
+    return NextResponse.json({ error: 'Failed to fetch rules' }, { status: 500 })
   }
 }
 
-export async function POST(request) {
+export async function PUT(request) {
   try {
     const { userId } = await auth()
-    
-    if (!userId) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const body = await request.json()
-    const { team_id, type, enabled, value } = body
+    const { team_id, rules } = await request.json()
+    if (!team_id) return NextResponse.json({ error: 'team_id required' }, { status: 400 })
 
-    if (!team_id) {
-      return Response.json({ error: 'team_id is required' }, { status: 400 })
-    }
+    const { data, error } = await supabase
+      .from('Teams')
+      .update({ solver_rules: rules })
+      .eq('id', team_id)
+      .eq('user_id', userId)
+      .select()
+      .single()
 
-    // Check if rule exists
-    const { data: existing, error: selectError } = await supabase
-      .from('Rules')
-      .select('id')
-      .eq('team_id', team_id)
-      .eq('type', type)
-      .maybeSingle()
+    if (error) throw error
 
-    if (selectError) {
-      console.error('Error checking existing rule:', selectError)
-      throw selectError
-    }
-
-    if (existing) {
-      // Update existing rule
-      const { data, error } = await supabase
-        .from('Rules')
-        .update({ enabled, value })
-        .eq('id', existing.id)
-        .select()
-        .single()
-
-      if (error) throw error
-      return Response.json(data)
-    } else {
-      // Create new rule
-      const { data, error } = await supabase
-        .from('Rules')
-        .insert({
-          team_id,
-          type,
-          enabled,
-          value
-        })
-        .select()
-        .single()
-
-      if (error) throw error
-      return Response.json(data)
-    }
+    return NextResponse.json({ team_id, rules: data.solver_rules })
   } catch (error) {
-    console.error('Error in POST /api/rules:', error)
-    return Response.json({ error: error.message }, { status: 500 })
+    console.error('Error saving rules:', error)
+    return NextResponse.json({ error: 'Failed to save rules' }, { status: 500 })
+  }
+}
+
+function getDefaultRules() {
+  return {
+    // Hard constraints — OR-Tools enforces these absolutely
+    max_consecutive_days: 5,
+    min_rest_hours: 11,
+    max_weekly_hours: 48,
+    enforce_keyholder: true,
+    // Soft preferences — OR-Tools optimises toward these
+    prefer_consecutive_days_off: true,
+    fair_distribution: true,
+    balance_keyholder_shifts: true,
+    prefer_consistent_shift_times: false,
   }
 }
