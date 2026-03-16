@@ -2,522 +2,782 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 
-const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+const FONT_HEADING = "'Cal Sans', 'Plus Jakarta Sans', sans-serif"
+const FONT_BODY = "'Plus Jakarta Sans', sans-serif"
+const PINK = '#FF1F7D'
 
-const defaultOpeningHours = () => {
-  const hours = {}
-  daysOfWeek.forEach(day => {
-    const isWeekday = !['Saturday', 'Sunday'].includes(day)
-    hours[day] = {
-      open: isWeekday,
-      start: '09',
-      startMin: '00',
-      end: '17',
-      endMin: '00'
-    }
-  })
-  return hours
+const PALETTE = ['#8B5CF6', '#10B981', '#3B82F6', '#F97316', '#EF4444', '#6366F1']
+const PALETTE_LIGHT = ['#F5F3FF', '#ECFDF5', '#EFF6FF', '#FFF7ED', '#FEF2F2', '#EEF2FF']
+
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+const TIME_OPTIONS = Array.from({ length: 24 * 4 }, (_, i) => {
+  const h = Math.floor(i / 4)
+  const m = (i % 4) * 15
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+})
+
+const INDUSTRY_TEAMS = {
+  hospitality: [
+    { id: 'foh', label: 'Front of House' },
+    { id: 'bar', label: 'Bar' },
+    { id: 'kitchen', label: 'Kitchen' },
+    { id: 'kp', label: 'KP' },
+    { id: 'management', label: 'Management' },
+  ],
+  retail: [
+    { id: 'shopfloor', label: 'Shop Floor' },
+    { id: 'stockroom', label: 'Stock Room' },
+    { id: 'management', label: 'Management' },
+    { id: 'customerservice', label: 'Customer Service' },
+    { id: 'checkout', label: 'Checkout' },
+  ],
+  other: [],
 }
 
-const hourOptions = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
-const minuteOptions = ['00', '15', '30', '45']
+const defaultHours = () => {
+  const h = {}
+  DAYS.forEach(day => {
+    h[day] = {
+      open: !['Saturday', 'Sunday'].includes(day),
+      opening: '09:00',
+      first_shift: '09:00',
+      last_shift: '17:00',
+      closing: '17:00',
+    }
+  })
+  return h
+}
+
+// ── SVG Icons ─────────────────────────────────────────────────────────────────
+
+function HospitalityIcon({ size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8h1a4 4 0 010 8h-1" />
+      <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" />
+      <line x1="6" y1="1" x2="6" y2="4" />
+      <line x1="10" y1="1" x2="10" y2="4" />
+      <line x1="14" y1="1" x2="14" y2="4" />
+    </svg>
+  )
+}
+
+function RetailIcon({ size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" />
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <path d="M16 10a4 4 0 01-8 0" />
+    </svg>
+  )
+}
+
+function OtherIcon({ size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="7" width="20" height="14" rx="2" />
+      <path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" />
+      <line x1="12" y1="12" x2="12" y2="16" />
+      <line x1="10" y1="14" x2="14" y2="14" />
+    </svg>
+  )
+}
+
+function CheckIcon({ size = 12 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+    </svg>
+  )
+}
+
+function PlusIcon({ size = 12 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+    </svg>
+  )
+}
+
+function ArrowIcon({ size = 14 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+    </svg>
+  )
+}
+
+function BusinessIcon({ size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+      <polyline points="9 22 9 12 15 12 15 22" />
+    </svg>
+  )
+}
+
+function TeamIcon({ size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 00-3-3.87" />
+      <path d="M16 3.13a4 4 0 010 7.75" />
+    </svg>
+  )
+}
+
+function ClockIcon({ size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  )
+}
+
+// ── Progress bar ──────────────────────────────────────────────────────────────
+
+function ProgressBar({ step, total }) {
+  const pct = (step / total) * 100
+  return (
+    <div style={{ marginBottom: 32 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: '#9CA3AF', fontFamily: FONT_BODY }}>
+          Step {step} of {total}
+        </span>
+        <span style={{ fontSize: 12, color: '#9CA3AF', fontFamily: FONT_BODY }}>
+          {Math.round(pct)}%
+        </span>
+      </div>
+      <div style={{ height: 6, background: '#F3F4F6', borderRadius: 99, overflow: 'hidden' }}>
+        <div style={{
+          height: '100%', width: `${pct}%`,
+          background: `linear-gradient(90deg, ${PINK}, #FF5FA8)`,
+          borderRadius: 99, transition: 'width 0.4s ease',
+        }} />
+      </div>
+    </div>
+  )
+}
+
+// ── Step icon chip ────────────────────────────────────────────────────────────
+
+function StepChip({ icon, label, active }) {
+  return (
+    <div style={{
+      display: 'inline-flex', alignItems: 'center', gap: 6,
+      padding: '4px 10px', borderRadius: 8,
+      background: active ? '#FFF0F5' : '#F9FAFB',
+      border: `1px solid ${active ? '#FF1F7D44' : '#E5E7EB'}`,
+      color: active ? PINK : '#9CA3AF',
+      fontSize: 11, fontWeight: 600, marginBottom: 20,
+      fontFamily: FONT_BODY,
+    }}>
+      {icon}
+      {label}
+    </div>
+  )
+}
+
+// ── Time select ───────────────────────────────────────────────────────────────
+
+function TimeSelect({ value, onChange, disabled }) {
+  return (
+    <select
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      disabled={disabled}
+      style={{
+        height: 34, padding: '0 8px', borderRadius: 8,
+        border: `1px solid ${disabled ? '#F3F4F6' : '#E5E7EB'}`,
+        fontSize: 12, fontWeight: 600,
+        color: disabled ? '#D1D5DB' : '#111827',
+        background: disabled ? '#F9FAFB' : '#fff',
+        outline: 'none', cursor: disabled ? 'not-allowed' : 'pointer',
+        minWidth: 80, fontFamily: FONT_BODY,
+      }}
+    >
+      {TIME_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+    </select>
+  )
+}
+
+// ── Hours row ─────────────────────────────────────────────────────────────────
+
+function HoursRow({ day, data, onChange, onCopyTo, allDays }) {
+  const [showCopyTo, setShowCopyTo] = useState(false)
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 8,
+      padding: '8px 12px', borderRadius: 10,
+      background: data.open ? '#fff' : '#F9FAFB',
+      border: `1px solid ${data.open ? '#E5E7EB' : '#F3F4F6'}`,
+      opacity: data.open ? 1 : 0.6,
+      marginBottom: 5,
+    }}>
+      {/* Day toggle */}
+      <button
+        onClick={() => onChange({ ...data, open: !data.open })}
+        style={{
+          width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+          border: 'none',
+          background: data.open ? PINK : '#E5E7EB',
+          color: '#fff',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer', transition: 'all .1s',
+        }}
+      >
+        {data.open && <CheckIcon size={11} />}
+      </button>
+
+      {/* Day label */}
+      <span style={{
+        width: 36, fontSize: 11, fontWeight: 700,
+        color: data.open ? '#111827' : '#9CA3AF',
+        fontFamily: FONT_BODY, flexShrink: 0,
+      }}>
+        {day.slice(0, 3)}
+      </span>
+
+      {data.open ? (
+        <>
+          {/* Equation: Open → First shift → Last shift → Close */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, flex: 1, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <span style={{ fontSize: 8, fontWeight: 600, color: '#9CA3AF', letterSpacing: 0.4 }}>OPEN</span>
+              <TimeSelect value={data.opening} onChange={v => onChange({ ...data, opening: v })} />
+            </div>
+
+            <span style={{ color: '#D1D5DB', fontSize: 12, marginTop: 14 }}>→</span>
+
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <span style={{ fontSize: 8, fontWeight: 600, color: '#8B5CF6', letterSpacing: 0.4 }}>FIRST SHIFT</span>
+              <TimeSelect value={data.first_shift} onChange={v => onChange({ ...data, first_shift: v })} />
+            </div>
+
+            <span style={{ color: '#D1D5DB', fontSize: 12, marginTop: 14 }}>→</span>
+
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <span style={{ fontSize: 8, fontWeight: 600, color: '#8B5CF6', letterSpacing: 0.4 }}>LAST SHIFT</span>
+              <TimeSelect value={data.last_shift} onChange={v => onChange({ ...data, last_shift: v })} />
+            </div>
+
+            <span style={{ color: '#D1D5DB', fontSize: 12, marginTop: 14 }}>→</span>
+
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <span style={{ fontSize: 8, fontWeight: 600, color: '#9CA3AF', letterSpacing: 0.4 }}>CLOSE</span>
+              <TimeSelect value={data.closing} onChange={v => onChange({ ...data, closing: v })} />
+            </div>
+          </div>
+
+          {/* Copy to */}
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <button
+              onClick={() => setShowCopyTo(v => !v)}
+              style={{
+                height: 26, padding: '0 8px', borderRadius: 6,
+                border: '1px solid #E5E7EB', background: '#F9FAFB',
+                fontSize: 10, fontWeight: 600, color: '#6B7280',
+                cursor: 'pointer', whiteSpace: 'nowrap',
+              }}
+            >
+              Copy to
+            </button>
+            {showCopyTo && (
+              <div style={{
+                position: 'absolute', right: 0, top: 30, zIndex: 20,
+                background: '#fff', border: '1px solid #E5E7EB', borderRadius: 8,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                overflow: 'hidden', minWidth: 120,
+              }}>
+                <button
+                  onClick={() => { onCopyTo('all'); setShowCopyTo(false) }}
+                  style={{
+                    display: 'block', width: '100%', padding: '8px 12px',
+                    textAlign: 'left', fontSize: 11, fontWeight: 600,
+                    color: PINK, background: 'transparent', border: 'none',
+                    cursor: 'pointer', borderBottom: '1px solid #F3F4F6',
+                  }}
+                >
+                  All days
+                </button>
+                <button
+                  onClick={() => { onCopyTo('weekdays'); setShowCopyTo(false) }}
+                  style={{
+                    display: 'block', width: '100%', padding: '8px 12px',
+                    textAlign: 'left', fontSize: 11, fontWeight: 600,
+                    color: '#374151', background: 'transparent', border: 'none',
+                    cursor: 'pointer', borderBottom: '1px solid #F3F4F6',
+                  }}
+                >
+                  Weekdays
+                </button>
+                <button
+                  onClick={() => { onCopyTo('weekends'); setShowCopyTo(false) }}
+                  style={{
+                    display: 'block', width: '100%', padding: '8px 12px',
+                    textAlign: 'left', fontSize: 11, fontWeight: 600,
+                    color: '#374151', background: 'transparent', border: 'none',
+                    cursor: 'pointer', borderBottom: '1px solid #F3F4F6',
+                  }}
+                >
+                  Weekends
+                </button>
+                {allDays.filter(d => d !== day).map(d => (
+                  <button
+                    key={d}
+                    onClick={() => { onCopyTo(d); setShowCopyTo(false) }}
+                    style={{
+                      display: 'block', width: '100%', padding: '7px 12px',
+                      textAlign: 'left', fontSize: 11, color: '#374151',
+                      background: 'transparent', border: 'none', cursor: 'pointer',
+                    }}
+                  >
+                    {d.slice(0, 3)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        <span style={{ fontSize: 12, color: '#9CA3AF', fontStyle: 'italic', flex: 1 }}>Closed</span>
+      )}
+    </div>
+  )
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 export default function PreWizardOnboarding() {
   const router = useRouter()
-  const [currentStep, setCurrentStep] = useState(1)
+  const [step, setStep] = useState(1)
   const [saving, setSaving] = useState(false)
-  const totalSteps = 5
-  
-  // Form state
-  const [formData, setFormData] = useState({
-    locale_id: null,
-    business_name: '',
-    employee_count_range: null,
-    industry: null,
-    opening_hours: defaultOpeningHours()
-  })
+  const TOTAL = 4
 
-  // Locale options with compliance info
-  const [locales, setLocales] = useState([])
-  const [selectedLocale, setSelectedLocale] = useState(null)
-  const [localesLoading, setLocalesLoading] = useState(true)
+  const [businessName, setBusinessName] = useState('')
+  const [industry, setIndustry] = useState(null)
+  const [otherIndustry, setOtherIndustry] = useState('')
+  const [selectedTeams, setSelectedTeams] = useState([])
+  const [customTeam, setCustomTeam] = useState('')
+  const [hours, setHours] = useState(defaultHours())
 
-  // Fetch locales on mount
-  useEffect(() => {
-    const fetchLocales = async () => {
-      try {
-        const response = await fetch('/api/locales')
-        if (response.ok) {
-          const data = await response.json()
-          setLocales(data)
-        }
-      } catch (error) {
-        console.error('Error fetching locales:', error)
-      } finally {
-        setLocalesLoading(false)
-      }
-    }
-    fetchLocales()
-  }, [])
+  const presetTeams = industry ? (INDUSTRY_TEAMS[industry] || []) : []
 
-  const employeeRanges = [
-    { value: '5-10', label: '5-10 employees' },
-    { value: '11-25', label: '11-25 employees' },
-    { value: '26-50', label: '26-50 employees' },
-    { value: '51-100', label: '51-100 employees' },
-    { value: '100+', label: '100+ employees' }
-  ]
-
-  const industries = [
-    { value: 'hospitality', label: 'Hospitality', icon: '🍽️' },
-    { value: 'retail', label: 'Retail', icon: '🛍️' },
-    { value: 'healthcare', label: 'Healthcare', icon: '🏥' },
-    { value: 'other', label: 'Other', icon: '🏢' }
-  ]
-
-  const handleLocaleSelect = (localeId) => {
-    const locale = locales.find(l => l.id === localeId)
-    setSelectedLocale(locale)
-    setFormData({ ...formData, locale_id: localeId })
-  }
-
-  const updateOpeningHours = (day, field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      opening_hours: {
-        ...prev.opening_hours,
-        [day]: {
-          ...prev.opening_hours[day],
-          [field]: value
-        }
-      }
-    }))
-  }
-
-  const toggleDayOpen = (day) => {
-    setFormData(prev => ({
-      ...prev,
-      opening_hours: {
-        ...prev.opening_hours,
-        [day]: {
-          ...prev.opening_hours[day],
-          open: !prev.opening_hours[day].open
-        }
-      }
-    }))
-  }
-
-  // Copy first open day's hours to all other open days
-  const applyToAllOpen = () => {
-    const firstOpenDay = daysOfWeek.find(d => formData.opening_hours[d].open)
-    if (!firstOpenDay) return
-    const source = formData.opening_hours[firstOpenDay]
-    
-    setFormData(prev => {
-      const updated = { ...prev.opening_hours }
-      daysOfWeek.forEach(day => {
-        if (updated[day].open) {
-          updated[day] = { ...updated[day], start: source.start, startMin: source.startMin, end: source.end, endMin: source.endMin }
-        }
-      })
-      return { ...prev, opening_hours: updated }
+  const toggleTeam = (id, label) => {
+    setSelectedTeams(prev => {
+      const exists = prev.find(t => t.id === id)
+      if (exists) return prev.filter(t => t.id !== id)
+      return [...prev, { id, label }]
     })
   }
 
-  const handleNext = () => {
-    setCurrentStep(currentStep + 1)
+  const addCustomTeam = () => {
+    const trimmed = customTeam.trim()
+    if (!trimmed) return
+    const id = `custom_${Date.now()}`
+    setSelectedTeams(prev => [...prev, { id, label: trimmed }])
+    setCustomTeam('')
   }
 
-  const handleBack = () => {
-    setCurrentStep(currentStep - 1)
+  const updateDayHours = (day, data) => {
+    setHours(prev => ({ ...prev, [day]: data }))
+  }
+
+  const copyTo = (sourceDay, target) => {
+    const source = hours[sourceDay]
+    setHours(prev => {
+      const updated = { ...prev }
+      const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+      const weekends = ['Saturday', 'Sunday']
+      const targets = target === 'all' ? DAYS
+        : target === 'weekdays' ? weekdays
+        : target === 'weekends' ? weekends
+        : [target]
+      targets.forEach(d => {
+        if (d !== sourceDay) {
+          updated[d] = { ...updated[d], opening: source.opening, first_shift: source.first_shift, last_shift: source.last_shift, closing: source.closing }
+        }
+      })
+      return updated
+    })
+  }
+
+  const canProceed = () => {
+    if (step === 1) return businessName.trim().length > 0
+    if (step === 2) return industry !== null && (industry !== 'other' || otherIndustry.trim().length > 0)
+    if (step === 3) return selectedTeams.length > 0
+    if (step === 4) return DAYS.some(d => hours[d].open)
+    return false
   }
 
   const handleSubmit = async () => {
     setSaving(true)
     try {
-      const response = await fetch('/api/onboarding', {
+      const teamsWithColors = selectedTeams.map((t, i) => ({
+        ...t,
+        color: PALETTE[i % PALETTE.length],
+        colorLight: PALETTE_LIGHT[i % PALETTE_LIGHT.length],
+      }))
+
+      const res = await fetch('/api/onboarding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          business_name: businessName.trim(),
+          industry: industry === 'other' ? otherIndustry.trim() : industry,
+          teams: teamsWithColors,
+          operating_hours: hours,
+        }),
       })
 
-      if (response.ok) {
-        router.push('/dashboard')
+      if (res.ok) {
+        router.push('/dashboard?tour=start')
       } else {
-        const data = await response.json()
-        alert(data.error || 'Failed to save onboarding data')
+        const d = await res.json()
+        alert(d.error || 'Failed to save — please try again')
       }
-    } catch (error) {
-      console.error('Error saving onboarding:', error)
-      alert('Failed to save onboarding data')
+    } catch (err) {
+      console.error(err)
+      alert('Failed to save — please try again')
     } finally {
       setSaving(false)
     }
   }
 
-  const canProceed = () => {
-    switch (currentStep) {
-      case 1: return formData.locale_id !== null
-      case 2: return formData.business_name.trim().length > 0
-      case 3: return formData.employee_count_range !== null
-      case 4: return formData.industry !== null
-      case 5: {
-        return daysOfWeek.some(d => formData.opening_hours[d].open)
-      }
-      default: return false
-    }
-  }
-
-  const openDaysSummary = () => {
-    const openDays = daysOfWeek.filter(d => formData.opening_hours[d].open)
-    if (openDays.length === 7) return 'Open every day'
-    if (openDays.length === 0) return 'No days selected'
-    if (openDays.length === 5 && !formData.opening_hours.Saturday.open && !formData.opening_hours.Sunday.open) {
-      return 'Mon to Fri'
-    }
-    if (openDays.length === 6) {
-      const closedDay = daysOfWeek.find(d => !formData.opening_hours[d].open)
-      return `Every day except ${closedDay}`
-    }
-    return openDays.map(d => d.slice(0, 3)).join(', ')
-  }
+  const stepMeta = [
+    { icon: <BusinessIcon size={13} />, label: 'Business' },
+    { icon: <OtherIcon size={13} />, label: 'Industry' },
+    { icon: <TeamIcon size={13} />, label: 'Teams' },
+    { icon: <ClockIcon size={13} />, label: 'Hours' },
+  ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-pink-50 flex flex-col items-center justify-center p-4">
+    <div style={{
+      minHeight: '100vh', fontFamily: FONT_BODY,
+      background: 'linear-gradient(135deg, #FFF0F5 0%, #fff 50%, #F5F3FF 100%)',
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      justifyContent: 'center', padding: 24,
+    }}>
+
       {/* Logo */}
-      <div className="mb-8 text-center">
-        <div className="inline-flex items-center gap-2.5 bg-white px-7 py-4 rounded-2xl shadow-lg">
-          <Image 
-            src="/logo.svg" 
-            alt="Shiftly" 
-            width={52} 
-            height={52}
-            className="flex-shrink-0"
-          />
-          <span className="text-3xl font-bold text-gray-900 mt-0.5" style={{ fontFamily: "'Cal Sans', sans-serif" }}>
-            Shiftly
+      <div style={{ marginBottom: 28, textAlign: 'center' }}>
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 8,
+          background: '#fff', padding: '10px 24px', borderRadius: 12,
+          boxShadow: '0 2px 16px rgba(0,0,0,0.08)', border: '1px solid #F3F4F6',
+        }}>
+          <span style={{ fontFamily: FONT_HEADING, fontSize: 22, fontWeight: 700, color: '#111827' }}>
+            Shift<span style={{ color: PINK }}>ly</span>
           </span>
         </div>
       </div>
 
-      <div className="w-full max-w-2xl">
-        {/* Progress Bar */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-600">Step {currentStep} of {totalSteps}</span>
-            <span className="text-sm text-gray-500">{Math.round((currentStep / totalSteps) * 100)}%</span>
-          </div>
-          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-pink-500 to-pink-600 transition-all duration-500 ease-out"
-              style={{ width: `${(currentStep / totalSteps) * 100}%` }}
-            />
-          </div>
-        </div>
+      <div style={{ width: '100%', maxWidth: 620 }}>
+        <ProgressBar step={step} total={TOTAL} />
 
-        {/* Question Cards */}
-        <div className="bg-white rounded-3xl shadow-xl p-8 sm:p-12 min-h-[500px] flex flex-col">
-          {/* Step 1: Location */}
-          {currentStep === 1 && (
-            <div className="flex-1 flex flex-col animate-fade-in">
-              <div className="mb-8">
-                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 font-cal">
-                  Where is your business based?
-                </h1>
-                <p className="text-lg text-gray-600">
-                  We'll apply the right compliance rules and formatting for your region.
-                </p>
-              </div>
+        <div style={{
+          background: '#fff', borderRadius: 20,
+          boxShadow: '0 8px 40px rgba(0,0,0,0.08)',
+          border: '1px solid #F3F4F6',
+          padding: '32px 36px', minHeight: 480,
+          display: 'flex', flexDirection: 'column',
+        }}>
 
-              {localesLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="w-8 h-8 border-4 border-gray-200 border-t-pink-500 rounded-full animate-spin"></div>
-                </div>
-              ) : (
-                <div className="space-y-3 flex-1">
-                  {locales.map((locale) => (
-                    <button
-                      key={locale.id}
-                      onClick={() => handleLocaleSelect(locale.id)}
-                      className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
-                        formData.locale_id === locale.id
-                          ? 'border-pink-500 bg-pink-50 shadow-md'
-                          : 'border-gray-200 hover:border-pink-300 hover:bg-pink-50/50'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-lg font-medium text-gray-900">
-                          {locale.country_name}
-                        </span>
-                        {formData.locale_id === locale.id && (
-                          <div className="w-6 h-6 bg-pink-500 rounded-full flex items-center justify-center">
-                            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Compliance Info */}
-              {selectedLocale && (
-                <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-200">
-                  <div className="flex items-start gap-3">
-                    <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                    </svg>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-blue-900 mb-1">Your compliance settings</p>
-                      <div className="text-xs text-blue-700 space-y-0.5">
-                        {selectedLocale.max_weekly_hours && (
-                          <div>Max {selectedLocale.max_weekly_hours} hours per week</div>
-                        )}
-                        {selectedLocale.min_rest_hours && (
-                          <div>Min {selectedLocale.min_rest_hours} hours rest between shifts</div>
-                        )}
-                        <div>{selectedLocale.annual_leave_days} days annual leave</div>
-                        <div>Currency: {selectedLocale.currency_code}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+          {/* ── Step 1: Business Name ── */}
+          {step === 1 && (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <StepChip icon={<BusinessIcon size={13} />} label="Business" active />
+              <h1 style={{ fontFamily: FONT_HEADING, fontSize: 28, fontWeight: 700, color: '#111827', margin: '0 0 8px' }}>
+                What's your business called?
+              </h1>
+              <p style={{ fontSize: 14, color: '#6B7280', margin: '0 0 28px' }}>
+                This appears throughout your workspace.
+              </p>
+              <input
+                type="text"
+                value={businessName}
+                onChange={e => setBusinessName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && canProceed() && setStep(2)}
+                placeholder="e.g. The Crown, Riverside Retail..."
+                autoFocus
+                style={{
+                  width: '100%', padding: '14px 16px', fontSize: 18, fontWeight: 600,
+                  border: '2px solid #E5E7EB', borderRadius: 10, color: '#111827',
+                  background: '#fff', outline: 'none', boxSizing: 'border-box',
+                  transition: 'border-color .15s',
+                  borderColor: businessName.trim() ? PINK : '#E5E7EB',
+                }}
+              />
             </div>
           )}
 
-          {/* Step 2: Business Name */}
-          {currentStep === 2 && (
-            <div className="flex-1 flex flex-col animate-fade-in">
-              <div className="mb-8">
-                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 font-cal">
-                  What's your business name?
-                </h1>
-                <p className="text-lg text-gray-600">
-                  This will appear throughout your workspace.
-                </p>
-              </div>
+          {/* ── Step 2: Industry ── */}
+          {step === 2 && (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <StepChip icon={<OtherIcon size={13} />} label="Industry" active />
+              <h1 style={{ fontFamily: FONT_HEADING, fontSize: 28, fontWeight: 700, color: '#111827', margin: '0 0 8px' }}>
+                What industry are you in?
+              </h1>
+              <p style={{ fontSize: 14, color: '#6B7280', margin: '0 0 24px' }}>
+                We'll pre-load team presets and shift templates that match your business.
+              </p>
 
-              <div className="flex-1">
-                <input
-                  type="text"
-                  value={formData.business_name}
-                  onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
-                  placeholder="e.g., Main Street Coffee"
-                  className="w-full px-6 py-4 text-2xl border-2 border-gray-300 rounded-xl focus:border-pink-500 focus:ring-4 focus:ring-pink-100 transition-all text-gray-900 bg-white placeholder-gray-400"
-                  autoFocus
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Step 3: Employee Count */}
-          {currentStep === 3 && (
-            <div className="flex-1 flex flex-col animate-fade-in">
-              <div className="mb-8">
-                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 font-cal">
-                  How many employees do you have?
-                </h1>
-                <p className="text-lg text-gray-600">
-                  This helps us understand your team size.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1">
-                {employeeRanges.map((range) => (
-                  <button
-                    key={range.value}
-                    onClick={() => setFormData({ ...formData, employee_count_range: range.value })}
-                    className={`p-6 rounded-xl border-2 transition-all ${
-                      formData.employee_count_range === range.value
-                        ? 'border-pink-500 bg-pink-50 shadow-md'
-                        : 'border-gray-200 hover:border-pink-300 hover:bg-pink-50/50'
-                    }`}
-                  >
-                    <span className="text-xl font-semibold text-gray-900">{range.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Step 4: Industry */}
-          {currentStep === 4 && (
-            <div className="flex-1 flex flex-col animate-fade-in">
-              <div className="mb-8">
-                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 font-cal">
-                  What industry are you in?
-                </h1>
-                <p className="text-lg text-gray-600">
-                  We'll customize your experience based on your industry.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 flex-1">
-                {industries.map((ind) => (
-                  <button
-                    key={ind.value}
-                    onClick={() => setFormData({ ...formData, industry: ind.value })}
-                    className={`p-6 rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-3 ${
-                      formData.industry === ind.value
-                        ? 'border-pink-500 bg-pink-50 shadow-md'
-                        : 'border-gray-200 hover:border-pink-300 hover:bg-pink-50/50'
-                    }`}
-                  >
-                    <span className="text-4xl">{ind.icon}</span>
-                    <span className="text-lg font-semibold text-gray-900">{ind.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Step 5: Opening Hours */}
-          {currentStep === 5 && (
-            <div className="flex-1 flex flex-col animate-fade-in">
-              <div className="mb-6">
-                <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 font-cal">
-                  What are your opening hours?
-                </h1>
-                <p className="text-lg text-gray-600">
-                  We'll use this to generate your shift patterns. You can always adjust later.
-                </p>
-              </div>
-
-              {/* Apply to all button */}
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-sm text-gray-500">{openDaysSummary()}</p>
-                <button
-                  type="button"
-                  onClick={applyToAllOpen}
-                  className="text-xs font-medium text-pink-600 hover:text-pink-700 transition-colors"
-                >
-                  Apply first day to all
-                </button>
-              </div>
-
-              {/* Days grid */}
-              <div className="space-y-2 flex-1">
-                {daysOfWeek.map((day) => {
-                  const dayData = formData.opening_hours[day]
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 16 }}>
+                {[
+                  { value: 'hospitality', label: 'Hospitality', Icon: HospitalityIcon },
+                  { value: 'retail', label: 'Retail', Icon: RetailIcon },
+                  { value: 'other', label: 'Other', Icon: OtherIcon },
+                ].map(({ value, label, Icon }) => {
+                  const on = industry === value
                   return (
-                    <div
-                      key={day}
-                      className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
-                        dayData.open ? 'bg-white border border-gray-200' : 'bg-gray-50 border border-gray-100'
-                      }`}
+                    <button
+                      key={value}
+                      onClick={() => setIndustry(value)}
+                      style={{
+                        padding: '20px 12px', borderRadius: 10, cursor: 'pointer',
+                        border: on ? `2px solid ${PINK}` : '2px solid #E5E7EB',
+                        background: on ? '#FFF0F5' : '#F9FAFB',
+                        display: 'flex', flexDirection: 'column',
+                        alignItems: 'center', gap: 8, transition: 'all .12s',
+                      }}
                     >
-                      {/* Day name + toggle */}
-                      <button
-                        onClick={() => toggleDayOpen(day)}
-                        className="flex items-center gap-2 w-24 flex-shrink-0"
-                      >
-                        <div className={`w-5 h-5 rounded flex items-center justify-center transition-all ${
-                          dayData.open ? 'bg-pink-500' : 'bg-gray-300'
-                        }`}>
-                          {dayData.open && (
-                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                            </svg>
-                          )}
-                        </div>
-                        <span className={`text-sm font-medium ${dayData.open ? 'text-gray-900' : 'text-gray-400'}`}>
-                          {day.slice(0, 3)}
-                        </span>
-                      </button>
-
-                      {/* Time selectors or Closed label */}
-                      {dayData.open ? (
-                        <div className="flex items-center gap-1.5 flex-1">
-                          <select
-                            value={dayData.start}
-                            onChange={(e) => updateOpeningHours(day, 'start', e.target.value)}
-                            className="w-16 px-1.5 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white text-center focus:ring-2 focus:ring-pink-500 focus:border-transparent appearance-none"
-                          >
-                            {hourOptions.map(h => <option key={h} value={h}>{h}</option>)}
-                          </select>
-                          <span className="text-gray-400 font-bold text-xs">:</span>
-                          <select
-                            value={dayData.startMin}
-                            onChange={(e) => updateOpeningHours(day, 'startMin', e.target.value)}
-                            className="w-14 px-1.5 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white text-center focus:ring-2 focus:ring-pink-500 focus:border-transparent appearance-none"
-                          >
-                            {minuteOptions.map(m => <option key={m} value={m}>{m}</option>)}
-                          </select>
-
-                          <span className="text-gray-400 mx-1">to</span>
-
-                          <select
-                            value={dayData.end}
-                            onChange={(e) => updateOpeningHours(day, 'end', e.target.value)}
-                            className="w-16 px-1.5 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white text-center focus:ring-2 focus:ring-pink-500 focus:border-transparent appearance-none"
-                          >
-                            {hourOptions.map(h => <option key={h} value={h}>{h}</option>)}
-                          </select>
-                          <span className="text-gray-400 font-bold text-xs">:</span>
-                          <select
-                            value={dayData.endMin}
-                            onChange={(e) => updateOpeningHours(day, 'endMin', e.target.value)}
-                            className="w-14 px-1.5 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white text-center focus:ring-2 focus:ring-pink-500 focus:border-transparent appearance-none"
-                          >
-                            {minuteOptions.map(m => <option key={m} value={m}>{m}</option>)}
-                          </select>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-gray-400 italic flex-1">Closed</span>
-                      )}
-                    </div>
+                      <div style={{ color: on ? PINK : '#9CA3AF' }}>
+                        <Icon size={24} />
+                      </div>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: on ? PINK : '#374151' }}>
+                        {label}
+                      </span>
+                    </button>
                   )
                 })}
               </div>
 
-              <p className="text-xs text-gray-400 mt-3">
-                Don&apos;t worry about staff prep or close-down time. You can fine-tune shift patterns in your workspace.
+              {industry === 'other' && (
+                <input
+                  type="text"
+                  value={otherIndustry}
+                  onChange={e => setOtherIndustry(e.target.value)}
+                  placeholder="Tell us your industry..."
+                  autoFocus
+                  style={{
+                    width: '100%', padding: '11px 14px', fontSize: 14,
+                    border: '1.5px solid #E5E7EB', borderRadius: 8, color: '#111827',
+                    background: '#fff', outline: 'none', boxSizing: 'border-box',
+                    borderColor: otherIndustry.trim() ? PINK : '#E5E7EB',
+                  }}
+                />
+              )}
+            </div>
+          )}
+
+          {/* ── Step 3: Teams ── */}
+          {step === 3 && (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <StepChip icon={<TeamIcon size={13} />} label="Teams" active />
+              <h1 style={{ fontFamily: FONT_HEADING, fontSize: 28, fontWeight: 700, color: '#111827', margin: '0 0 8px' }}>
+                Select your teams
+              </h1>
+              <p style={{ fontSize: 14, color: '#6B7280', margin: '0 0 6px' }}>
+                Each team gets its own shift patterns and scheduling rules.
+              </p>
+
+              {presetTeams.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, marginTop: 16 }}>
+                  {presetTeams.map((t, i) => {
+                    const on = selectedTeams.find(s => s.id === t.id)
+                    const color = PALETTE[i % PALETTE.length]
+                    const colorLight = PALETTE_LIGHT[i % PALETTE_LIGHT.length]
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => toggleTeam(t.id, t.label)}
+                        style={{
+                          padding: '8px 16px', borderRadius: 8, cursor: 'pointer',
+                          border: on ? `2px solid ${color}` : '1.5px solid #E5E7EB',
+                          background: on ? colorLight : '#F9FAFB',
+                          color: on ? color : '#6B7280',
+                          fontSize: 12, fontWeight: 600,
+                          display: 'flex', alignItems: 'center', gap: 6,
+                          transition: 'all .12s',
+                        }}
+                      >
+                        {on && (
+                          <div style={{
+                            width: 14, height: 14, borderRadius: 3,
+                            background: color, color: '#fff',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            flexShrink: 0,
+                          }}>
+                            <CheckIcon size={9} />
+                          </div>
+                        )}
+                        {t.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Selected custom teams */}
+              {selectedTeams.filter(t => !presetTeams.find(p => p.id === t.id)).map((t, i) => {
+                const color = PALETTE[(presetTeams.length + i) % PALETTE.length]
+                const colorLight = PALETTE_LIGHT[(presetTeams.length + i) % PALETTE_LIGHT.length]
+                return (
+                  <div key={t.id} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '6px 12px', borderRadius: 8, marginBottom: 4,
+                    background: colorLight, border: `2px solid ${color}`,
+                    color, fontSize: 12, fontWeight: 600,
+                  }}>
+                    {t.label}
+                    <button
+                      onClick={() => setSelectedTeams(prev => prev.filter(s => s.id !== t.id))}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color, padding: 0, marginLeft: 2 }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                )
+              })}
+
+              {/* Custom team input */}
+              <div style={{ display: 'flex', gap: 8, marginTop: 'auto' }}>
+                <input
+                  type="text"
+                  value={customTeam}
+                  onChange={e => setCustomTeam(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && addCustomTeam()}
+                  placeholder="Add custom team..."
+                  style={{
+                    flex: 1, padding: '9px 12px', fontSize: 12, fontWeight: 500,
+                    border: '1.5px solid #E5E7EB', borderRadius: 8, color: '#111827',
+                    background: '#fff', outline: 'none',
+                  }}
+                />
+                <button
+                  onClick={addCustomTeam}
+                  disabled={!customTeam.trim()}
+                  style={{
+                    height: 38, padding: '0 14px', borderRadius: 8, border: 'none',
+                    background: customTeam.trim() ? PINK : '#F3F4F6',
+                    color: customTeam.trim() ? '#fff' : '#9CA3AF',
+                    fontSize: 12, fontWeight: 600, cursor: customTeam.trim() ? 'pointer' : 'not-allowed',
+                    display: 'flex', alignItems: 'center', gap: 5,
+                  }}
+                >
+                  <PlusIcon size={11} /> Add
+                </button>
+              </div>
+
+              {selectedTeams.length > 0 && (
+                <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 8 }}>
+                  {selectedTeams.length} team{selectedTeams.length !== 1 ? 's' : ''} selected
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Step 4: Hours ── */}
+          {step === 4 && (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              <StepChip icon={<ClockIcon size={13} />} label="Hours" active />
+              <h1 style={{ fontFamily: FONT_HEADING, fontSize: 28, fontWeight: 700, color: '#111827', margin: '0 0 8px' }}>
+                When do you operate?
+              </h1>
+              <p style={{ fontSize: 14, color: '#6B7280', margin: '0 0 6px' }}>
+                Open and Close times anchor your shift patterns.{' '}
+                <span style={{ color: '#8B5CF6', fontWeight: 600 }}>First/Last shift</span>
+                {' '}set when staff rotas begin and end.
+              </p>
+
+              <div style={{ flex: 1, overflowY: 'auto', marginTop: 14 }}>
+                {DAYS.map(day => (
+                  <HoursRow
+                    key={day}
+                    day={day}
+                    data={hours[day]}
+                    onChange={data => updateDayHours(day, data)}
+                    onCopyTo={target => copyTo(day, target)}
+                    allDays={DAYS}
+                  />
+                ))}
+              </div>
+
+              <p style={{ fontSize: 11, color: '#9CA3AF', marginTop: 8 }}>
+                You can adjust these anytime in Settings. Shift patterns on the Shifts page will auto-anchor to these times.
               </p>
             </div>
           )}
 
-          {/* Navigation Buttons */}
-          <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-200">
+          {/* ── Nav buttons ── */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            marginTop: 28, paddingTop: 20, borderTop: '1px solid #F3F4F6',
+          }}>
             <button
-              onClick={handleBack}
-              disabled={currentStep === 1}
-              className="px-6 py-3 text-gray-600 hover:text-gray-900 font-medium disabled:opacity-0 disabled:cursor-default transition-all"
+              onClick={() => setStep(s => s - 1)}
+              disabled={step === 1}
+              style={{
+                padding: '10px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                border: '1px solid #E5E7EB', background: '#fff', color: '#6B7280',
+                cursor: step === 1 ? 'default' : 'pointer',
+                opacity: step === 1 ? 0 : 1, transition: 'opacity .15s',
+              }}
             >
               Back
             </button>
 
-            {currentStep < totalSteps ? (
+            {step < TOTAL ? (
               <button
-                onClick={handleNext}
+                onClick={() => setStep(s => s + 1)}
                 disabled={!canProceed()}
-                className="px-8 py-3 bg-gradient-to-r from-pink-500 to-pink-600 text-white font-semibold rounded-xl hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                style={{
+                  padding: '10px 24px', borderRadius: 8, fontSize: 13, fontWeight: 700,
+                  border: 'none', background: canProceed() ? PINK : '#F3F4F6',
+                  color: canProceed() ? '#fff' : '#9CA3AF',
+                  cursor: canProceed() ? 'pointer' : 'not-allowed',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  transition: 'all .12s',
+                }}
               >
-                Continue
+                Continue <ArrowIcon size={13} />
               </button>
             ) : (
               <button
                 onClick={handleSubmit}
                 disabled={!canProceed() || saving}
-                className="px-8 py-3 bg-gradient-to-r from-pink-500 to-pink-600 text-white font-semibold rounded-xl hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                style={{
+                  padding: '10px 24px', borderRadius: 8, fontSize: 13, fontWeight: 700,
+                  border: 'none', background: canProceed() && !saving ? PINK : '#F3F4F6',
+                  color: canProceed() && !saving ? '#fff' : '#9CA3AF',
+                  cursor: canProceed() && !saving ? 'pointer' : 'not-allowed',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                }}
               >
                 {saving ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Saving...
+                    <div style={{
+                      width: 14, height: 14, borderRadius: 99,
+                      border: '2px solid rgba(255,255,255,0.3)',
+                      borderTopColor: '#fff', animation: 'spin 0.6s linear infinite',
+                    }} />
+                    Saving…
                   </>
                 ) : (
-                  'Get Started'
+                  <>Get Started <ArrowIcon size={13} /></>
                 )}
               </button>
             )}
           </div>
         </div>
       </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </div>
   )
 }
