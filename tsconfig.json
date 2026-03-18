@@ -29,6 +29,6 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-, "app/dashboard/rules/page.jsx", "app/components/navigation.jsx", "app/layout.jsx", "app/dashboard/staff/page.js", "app/api/route.js", "next.config.js", "middleware.js", "app/landing-page.tsx"  ],
+, "app/dashboard/rules/page.jsx", "app/components/navigation.jsx", "app/layout.jsx", "app/dashboard/staff/page.js", "app/api/route.js", "next.config.js", "proxy.js", "app/landing-page.tsx"  ],
   "exclude": ["node_modules"]
 }

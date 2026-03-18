@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",
-    "@clerk/nextjs": "^6.34.5",
+    "@clerk/nextjs": "^6.35.0",
     "@ducanh2912/next-pwa": "^10.2.9",
     "@stripe/stripe-js": "^8.6.0",
     "@supabase/supabase-js": "^2.81.1",
