@@ -11,9 +11,38 @@
 }
 
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+  --foreground-rgb: #000000;
+  --background-start-rgb: #d6dbdc;
+  --background-end-rgb: #ffffff;
+
+  /* Colours */
+  --gray-0: #ffffff;
+  --gray-10: #FAFAFA;
+  --gray-50: #d6dbdc;
+  --gray-100: #F3F4F6;
+  --gray-200: #E5E7EB;
+  --gray-300: #CBD5E1;
+  --gray-400: #9CA3AF;
+  --gray-600: #6B7280;
+  --gray-700: #4B5563;
+  --gray-800: #374151;
+  --gray-900: #111827;
+  --gray-999: #000000;
+
+  --pink-50: #fef1f7;
+  --pink-100: #fee5f0;
+  --pink-200: #fecce3;
+  --pink-300: #ffa3ca;
+  --pink-400: #ff6ba8;
+  --pink-500: #fb3d88;
+  --pink-600: #ec1c68;
+  --pink-700: #cd0f52;
+  --pink-800: #aa1045;
+  --pink-900: #8d123c;
+
+  --red-500: #EF4444;
+  --red-600: #DC2626;
+  --green-500: #10B981;
 }
 
 @font-face {
@@ -24,22 +53,22 @@
   font-display: swap;
 }
 
-@media (prefers-color-scheme: dark) {
+/* @media (prefers-color-scheme: dark) {
   :root {
     --foreground-rgb: 255, 255, 255;
     --background-start-rgb: 0, 0, 0;
     --background-end-rgb: 0, 0, 0;
   }
-}
+} */
 
 body {
-  color: rgb(var(--foreground-rgb));
+  color: var(--gray-999);
   background: linear-gradient(
       to bottom,
       transparent,
-      rgb(var(--background-end-rgb))
+      var(--gray-0)
     )
-    rgb(var(--background-start-rgb));
+    var(--gray-50);
 }
 
 @layer utilities {
@@ -104,7 +133,7 @@ body {
   font-size: 2rem;       /* 32px - larger than before */
   font-weight: 600;
   line-height: 2.5rem;
-  color: #111827;
+  color: var(--gray-900);
   letter-spacing: -0.02em;
 }
 
@@ -113,7 +142,7 @@ body {
   font-size: 1.5rem;     /* 24px */
   font-weight: 600;
   line-height: 2rem;
-  color: #111827;
+  color: var(--gray-900);
   letter-spacing: -0.01em;
 }
 
@@ -122,7 +151,7 @@ body {
   font-size: 1.25rem;    /* 20px */
   font-weight: 600;
   line-height: 1.75rem;
-  color: #111827;
+  color: var(--gray-900);
 }
 
 .heading-page, .heading-section, .heading-subsection {
@@ -135,28 +164,28 @@ body {
   font-size: 1rem;       /* 16px */
   font-weight: 400;
   line-height: 1.5rem;
-  color: #374151;
+  color: var(--gray-800);
 }
 
 .body-small {
   font-size: 0.875rem;   /* 14px */
   font-weight: 400;
   line-height: 1.25rem;
-  color: #6B7280;
+  color: var(--gray-600);
 }
 
 .caption {
   font-size: 0.75rem;    /* 12px */
   font-weight: 400;
   line-height: 1rem;
-  color: #9CA3AF;
+  color: var(--gray-400);
 }
 
 .lead {
   font-size: 1.125rem;   /* 18px */
   font-weight: 400;
   line-height: 1.75rem;
-  color: #4B5563;
+  color: var(--gray-700);
 }
 
 /* ============================================
@@ -166,28 +195,30 @@ body {
 /* Primary Button (Pink) */
 .btn-primary {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  background: linear-gradient(135deg, #FF1F7D 0%, #FF006E 100%);
+  background: linear-gradient(135deg, var(--pink-600) 0%, var(--pink-700) 100%);
 }
 
 .btn-primary:hover:not(:disabled) {
   transform: translateY(-1px) scale(1.02);
-  box-shadow: 0 10px 25px -5px rgba(255, 31, 125, 0.35), 0 8px 10px -6px rgba(255, 31, 125, 0.25);
+  box-shadow:
+  0 10px 25px -5px rgb(from var(--pink-600) r g b / 35%),
+  0 8px 10px -6px rgb(from var(--pink-600) r g b / 25%);
 }
 
 .btn-primary:active:not(:disabled) {
   transform: translateY(0) scale(0.98);
-  box-shadow: 0 4px 10px -2px rgba(255, 31, 125, 0.3);
+  box-shadow: 0 4px 10px -2px rgb(from var(--pink-600) r g b / 30%);
 }
 
 /* Secondary Button (Gray/White) */
 .btn-secondary {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  border: 1px solid #E5E7EB;
+  border: 1px solid var(--gray-200);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  border-color: #FF1F7D;
-  background-color: #FFF0F7;
+  border-color: var(--pink-600);
+  background-color: var(--pink-50);
   transform: translateY(-1px);
 }
 
@@ -198,12 +229,12 @@ body {
 /* Danger Button (Red) */
 .btn-danger {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  background-color: #EF4444;
+  background-color: var(--red-500);
 }
 
 .btn-danger:hover:not(:disabled) {
-  background-color: #DC2626;
-  box-shadow: 0 8px 16px -4px rgba(239, 68, 68, 0.4);
+  background-color: var(--red-600);
+  box-shadow: 0 8px 16px -4px rgb(from var(--red-500) r g b / 40%);
   transform: translateY(-1px);
 }
 
@@ -214,7 +245,7 @@ body {
 
 .btn-icon:hover:not(:disabled) {
   transform: scale(1.1);
-  color: #FF1F7D;
+  color: var(--pink-600);
 }
 
 .btn-icon:active:not(:disabled) {
@@ -247,9 +278,9 @@ textarea:disabled {
 
 /* Exclude buttons and navigation links from global hover styles */
 a:not(.btn-primary):not(.btn-secondary):not([id^='nav-']):hover {
-  color: #FF1F7D;
+  color: var(--pink-600);
   text-decoration: underline;
-  text-decoration-color: #FF1F7D;
+  text-decoration-color: var(--pink-600);
   text-underline-offset: 2px;
 }
 
@@ -258,11 +289,11 @@ a:not(.btn-primary):not(.btn-secondary):not([id^='nav-']):hover {
    ============================================ */
 
 table tbody tr:nth-child(even) {
-  background-color: #F9FAFB;
+  background-color: var(--gray-10);
 }
 
 table tbody tr:hover {
-  background-color: #FFF0F7;
+  background-color: var(--pink-50);
 }
 
 /* ============================================
@@ -273,12 +304,12 @@ table tbody tr:hover {
 input,
 textarea,
 select {
-  color: #111827; /* gray-900 */
+  color: var(--gray-900);
 }
 
 input::placeholder,
 textarea::placeholder {
-  color: #9CA3AF; /* gray-400 */
+  color: var(--gray-400);
 }
 
 /* ============================================
@@ -288,27 +319,27 @@ textarea::placeholder {
 input.error,
 textarea.error,
 select.error {
-  border-color: #EF4444 !important;
+  border-color: var(--red-500) !important;
   background-color: #FEF2F2;
 }
 
 input.success,
 textarea.success,
 select.success {
-  border-color: #10B981 !important;
+  border-color: var(--green-500) !important;
   background-color: #F0FDF4;
 }
 
 input.error:focus,
 textarea.error:focus {
-  outline-color: #EF4444;
-  border-color: #EF4444;
+  outline-color: var(--red-500);
+  border-color: var(--red-500);
 }
 
 input.success:focus,
 textarea.success:focus {
-  outline-color: #10B981;
-  border-color: #10B981;
+  outline-color: var(--green-500);
+  border-color: var(--green-500);
 }
 
 /* ============================================
@@ -369,7 +400,7 @@ textarea.success:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #10B981;
+  background-color: var(--green-500);
   animation: scale-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -412,20 +443,7 @@ textarea.success:focus {
   color: #1E40AF;
 }
 
-.badge-pending {
-  background-color: #FEF3C7;
-  color: #92400E;
-}
 
-.badge-approved {
-  background-color: #D1FAE5;
-  color: #065F46;
-}
-
-.badge-rejected {
-  background-color: #FEE2E2;
-  color: #991B1B;
-}
 
 /* ============================================
    REACT DATEPICKER COMPREHENSIVE FIX
@@ -459,7 +477,7 @@ textarea.success:focus {
 /* Calendar itself */
 .react-datepicker {
   font-family: inherit;
-  border: 1px solid #E2E8F0;
+  border: 1px solid var(--gray-200);
   border-radius: 12px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   z-index: 99999 !important;
@@ -468,14 +486,14 @@ textarea.success:focus {
 
 /* Header styling */
 .react-datepicker__header {
-  background-color: #FAFAFA;
-  border-bottom: 1px solid #E2E8F0;
+  background-color: var(--gray-10);
+  border-bottom: 1px solid var(--gray-200);
   border-radius: 12px 12px 0 0;
   padding-top: 8px;
 }
 
 .react-datepicker__current-month {
-  color: #0F172A;
+  color: var(--gray-900);
   font-weight: 600;
   font-size: 0.95rem;
   padding: 8px 0;
@@ -486,46 +504,46 @@ textarea.success:focus {
 }
 
 .react-datepicker__day-name {
-  color: #64748B;
+  color: var(--gray-700);
   font-weight: 500;
   font-size: 0.875rem;
 }
 
 /* Day cells */
 .react-datepicker__day {
-  color: #0F172A;
+  color: var(--gray-900);
   border-radius: 6px;
   margin: 2px;
   transition: all 0.15s ease;
 }
 
 .react-datepicker__day:hover {
-  background-color: #FFF0F7;
-  color: #FF006E;
+  background-color: var(--pink-50);
+  color: var(--pink-700);
 }
 
 /* Selected day - PINK! */
 .react-datepicker__day--selected,
 .react-datepicker__day--keyboard-selected {
-  background-color: #FF006E !important;
+  background-color: var(--pink-700) !important;
   color: white !important;
   font-weight: 600;
 }
 
 /* Disabled days */
 .react-datepicker__day--disabled {
-  color: #CBD5E1 !important;
+  color: var(--gray-300) !important;
   cursor: not-allowed;
 }
 
 .react-datepicker__day--disabled:hover {
   background-color: transparent !important;
-  color: #CBD5E1 !important;
+  color: var(--gray-300) !important;
 }
 
 /* Outside month */
 .react-datepicker__day--outside-month {
-  color: #CBD5E1;
+  color: var(--gray-300);
 }
 
 /* Navigation buttons */
@@ -534,12 +552,12 @@ textarea.success:focus {
 }
 
 .react-datepicker__navigation-icon::before {
-  border-color: #64748B;
+  border-color: var(--gray-700);
   border-width: 2px 2px 0 0;
 }
 
 .react-datepicker__navigation:hover .react-datepicker__navigation-icon::before {
-  border-color: #FF006E;
+  border-color: var(--pink-700);
 }
 
 /* Month container */
@@ -600,9 +618,9 @@ textarea.success:focus {
 .skeleton {
   background: linear-gradient(
     90deg,
-    #F3F4F6 0%,
-    #E5E7EB 50%,
-    #F3F4F6 100%
+    var(--gray-100) 0%,
+    var(--gray-200) 50%,
+    var(--gray-100) 100%
   );
   background-size: 200% 100%;
   animation: skeleton-pulse 1.5s ease-in-out infinite;
@@ -631,7 +649,7 @@ textarea.success:focus {
 
 /* Clear, visible focus ring for keyboard navigation */
 *:focus-visible {
-  outline: 2px solid #FF1F7D;
+  outline: 2px solid var(--pink-600);
   outline-offset: 2px;
   border-radius: 0.375rem;
 }
@@ -643,7 +661,7 @@ textarea.success:focus {
 
 /* Button focus states */
 button:focus-visible {
-  outline: 2px solid #FF1F7D;
+  outline: 2px solid var(--pink-600);
   outline-offset: 2px;
 }
 
@@ -651,9 +669,9 @@ button:focus-visible {
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
-  outline: 2px solid #FF1F7D;
+  outline: 2px solid var(--pink-600);
   outline-offset: 0;
-  border-color: #FF1F7D;
+  border-color: var(--pink-600);
 }
 
 /* ============================================
