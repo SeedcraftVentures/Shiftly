@@ -1,3 +1,4 @@
 1. Combine all svg icons in one file and reuse
-2. Too many tailwind classes clutter
-3. 
+
+FF1F7D - pink-500
+F8F9FA - gray-50
