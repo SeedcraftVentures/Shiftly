@@ -268,7 +268,7 @@ export default function NavigationSideBar() {
             </div>
           )}
 
-          {NavItemsDiv({mobile: false})}
+          {NavItemsDiv({})}
         </div>
       </nav>
     </>
