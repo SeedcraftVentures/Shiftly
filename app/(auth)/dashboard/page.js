@@ -210,7 +210,7 @@ export default function DashboardPage() {
 
         <Link 
           href="/dashboard/requests"
-          className={`bg-white rounded-xl sm:rounded-2xl border p-3 sm:p-6 text-center hover:shadow-lg hover:shadow-pink-500/10 transition-all ${
+          className={`bg-white rounded-xl sm:rounded-2xl border p-3 sm:p-6 text-center hover:shadow-lg hover:shadow-pink-500/10 transition-colors transition-shadow ${
             pendingRequestsCount > 0 ? 'border-amber-300 ring-2 ring-amber-100' : 'border-gray-200'
           }`}
         >

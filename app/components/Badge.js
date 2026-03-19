@@ -7,11 +7,8 @@ export default function Badge({
   }) {
     const variants = {
       success: 'badge-success',
-      approved: 'badge-approved',
       warning: 'badge-warning',
-      pending: 'badge-pending',
       error: 'badge-error',
-      rejected: 'badge-rejected',
       info: 'badge-info',
       default: 'bg-gray-100 text-gray-700',
     }
