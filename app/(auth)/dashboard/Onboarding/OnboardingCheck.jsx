@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { useUser } from '@clerk/nextjs'
+// import { useUser } from '@clerk/nextjs'
+import { useUser } from '@/app/lib/authless'
 import { STORAGE_KEYS, STORAGE_VALUES } from '@/app/lib/constants'
 
 export default function OnboardingCheck({ children }) {

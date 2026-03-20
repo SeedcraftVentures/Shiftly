@@ -1,4 +1,5 @@
-import { auth } from '@clerk/nextjs/server'
+// import { auth } from '@clerk/nextjs/server'
+import { auth } from '@/app/lib/authless'
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { notifyUser, notifyTeam } from '@/app/lib/createNotification'
