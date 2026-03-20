@@ -3,3 +3,9 @@
 
 FF1F7D - pink-500
 F8F9FA - gray-50
+
+
+Logic/visual updates:
+1. Some colours aligned with pink-*
+2. 'new' removed from /api/auth/user-type and usages. Forced to 'manager'
+3. 

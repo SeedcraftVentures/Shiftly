@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useUser } from '@clerk/nextjs'
+import { STORAGE_KEYS, STORAGE_VALUES } from '@/app/lib/constants'
 
 export default function OnboardingCheck({ children }) {
   const router = useRouter()
@@ -32,10 +33,10 @@ export default function OnboardingCheck({ children }) {
     const checkAccess = async () => {
       try {
         // Step 1: Check if user is an employee — redirect before showing ANY manager UI
-        const cacheKey = `shiftly_user_type_${user.id}`
+        const cacheKey = STORAGE_KEYS.userType(user.id)
         const cachedType = localStorage.getItem(cacheKey)
 
-        if (cachedType === 'employee') {
+        if (cachedType === STORAGE_VALUES.userType.employee) {
           router.replace('/employee')
           return // Stay on spinner forever — redirect will unmount us
         }
@@ -45,15 +46,15 @@ export default function OnboardingCheck({ children }) {
           const typeResponse = await fetch('/api/auth/user-type')
           const typeData = await typeResponse.json()
 
-          if (typeData.type === 'employee') {
-            localStorage.setItem(cacheKey, 'employee')
+          if (typeData.type === STORAGE_VALUES.userType.employee) {
+            localStorage.setItem(cacheKey, STORAGE_VALUES.userType.employee)
             router.replace('/employee')
             return // Stay on spinner
           }
 
           // Cache as manager so we skip this check next time
-          if (typeData.type === 'manager' || typeData.type === 'new') {
-            localStorage.setItem(cacheKey, 'manager')
+          if (typeData.type === STORAGE_VALUES.userType.manager) {
+            localStorage.setItem(cacheKey, STORAGE_VALUES.userType.manager)
           }
         }
 

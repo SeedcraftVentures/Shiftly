@@ -15,12 +15,12 @@ import {
   InboxIcon,
   LockClosedIcon,
   MenuIcon,
-  PayrollIcon,
-  ReportsIcon,
-  RulesIcon,
-  SettingsIcon,
-  StaffIcon
-} from '@/app/utils/icons'
+  CoinIcon,
+  BarChartIcon,
+  GearFilledIcon,
+  GearIcon,
+  PeopleIcon
+} from '@/app/lib/icons'
 
 export default function NavigationSideBar() {
   const pathname = usePathname()
@@ -78,13 +78,13 @@ export default function NavigationSideBar() {
       id: 'nav-staff',
       name: 'Staff', 
       path: '/dashboard/staff',
-      icon: StaffIcon
+      icon: PeopleIcon
     },
     {
        id: 'nav-rules',
        name: 'Rules',
        path: '/dashboard/rules',
-      icon: RulesIcon,
+      icon: GearFilledIcon,
     },
     { 
       id: 'nav-generate',
@@ -104,20 +104,20 @@ export default function NavigationSideBar() {
       name: 'Payroll', 
       path: '/dashboard/payroll',
       locked: true,
-      icon: PayrollIcon
+      icon: CoinIcon
     },
     { 
       id: 'nav-reports',
       name: 'Reports', 
       path: '/dashboard/reports',
-      icon: ReportsIcon,
+      icon: BarChartIcon,
       dividerAfter: true
     },
     {
       id: 'nav-settings',
       name: 'Settings', 
       path: '/dashboard/settings',
-      icon: SettingsIcon
+      icon: GearIcon
     },
     { 
       id: 'nav-help',

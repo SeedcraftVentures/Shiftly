@@ -6,9 +6,19 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
-// import AnnouncementComposer from '@/app/components/AnnouncementComposer'
+import { QUERY_KEYS, STORAGE_KEYS, STORAGE_VALUES } from '@/app/lib/constants'
+import {
+  CalendarIcon,
+  CheckCircleIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  ClockIcon,
+  MessageBubbleIcon,
+  PencilSquareIcon,
+  PlusIcon,
+  TrashIcon,
+} from '@/app/lib/icons'
 import PageHeader from '@/app/wrappers/PageHeader'
-import SectionHeader from '@/app/components/SectionHeader'
 import Button from '@/app/components/Button'
 import Badge from '@/app/components/Badge'
 
@@ -18,22 +28,21 @@ export default function DashboardPage() {
   const queryClient = useQueryClient()
   const [isCheckingUserType, setIsCheckingUserType] = useState(true)
   const [isCheckingSubscription, setIsCheckingSubscription] = useState(true)
-  const [subscription, setSubscription] = useState(null)
 
   // Check if user is employee and redirect
   useEffect(() => {
     if (!isLoaded || !user) return
 
     const checkUserType = async () => {
-      const cacheKey = `shiftly_user_type_${user.id}`
+      const cacheKey = STORAGE_KEYS.userType(user.id)
       const cachedType = localStorage.getItem(cacheKey)
       
-      if (cachedType === 'manager') {
+      if (cachedType === STORAGE_VALUES.userType.manager) {
         setIsCheckingUserType(false)
         return
       }
 
-      if (cachedType === 'employee') {
+      if (cachedType === STORAGE_VALUES.userType.employee) {
         router.replace('/employee')
         return
       }
@@ -42,13 +51,13 @@ export default function DashboardPage() {
         const response = await fetch('/api/auth/user-type')
         const data = await response.json()
         
-        if (data.type === 'employee') {
-          localStorage.setItem(cacheKey, 'employee')
+        if (data.type === STORAGE_VALUES.userType.employee) {
+          localStorage.setItem(cacheKey, STORAGE_VALUES.userType.employee)
           router.replace('/employee')
           return
         }
         
-        localStorage.setItem(cacheKey, 'manager')
+        localStorage.setItem(cacheKey, STORAGE_VALUES.userType.manager)
       } catch (error) {
         console.error('Error checking user type:', error)
       }
@@ -66,7 +75,7 @@ export default function DashboardPage() {
 
   // Fetch rotas with React Query - cached for 5 mins, instant on return
   const { data: rotas = [], isLoading } = useQuery({
-    queryKey: ['rotas'],
+    queryKey: QUERY_KEYS.rotas,
     queryFn: async () => {
       const response = await fetch('/api/rotas')
       if (!response.ok) throw new Error('Failed to fetch rotas')
@@ -77,7 +86,7 @@ export default function DashboardPage() {
 
   // Fetch pending requests count
   const { data: requests = [] } = useQuery({
-    queryKey: ['requests'],
+    queryKey: QUERY_KEYS.requests,
     queryFn: async () => {
       const response = await fetch('/api/requests')
       if (!response.ok) throw new Error('Failed to fetch requests')
@@ -100,7 +109,7 @@ export default function DashboardPage() {
       return rotaId
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rotas'] })
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.rotas })
     },
     onError: (error) => {
       console.error('Error deleting rota:', error)
@@ -190,9 +199,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-8">
         <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 p-3 sm:p-6 text-center hover:shadow-lg hover:shadow-pink-500/10 transition-all">
           <div className="w-10 h-10 sm:w-12 sm:h-12 bg-pink-100 rounded-lg sm:rounded-xl flex items-center justify-center mx-auto mb-2 sm:mb-3">
-            <svg className="w-5 h-5 sm:w-6 sm:h-6 text-pink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <ClockIcon className="w-5 h-5 sm:w-6 sm:h-6 text-pink-600" />
           </div>
           <p className="text-xl sm:text-3xl font-bold text-gray-900 mb-0.5 sm:mb-1">{stats.timeSaved}h</p>
           <p className="caption">Time Saved</p>
@@ -200,9 +207,7 @@ export default function DashboardPage() {
 
         <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 p-3 sm:p-6 text-center hover:shadow-lg hover:shadow-pink-500/10 transition-all">
           <div className="w-10 h-10 sm:w-12 sm:h-12 bg-pink-100 rounded-lg sm:rounded-xl flex items-center justify-center mx-auto mb-2 sm:mb-3">
-            <svg className="w-5 h-5 sm:w-6 sm:h-6 text-pink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <CheckCircleIcon className="w-5 h-5 sm:w-6 sm:h-6 text-pink-600" />
           </div>
           <p className="text-xl sm:text-3xl font-bold text-gray-900 mb-0.5 sm:mb-1">{stats.weeksApproved}</p>
           <p className="caption">Weeks Approved</p>
@@ -217,9 +222,7 @@ export default function DashboardPage() {
           <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center mx-auto mb-2 sm:mb-3 ${
             pendingRequestsCount > 0 ? 'bg-amber-100' : 'bg-pink-100'
           }`}>
-            <svg className={`w-5 h-5 sm:w-6 sm:h-6 ${pendingRequestsCount > 0 ? 'text-amber-600' : 'text-pink-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
+            <MessageBubbleIcon className={`w-5 h-5 sm:w-6 sm:h-6 ${pendingRequestsCount > 0 ? 'text-amber-600' : 'text-pink-600'}`} />
           </div>
           <p className="text-xl sm:text-3xl font-bold text-gray-900 mb-0.5 sm:mb-1">{pendingRequestsCount}</p>
           <p className="caption">
@@ -233,16 +236,12 @@ export default function DashboardPage() {
       <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 overflow-hidden mb-4">
         <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100">
           <div className="flex items-center justify-between gap-3">
-            <SectionHeader title="Upcoming Rotas" />
+            <h2 className="heading-section">Upcoming Rotas</h2>
             <Button
               variant="primary"
               size="sm"
               onClick={() => router.push('/dashboard/generate')}
-              icon={
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-              }
+              icon={<PlusIcon className="w-4 h-4" />}
             >
               New Rota
             </Button>
@@ -256,9 +255,7 @@ export default function DashboardPage() {
         ) : upcomingRotas.length === 0 ? (
           <div className="text-center py-8 sm:py-12 px-4 sm:px-6">
             <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gray-100 rounded-xl sm:rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-4">
-              <svg className="w-7 h-7 sm:w-8 sm:h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
+              <CalendarIcon className="w-7 h-7 sm:w-8 sm:h-8 text-gray-400" />
             </div>
             <p className="body-text font-medium mb-1">No upcoming rotas</p>
             <p className="body-small mb-4">Create and approve a rota to see it here</p>
@@ -281,9 +278,7 @@ export default function DashboardPage() {
                   className="flex-1 px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3 sm:gap-4 text-left"
                 >
                   <div className="w-9 h-9 sm:w-10 sm:h-10 bg-pink-100 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
-                    <svg className="w-4 h-4 sm:w-5 sm:h-5 text-pink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
+                    <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5 text-pink-600" />
                   </div>
                   <div className="min-w-0">
                     <p className="body-text font-medium truncate">
@@ -305,14 +300,10 @@ export default function DashboardPage() {
                     {deleteMutation.isPending && deleteMutation.variables === rota.id ? (
                       <div className="w-4 h-4 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin"></div>
                     ) : (
-                      <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
+                      <TrashIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                     )}
                   </button>
-                  <svg className="w-5 h-5 text-gray-400 hidden sm:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
+                  <ChevronRightIcon className="w-5 h-5 text-gray-400 hidden sm:block" />
                 </div>
               </div>
             ))}
@@ -349,9 +340,7 @@ export default function DashboardPage() {
                   className="flex-1 px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3 sm:gap-4 text-left"
                 >
                   <div className="w-9 h-9 sm:w-10 sm:h-10 bg-amber-50 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
-                    <svg className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
+                    <PencilSquareIcon className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />
                   </div>
                   <div className="min-w-0">
                     <p className="body-text font-medium text-gray-700 truncate">
@@ -373,14 +362,10 @@ export default function DashboardPage() {
                     {deleteMutation.isPending && deleteMutation.variables === rota.id ? (
                       <div className="w-4 h-4 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin"></div>
                     ) : (
-                      <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
+                      <TrashIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                     )}
                   </button>
-                  <svg className="w-5 h-5 text-gray-400 hidden sm:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
+                  <ChevronRightIcon className="w-5 h-5 text-gray-400 hidden sm:block" />
                 </div>
               </div>
             ))}
@@ -417,14 +402,7 @@ function PastRotasSection({ pastRotas, onRotaClick, onDelete, deleteMutation, fo
           <h2 className="heading-section">Past Rotas</h2>
           <Badge variant="default">{pastRotas.length}</Badge>
         </div>
-        <svg 
-          className={`w-5 h-5 text-gray-400 transition-transform ${showPastRotas ? 'rotate-180' : ''}`} 
-          fill="none" 
-          viewBox="0 0 24 24" 
-          stroke="currentColor"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
+        <ChevronDownIcon className={`w-5 h-5 text-gray-400 transition-transform ${showPastRotas ? 'rotate-180' : ''}`} />
       </button>
 
       {showPastRotas && (
@@ -439,9 +417,7 @@ function PastRotasSection({ pastRotas, onRotaClick, onDelete, deleteMutation, fo
                 className="flex-1 px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3 sm:gap-4 text-left"
               >
                 <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gray-100 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
+                  <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
                 </div>
                 <div className="min-w-0">
                   <p className="body-text font-medium text-gray-700 truncate">
@@ -463,14 +439,10 @@ function PastRotasSection({ pastRotas, onRotaClick, onDelete, deleteMutation, fo
                   {deleteMutation.isPending && deleteMutation.variables === rota.id ? (
                     <div className="w-4 h-4 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin"></div>
                   ) : (
-                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
+                    <TrashIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                   )}
                 </button>
-                <svg className="w-5 h-5 text-gray-400 hidden sm:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+                <ChevronRightIcon className="w-5 h-5 text-gray-400 hidden sm:block" />
               </div>
             </div>
           ))}

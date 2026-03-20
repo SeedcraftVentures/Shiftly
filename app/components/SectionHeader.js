@@ -2,7 +2,7 @@ export default function SectionHeader({ title, subtitle, action, size = 'default
     const titleClass = size === 'small' ? 'heading-subsection' : 'heading-section'
     
     return (
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between">
         <div>
           <h2 className={titleClass}>{title}</h2>
           {subtitle && (
