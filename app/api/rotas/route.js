@@ -1,6 +1,6 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/app/lib/supabaseAnon'
 import { notifyTeam } from '@/app/lib/createNotification'
 import { DB_TABLES } from '@/app/lib/constants'
 

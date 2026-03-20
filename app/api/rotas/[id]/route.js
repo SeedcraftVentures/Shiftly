@@ -1,6 +1,6 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/app/lib/supabaseAnon'
 import { DB_TABLES } from '@/app/lib/constants'
 
 // GET - Fetch a specific rota
