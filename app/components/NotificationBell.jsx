@@ -38,6 +38,7 @@ function timeAgo(dateStr) {
 
 export default function NotificationBell({ variant = 'desktop' }) {
   const { user } = useUser()
+  const userId = user?.id
   const [open, setOpen] = useState(false)
   const [notifications, setNotifications] = useState([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -59,11 +60,11 @@ export default function NotificationBell({ variant = 'desktop' }) {
   }, [])
 
   useEffect(() => {
-    if (user) fetchNotifications()
-  }, [user, fetchNotifications])
+    if (userId) fetchNotifications()
+  }, [userId, fetchNotifications])
 
   useEffect(() => {
-    if (!user) return
+    if (!userId) return
 
     const channel = supabase
       .channel('notifications-realtime')
@@ -73,7 +74,7 @@ export default function NotificationBell({ variant = 'desktop' }) {
           event: 'INSERT',
           schema: 'public',
           table: 'notifications',
-          filter: `recipient_user_id=eq.${user.id}`,
+          filter: `recipient_user_id=eq.${userId}`,
         },
         (payload) => {
           setNotifications((prev) => [payload.new, ...prev])

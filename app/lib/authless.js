@@ -1,18 +1,20 @@
-export async function auth()
-{
-  return {
-        userId: 'test-user-id'
-    }
+const testUser = {
+  id: 'hacker-test-user-id',
+  firstName: 'Hacker',
 }
 
-export function useUser()
-{
+const testUserState = {
+  isLoaded: true,
+  isSignedIn: true,
+  user: testUser,
+}
+
+export async function auth() {
   return {
-    isLoaded: true,
-    isSignedIn: true,
-    user: {
-      id: 'test-user-id',
-      firstName: 'Test'
-    },
+    userId: testUser.id,
   }
+}
+
+export function useUser() {
+  return testUserState
 }

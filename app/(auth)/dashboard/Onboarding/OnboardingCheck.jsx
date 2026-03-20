@@ -65,10 +65,11 @@ export default function OnboardingCheck({ children }) {
           const teams = await response.json()
           const defaultTeam = teams.find(t => t.is_default) || teams[0]
 
-          if (!defaultTeam?.onboarding_completed) {
-            router.push('/onboarding')
-            return
-          }
+          // TODO: 
+          // if (!defaultTeam?.onboarding_completed) {
+          //   router.push('/onboarding')
+          //   return
+          // }
 
           setShouldShow(true)
         } else {

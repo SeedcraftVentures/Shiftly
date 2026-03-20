@@ -53,6 +53,11 @@ export default function NavigationSideBar() {
           if (defaultTeam?.business_name) {
             setBusinessName(defaultTeam.business_name)
           }
+          // TODO: remove
+          else
+          {
+            setBusinessName("Test Business")
+          }
         }
       } catch (error) {
         console.error('Error fetching business name:', error)
