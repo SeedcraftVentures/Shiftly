@@ -2,9 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
-@font-face {
+/* @font-face {
   font-family: 'Cal Sans';
   src: url('https://cal.com/fonts/cal-sans/cal-sans.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+} */
+
+@font-face {
+  font-family: 'Cal Sans';
+  src: url('/fonts/CalSans-SemiBold.woff2') format('woff2');
   font-weight: 600;
   font-style: normal;
   font-display: swap;
@@ -44,18 +52,26 @@
   --pink-800: #aa1045;
   --pink-900: #8d123c;
 
+  --red-50: #FEF2F2;
+  --red-200: #FECACA;
   --red-500: #EF4444;
   --red-600: #DC2626;
   --green-500: #10B981;
   --green-600: #22c55e;
-}
 
-@font-face {
-  font-family: 'Cal Sans';
-  src: url('/fonts/CalSans-SemiBold.woff2') format('woff2');
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
+  --team-purple: #8B5CF6;
+  --team-green: #10B981;
+  --team-blue: #3B82F6;
+  --team-orange: #F97316;
+  --team-red: #EF4444;
+  --team-indigo: #6366F1;
+
+  --team-purple-light: #F5F3FF;
+  --team-green-light: #ECFDF5;
+  --team-blue-light: #EFF6FF;
+  --team-orange-light: #FFF7ED;
+  --team-red-light: #FEF2F2;
+  --team-indigo-light: #EEF2FF;
 }
 
 /* @media (prefers-color-scheme: dark) {

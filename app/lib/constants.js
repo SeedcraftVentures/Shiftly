@@ -5,6 +5,7 @@ export const DB_TABLES = {
     rotas: 'Rotas',
     requests: 'requests',
     notifications: 'notifications',
+    shifts: 'Shifts',
 }
 
 // localStorage Keys and Values

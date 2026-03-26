@@ -53,11 +53,6 @@ export default function NavigationSideBar() {
           if (defaultTeam?.business_name) {
             setBusinessName(defaultTeam.business_name)
           }
-          // TODO: remove
-          else
-          {
-            setBusinessName("Test Business")
-          }
         }
       } catch (error) {
         console.error('Error fetching business name:', error)
@@ -183,7 +178,7 @@ export default function NavigationSideBar() {
               className="flex-shrink-0"
             />
             <div className="flex flex-col">
-              <span className="accent-text-colour font-bold text-lg leading-tight mt-0.5" style={{ fontFamily: "'Cal Sans', sans-serif" }}>
+              <span className="font-cal accent-text-colour font-bold text-lg leading-tight mt-0.5">
                 Shiftly
               </span>
               {businessName && (
@@ -255,8 +250,7 @@ export default function NavigationSideBar() {
                 className="flex-shrink-0"
               />
               <span 
-                className="accent-text-colour font-bold text-2xl mt-0.5"
-                style={{ fontFamily: "'Cal Sans', sans-serif" }}
+                className="font-cal accent-text-colour font-bold text-2xl mt-0.5"
               >
                 Shiftly
               </span>

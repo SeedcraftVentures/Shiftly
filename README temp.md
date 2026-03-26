@@ -10,6 +10,9 @@
 ## 2. App Router
 We use Nextjs' [App Router](https://nextjs.org/docs/app/getting-started/layouts-and-pages), which means the filestructure **is** the routing.
 
+All routes are:
+Find all "app/" or router.push
+
 ## 3. Env vars
 In env.local
 For usages, find `env.` in files across the repo.
