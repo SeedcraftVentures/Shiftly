@@ -3,7 +3,7 @@
 import Button from '@/app/components/Button'
 import { PlusIcon } from '@/app/lib/icons'
 
-export default function ShiftFilterBar({ teams, shifts, filterTeamId, onFilterChange, onAddShift }) {
+export default function ShiftsFilterBar({ teams, shifts, filterTeamId, onFilterChange, onAddShift }) {
   const barStyle = {
     background: 'var(--gray-0)',
     padding: '10px 24px',

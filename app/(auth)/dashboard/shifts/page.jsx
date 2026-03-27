@@ -5,10 +5,10 @@ import { useShifts } from './hooks/useShifts'
 import { getTeamGaps } from '@/app/lib/shiftUtils'
 import { DAYS_SHORT, decimalTimeToLabel } from '@/app/lib/timeUtils'
 import PageHeader from '@/app/wrappers/PageHeader'
-import ShiftFilterBar from './components/ShiftFilterBar'
-import ShiftWarningBar from './components/ShiftWarningBar'
+import ShiftsFilterBar from './components/ShiftsFilterBar'
+import ShiftsWarningBar from './components/ShiftsWarningBar'
 import ShiftsList from './components/ShiftsList'
-// import WeekAtAGlance from './components/WeekAtAGlance'
+import ShiftsWeek from './components/ShiftsWeek'
 // import FixGapsModal from './components/FixGapsModal'
 
 export default function ShiftsPage() {
@@ -156,7 +156,6 @@ export default function ShiftsPage() {
           flexShrink: 0,
           position: 'sticky',
           top: 0,
-          zIndex: 30,
           paddingBottom: 8
         }}
       >
@@ -169,11 +168,11 @@ export default function ShiftsPage() {
             background: 'var(--gray-50)'
           }}
         >
-          <ShiftFilterBar
+          <ShiftsFilterBar
             teams={teams} shifts={shifts} filterTeamId={filterTeamId}
             onFilterChange={setFilterTeamId} onAddShift={handleAddShift}
           />
-          <ShiftWarningBar
+          <ShiftsWarningBar
             warnings={warnings} onDayClick={setSelectedDay}
             onFixGaps={() => { setSelectedRecs({}); setShowFixModal(true) }}
           />
@@ -205,11 +204,11 @@ export default function ShiftsPage() {
             shiftLengths={shiftLengths} openTime={openTime} closeTime={closeTime}
             scrollToId={scrollToId}
           />
-          {/* <WeekAtAGlance
+          <ShiftsWeek
             teams={teamsToCheck} allShifts={shifts} filteredShifts={filteredShifts}
             selectedDay={selectedDay} openShiftId={openShiftId} warnings={warnings}
             onSelectDay={setSelectedDay} onClickShift={handleClickShiftCard}
-          /> */}
+          />
         </div>
       </div>
 

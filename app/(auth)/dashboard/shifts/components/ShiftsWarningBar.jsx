@@ -2,7 +2,7 @@
 
 import Button from '@/app/components/Button'
 
-export default function ShiftWarningBar({ warnings, onDayClick, onFixGaps }) {
+export default function ShiftsWarningBar({ warnings, onDayClick, onFixGaps }) {
   if (warnings.length === 0) return null
 
   const rootStyle = {
