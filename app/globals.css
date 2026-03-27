@@ -83,6 +83,10 @@
   --text-2xl: theme('fontSize.2xl');
   --text-3xl: theme('fontSize.3xl');
   --text-4xl: theme('fontSize.4xl');
+
+  /* Fonts */
+  --font-primary: 'Cal Sans', sans-serif;
+  --font-secondary: 'Jakarta Sans', sans-serif;
 }
 
 /* @media (prefers-color-scheme: dark) {
@@ -94,6 +98,7 @@
 } */
 
 body {
+  font-family: var(--font-secondary);
   color: var(--gray-999);
   background: linear-gradient(
       to bottom,
@@ -128,9 +133,10 @@ body {
   padding: var(--ui-chip-padding, 5px 12px);
   border-radius: 8px;
   font-size: var(--text-xs);
-  font-weight: 600;
+  /* font-weight: 600; */
   white-space: nowrap;
   flex-shrink: 0;
+  font-family: var(--font-secondary);
 }
 
 .ui-chip-button {
@@ -187,12 +193,12 @@ body {
 
 /* Base Typography - Cal Sans for headings, Inter/system for body */
 .font-cal {
-  font-family: 'Cal Sans', sans-serif;
+  font-family: var(--font-primary);
 }
 
 /* Semantic Classes - Cal Sans for ALL headings */
 .heading-page {
-  font-family: 'Cal Sans', sans-serif;
+  font-family: var(--font-primary);
   font-size: var(--text-3xl); /* 32px → closest text-3xl (30px) */
   font-weight: 600;
   line-height: 2.5rem;
@@ -201,7 +207,7 @@ body {
 }
 
 .heading-section {
-  font-family: 'Cal Sans', sans-serif;
+  font-family: var(--font-primary);
   font-size: var(--text-2xl); /* 24px */
   font-weight: 600;
   line-height: 2rem;
@@ -211,7 +217,7 @@ body {
 }
 
 .heading-subsection {
-  font-family: 'Cal Sans', sans-serif;
+  font-family: var(--font-primary);
   font-size: var(--text-xl); /* 20px */
   font-weight: 600;
   line-height: 1.75rem;

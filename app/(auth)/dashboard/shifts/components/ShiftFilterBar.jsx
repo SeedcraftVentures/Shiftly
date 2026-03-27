@@ -1,5 +1,8 @@
 'use client'
 
+import Button from '@/app/components/Button'
+import { PlusIcon } from '@/app/lib/icons'
+
 export default function ShiftFilterBar({ teams, shifts, filterTeamId, onFilterChange, onAddShift }) {
   const barStyle = {
     background: 'var(--gray-0)',
@@ -37,79 +40,82 @@ export default function ShiftFilterBar({ teams, shifts, filterTeamId, onFilterCh
         FILTER
       </span>
 
-      <button
-        className="ui-chip ui-chip-button"
-        onClick={() => onFilterChange('all')}
+      <div
         style={{
-          ...chipBaseStyle,
-          border: allTeamsActive ? '2px solid var(--pink-500)' : '1px solid var(--gray-200)',
-          background: allTeamsActive ? 'var(--pink-50)' : 'var(--gray-0)',
-          color: allTeamsActive ? 'var(--pink-500)' : 'var(--gray-500)',
+          display: 'flex',
+          gap: 6,
+          flexWrap: 'wrap',
+          flex: 1
         }}
       >
-        All Teams{' '}
-        <span
+        <button
+          className="ui-chip ui-chip-button"
+          onClick={() => onFilterChange('all')}
           style={{
-            fontWeight: 400,
-            color: allTeamsActive ? 'var(--pink-500)' : 'var(--gray-400)',
+            ...chipBaseStyle,
+            border: allTeamsActive ? '2px solid var(--pink-500)' : '1px solid var(--gray-200)',
+            background: allTeamsActive ? 'var(--pink-50)' : 'var(--gray-0)',
+            color: allTeamsActive ? 'var(--pink-500)' : 'var(--gray-500)',
           }}
         >
-          ({shifts.length})
-        </span>
-      </button>
-
-      {teams.map(team => {
-        const on = filterTeamId === String(team.id)
-        return (
-          <button
-            className="ui-chip ui-chip-button"
-            key={team.id}
-            onClick={() => onFilterChange(String(team.id))}
+          All Teams{' '}
+          <span
             style={{
-              ...chipBaseStyle,
-              border: on ? `2px solid ${team.color}` : '1px solid var(--gray-200)',
-              background: on ? team.colorLight : 'var(--gray-0)',
-              color: on ? team.color : 'var(--gray-500)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
+              fontWeight: 400,
+              color: allTeamsActive ? 'var(--pink-500)' : 'var(--gray-400)',
             }}
           >
-            <div
-              className="ui-dot"
+            ({shifts.length})
+          </span>
+        </button>
+
+        {teams.map(team => {
+          const on = filterTeamId === String(team.id)
+          return (
+            <button
+              className="ui-chip ui-chip-button"
+              key={team.id}
+              onClick={() => onFilterChange(String(team.id))}
               style={{
-                width: 7,
-                height: 7,
-                background: team.color,
-              }}
-            />
-            {team.team_name}{' '}
-            <span
-              style={{
-                fontWeight: 400,
-                color: on ? team.color : 'var(--gray-400)',
+                ...chipBaseStyle,
+                border: on ? `2px solid ${team.color}` : '1px solid var(--gray-200)',
+                background: on ? team.colorLight : 'var(--gray-0)',
+                color: on ? team.color : 'var(--gray-500)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
               }}
             >
-              ({shifts.filter(s => s.team_id === team.id).length})
-            </span>
-          </button>
-        )
-      })}
+              <div
+                className="ui-dot"
+                style={{
+                  width: 7,
+                  height: 7,
+                  background: team.color,
+                }}
+              />
+              {team.team_name}{' '}
+              <span
+                style={{
+                  fontWeight: 400,
+                  color: on ? team.color : 'var(--gray-400)',
+                }}
+              >
+                ({shifts.filter(s => s.team_id === team.id).length})
+              </span>
+            </button>
+          )
+        })}
+      </div>
 
-      <button
-        className="ui-inline-action ui-inline-action-xs"
+      <Button
+        variant="primary"
+        size="sm"
         onClick={onAddShift}
-        style={{
-          marginLeft: 'auto',
-          border: 'none',
-          background: 'var(--pink-500)',
-          color: 'var(--gray-0)',
-          cursor: 'pointer',
-          flexShrink: 0,
-        }}
+        icon={<PlusIcon className="w-4 h-4" />}
       >
-        + Add Shift
-      </button>
+        Add Shift
+      </Button>
     </div>
   )
 }

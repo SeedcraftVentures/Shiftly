@@ -87,7 +87,7 @@ export default function ShiftsPage() {
     alignItems: 'center',
     justifyContent: 'center',
     height: '100vh',
-    fontFamily: "'Plus Jakarta Sans', sans-serif",
+    fontFamily: 'var(--font-secondary)',
   }
 
   const innerStyle = {
@@ -130,7 +130,7 @@ export default function ShiftsPage() {
         display: 'flex',
         flexDirection: 'column',
         minHeight: '100vh',
-        fontFamily: "'Plus Jakarta Sans', sans-serif",
+        fontFamily: 'var(--font-secondary)',
         background: 'var(--gray-50)',
         color: 'var(--gray-900)',
       }}

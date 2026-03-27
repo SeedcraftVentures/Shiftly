@@ -1,10 +1,12 @@
 'use client'
 
+import Button from '@/app/components/Button'
+
 export default function ShiftWarningBar({ warnings, onDayClick, onFixGaps }) {
   if (warnings.length === 0) return null
 
   const rootStyle = {
-    padding: '8px 16px',
+    padding: '10px 24px',
     background: 'var(--red-50)',
     border: '1px solid rgb(from var(--red-200) r g b / 33%)',
     borderRadius: 12,
@@ -68,17 +70,6 @@ export default function ShiftWarningBar({ warnings, onDayClick, onFixGaps }) {
     alignSelf: 'center',
   }
 
-  const fixGapsButtonStyle = {
-    border: 'none',
-    background: 'var(--red-500)',
-    color: 'var(--gray-0)',
-    fontSize: 'var(--text-xs)',
-    fontWeight: 600,
-    cursor: 'pointer',
-    whiteSpace: 'nowrap',
-    flexShrink: 0,
-  }
-
   return (
     <div style={rootStyle}>
       <div style={dangerBadgeStyle}>{warnings.length}</div>
@@ -112,13 +103,13 @@ export default function ShiftWarningBar({ warnings, onDayClick, onFixGaps }) {
         )}
       </div>
 
-      <button
-        className="ui-inline-action ui-inline-action-xs"
+      <Button
+        variant="danger"
+        size="sm"
         onClick={onFixGaps}
-        style={fixGapsButtonStyle}
       >
         ✦ Fix Gaps
-      </button>
+      </Button>
     </div>
   )
 }

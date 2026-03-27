@@ -22,8 +22,6 @@ import {
   applyTimeChange,
 } from '@/app/lib/shiftUtils'
 
-// ── Typography scale ─────────────────────────────────────────────────────────
-const FONT_BODY = 'Plus Jakarta Sans'
 
 // ── Repeated style variables ──────────────────────────────────────────────────
 const INPUT_H = 34
@@ -66,7 +64,7 @@ function PillToggle({ active, onClick, children, activeColor = 'var(--pink-accen
         opacity: disabled ? 0.55 : 1,
         gap: 5,
         flexShrink: 0,
-        fontFamily: FONT_BODY,
+        fontFamily: 'var(--font-secondary)',
       }}
     >
       {children}
@@ -95,7 +93,7 @@ function LockPill({ locked, onClick, color, autoLocked = false }) {
         cursor: autoLocked ? 'default' : 'pointer',
         gap: 4,
         flexShrink: 0,
-        fontFamily: FONT_BODY,
+        fontFamily: 'var(--font-secondary)',
       }}
     >
       {locked ? (
@@ -149,7 +147,7 @@ function Sel({ value, options, onChange, disabled }) {
         background: disabled ? 'var(--gray-50)' : 'var(--gray-0)',
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.7 : 1,
-        fontFamily: FONT_BODY,
+        fontFamily: 'var(--font-secondary)',
         fontSize: 'var(--text-xs)',
         fontWeight: 500,
         outline: 'none',
@@ -184,7 +182,7 @@ function LockedDisplay({ value }) {
         alignItems: 'center',
         fontWeight: 500,
         fontSize: 'var(--text-xs)',
-        fontFamily: FONT_BODY,
+        fontFamily: 'var(--font-secondary)',
         boxSizing: 'border-box',
       }}
     >
@@ -201,7 +199,7 @@ function NumInput({ value, onChange, min = 1, max = 20 }) {
   const displayStyle = {
     borderTop: BORDER_DEFAULT,
     borderBottom: BORDER_DEFAULT,
-    fontFamily: FONT_BODY,
+    fontFamily: 'var(--font-secondary)',
   }
   return (
     <div style={{ ...flexRowCenter }}>
@@ -283,7 +281,7 @@ function SegmentedToggle({ value, options, onChange, disabled, activeColor }) {
             background: value === opt.value ? (activeColor || 'var(--pink-accent)') : 'var(--gray-0)',
             color: value === opt.value ? 'var(--gray-0)' : 'var(--gray-500)',
             cursor: disabled ? 'not-allowed' : 'pointer',
-            fontFamily: FONT_BODY,
+            fontFamily: 'var(--font-secondary)',
             fontSize: 'var(--text-xs)',
             fontWeight: 600,
           }}
@@ -307,12 +305,12 @@ function DayToggles({ days, onChange, color }) {
     fontSize: 'var(--text-xs)',
     fontWeight: 600,
     cursor: 'pointer',
-    fontFamily: FONT_BODY,
+    fontFamily: 'var(--font-secondary)',
   }
   const dayButtonStyle = {
     border: 'none',
     cursor: 'pointer',
-    fontFamily: FONT_BODY,
+    fontFamily: 'var(--font-secondary)',
   }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -542,7 +540,7 @@ export default function ShiftRow({
               fontWeight: 600,
               color: 'var(--gray-900)',
               whiteSpace: 'nowrap',
-              fontFamily: FONT_BODY,
+              fontFamily: 'var(--font-secondary)',
             }}
           >
             {shift.name}
@@ -558,7 +556,7 @@ export default function ShiftRow({
             flexShrink: 0,
             background: teamColor + '18',
             color: teamColor,
-            fontFamily: FONT_BODY,
+            fontFamily: 'var(--font-secondary)',
           }}
         >
           {shift.anchor_type.charAt(0).toUpperCase() + shift.anchor_type.slice(1)}
@@ -571,7 +569,7 @@ export default function ShiftRow({
             width: 124,
             textAlign: 'center',
             flexShrink: 0,
-            fontFamily: FONT_BODY,
+            fontFamily: 'var(--font-secondary)',
           }}
         >
           {decimalToLabel(shift.start)} – {decimalToLabel(displayEnd)}
@@ -583,7 +581,7 @@ export default function ShiftRow({
             width: 76,
             textAlign: 'center',
             flexShrink: 0,
-            fontFamily: FONT_BODY,
+            fontFamily: 'var(--font-secondary)',
           }}
         >
           {shortDayLabel}
@@ -595,7 +593,7 @@ export default function ShiftRow({
             width: 38,
             textAlign: 'center',
             flexShrink: 0,
-            fontFamily: FONT_BODY,
+            fontFamily: 'var(--font-secondary)',
           }}
         >
           x{shift.staff}
@@ -649,7 +647,7 @@ export default function ShiftRow({
                   border: BORDER_DEFAULT,
                   background: 'var(--gray-0)',
                   color: 'var(--gray-900)',
-                  fontFamily: FONT_BODY,
+                  fontFamily: 'var(--font-secondary)',
                   fontSize: 'var(--text-xs)',
                   fontWeight: 500,
                   outline: 'none',
@@ -833,17 +831,17 @@ export default function ShiftRow({
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-700)', fontFamily: FONT_BODY }}>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-700)', fontFamily: 'var(--font-secondary)' }}>
                 <span style={{ color: 'var(--gray-400)', fontSize: 'var(--text-xs)' }}>Paid: </span>
                 <span style={{ fontWeight: 700 }}>{formatHours(paidHours)}</span>
               </span>
               {hasUnpaidBreak && (
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', fontFamily: FONT_BODY }}>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', fontFamily: 'var(--font-secondary)' }}>
                   On-site: {formatHours(onSiteHours)}
                 </span>
               )}
               {saveError && (
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--red-500)', fontFamily: FONT_BODY }}>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--red-500)', fontFamily: 'var(--font-secondary)' }}>
                   {saveError}
                 </span>
               )}
@@ -863,7 +861,7 @@ export default function ShiftRow({
                   fontSize: 'var(--text-xs)',
                   fontWeight: 600,
                   gap: 6,
-                  fontFamily: FONT_BODY,
+                  fontFamily: 'var(--font-secondary)',
                   cursor: 'pointer',
                 }}
               >
@@ -885,7 +883,7 @@ export default function ShiftRow({
                   justifyContent: 'center',
                   fontSize: 'var(--text-xs)',
                   fontWeight: 700,
-                  fontFamily: FONT_BODY,
+                  fontFamily: 'var(--font-secondary)',
                 }}
               >
                 {saving ? 'Saving…' : 'Save'}
