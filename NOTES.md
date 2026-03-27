@@ -1,6 +1,8 @@
 1. Combine all svg icons in one file and reuse
 2. LOTS of transition-all being used which is bad (https://stackoverflow.com/questions/67363406/what-is-the-difference-between-transition-all-and-transition-in-tailwindcss)
 3. Replace raw ANON_KEY clients with lib/supabase
+4. Instead of arbitrary font sizes, uses tailwind's theme variables
+5. Need to reuse rounded containers and button styles. Some buttons shadow on hover, some don't.
 
 FF1F7D - pink-500
 F8F9FA - gray-50

@@ -45,13 +45,6 @@ export function getOnSiteHours(start, end, breakMins, breakType) {
   return shiftLength
 }
 
-export function formatHours(h) {
-  if (h % 1 === 0) return `${h}h`
-  const whole = Math.floor(h)
-  const mins = Math.round((h - whole) * 60)
-  return whole > 0 ? `${whole}h ${mins}m` : `${mins}m`
-}
-
 // ── Shift time calculation ────────────────────────────────────────────────────
 import { clampHours } from './timeUtils'
 

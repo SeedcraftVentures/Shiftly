@@ -1,9 +1,9 @@
 'use client'
 
 import { useRef, useEffect } from 'react'
-// import ShiftRow from './ShiftRow'
+import ShiftRow from './ShiftRow'
 
-export default function ShiftPatternList({
+export default function ShiftsList({
   teams, shifts, filteredShifts, openShiftId,
   onToggleShift, onUpdateShift, onDeleteShift,
   fixedLocks, onSetFixedLock, shiftLengths,
@@ -22,6 +22,31 @@ export default function ShiftPatternList({
     flexDirection: 'column',
   }
 
+  const panelStyle = {
+    background: 'var(--gray-0)',
+    border: '1px solid var(--gray-200)',
+    borderRadius: 14,
+    overflow: 'hidden',
+    ...flexColumnStyle,
+  }
+
+  const headerStyle = {
+    padding: '12px 18px',
+    borderBottom: '1px solid var(--gray-100)',
+    ...flexCenterStyle,
+    gap: 8,
+    flexShrink: 0,
+  }
+
+  const countPillStyle = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '2px 9px',
+    borderRadius: 9999,
+    fontSize: 'var(--text-xs)',
+    fontWeight: 600,
+  }
+
   useEffect(() => {
     if (!scrollToId) return
     const el = rowRefs.current[scrollToId]
@@ -37,28 +62,16 @@ export default function ShiftPatternList({
   return (
     <div
       style={{
-        background: 'var(--gray-0)',
-        borderRadius: 14,
-        border: '1px solid var(--gray-200)',
-        ...flexColumnStyle,
-        overflow: 'hidden',
+        ...panelStyle,
         maxHeight: '50vh',
       }}
     >
       {/* Header */}
-      <div
-        style={{
-          padding: '12px 18px',
-          borderBottom: '1px solid var(--gray-100)',
-          ...flexCenterStyle,
-          gap: 8,
-          flexShrink: 0,
-        }}
-      >
+      <div style={headerStyle}>
         <span
           className="font-cal"
           style={{
-            fontSize: '0.875rem',
+            fontSize: 'var(--text-sm)',
             fontWeight: 700,
             color: 'var(--gray-900)',
           }}
@@ -67,10 +80,7 @@ export default function ShiftPatternList({
         </span>
         <span
           style={{
-            fontSize: '0.75rem',
-            fontWeight: 600,
-            padding: '2px 9px',
-            borderRadius: 99,
+            ...countPillStyle,
             background: 'var(--pink-100)',
             color: 'var(--pink-500)',
           }}
@@ -106,17 +116,17 @@ export default function ShiftPatternList({
                 }}
               >
                 <div
+                  className="ui-square-badge"
                   style={{
                     width: 11,
                     height: 11,
-                    borderRadius: 3,
                     background: team.color,
                   }}
                 />
                 <span
                   className="font-cal"
                   style={{
-                    fontSize: '0.875rem',
+                    fontSize: 'var(--text-sm)',
                     fontWeight: 700,
                     color: team.color,
                   }}
@@ -125,7 +135,7 @@ export default function ShiftPatternList({
                 </span>
                 <span
                   style={{
-                    fontSize: '0.75rem',
+                    fontSize: 'var(--text-xs)',
                     color: 'var(--gray-400)',
                   }}
                 >
@@ -149,7 +159,7 @@ export default function ShiftPatternList({
               >
                 {ts.map(shift => (
                   <div key={shift.id} ref={el => { rowRefs.current[shift.id] = el }}>
-                    {/* <ShiftRow
+                    <ShiftRow
                       shift={shift}
                       teams={teams}
                       teamColor={team.color}
@@ -162,7 +172,7 @@ export default function ShiftPatternList({
                       shiftLengths={shiftLengths}
                       openTime={openTime}
                       closeTime={closeTime}
-                    /> */}
+                    />
                   </div>
                 ))}
               </div>
@@ -180,7 +190,7 @@ export default function ShiftPatternList({
           >
             <div
               style={{
-                fontSize: '1.875rem',
+                fontSize: 'var(--text-3xl)',
                 marginBottom: 8,
               }}
             >
@@ -189,7 +199,7 @@ export default function ShiftPatternList({
             <div
               className="font-cal"
               style={{
-                fontSize: '0.875rem',
+                fontSize: 'var(--text-sm)',
                 fontWeight: 600,
                 marginBottom: 4,
               }}
@@ -198,7 +208,7 @@ export default function ShiftPatternList({
             </div>
             <div
               style={{
-                fontSize: '0.75rem',
+                fontSize: 'var(--text-xs)',
               }}
             >
               Click + Add Shift to create your first shift pattern

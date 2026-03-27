@@ -8,10 +8,6 @@ import {
   ArrowIcon, BusinessIcon, CheckIcon, ClockIcon, IndustryHospitalityIcon, IndustryOtherIcon, PlusIcon, IndustryRetailIcon, TeamIcon,
 } from '@/app/lib/icons'
 
-const TEXT_XS = '0.75rem'
-const TEXT_SM = '0.875rem'
-const TEXT_LG = '1.125rem'
-
 const INDUSTRY_TEAMS = {
   hospitality: [
     { id: 'foh', label: 'Front of House' },
@@ -55,8 +51,22 @@ function ProgressBar({ step, total }) {
   }
 
   const progressMetaTextStyle = {
-    fontSize: TEXT_XS,
+    fontSize: 'var(--text-xs)',
     color: 'var(--gray-400)'
+  }
+
+  const progressTrackStyle = {
+    height: 6,
+    background: 'var(--gray-100)',
+    borderRadius: 99,
+    overflow: 'hidden',
+  }
+
+  const progressFillStyle = {
+    height: '100%',
+    background: 'linear-gradient(90deg, var(--pink-500), var(--pink-400))',
+    borderRadius: 99,
+    transition: 'width 0.4s ease',
   }
 
   return (
@@ -69,12 +79,8 @@ function ProgressBar({ step, total }) {
           {Math.round(pct)}%
         </span>
       </div>
-      <div style={{ height: 6, background: 'var(--gray-100)', borderRadius: 99, overflow: 'hidden' }}>
-        <div style={{
-          height: '100%', width: `${pct}%`,
-          background: `linear-gradient(90deg, var(--pink-500), var(--pink-400))`,
-          borderRadius: 99, transition: 'width 0.4s ease',
-        }} />
+      <div style={progressTrackStyle}>
+        <div style={{ ...progressFillStyle, width: `${pct}%` }} />
       </div>
     </div>
   )
@@ -88,14 +94,13 @@ function StepChip({ icon, label, active }) {
     alignItems: 'center',
     gap: 6,
     padding: '4px 10px',
-    borderRadius: 8,
-    fontSize: TEXT_XS,
+    fontSize: 'var(--text-xs)',
     fontWeight: 600,
     marginBottom: 20
   }
 
   return (
-    <div style={{
+    <div className="ui-chip ui-chip-button" style={{
       ...chipBaseStyle,
       background: active ? 'var(--pink-50)' : 'var(--gray-50)',
       border: `1px solid ${active ? 'rgb(from var(--pink-500) r g b / 27%)' : 'var(--gray-200)'}`,
@@ -120,11 +125,12 @@ function TimeSelect({ value, onChange, disabled }) {
         padding: '0 8px',
         borderRadius: 8,
         border: `1px solid ${disabled ? 'var(--gray-100)' : 'var(--gray-200)'}`,
-        fontSize: TEXT_XS,
+        fontSize: 'var(--text-xs)',
         fontWeight: 600,
         color: disabled ? 'var(--gray-300)' : 'var(--gray-900)',
         background: disabled ? 'var(--gray-50)' : 'var(--gray-0)',
         outline: 'none',
+        boxSizing: 'border-box',
         cursor: disabled ? 'not-allowed' : 'pointer',
         minWidth: 80
       }}
@@ -148,6 +154,19 @@ function HoursRow({ day, data, onChange, onCopyTo, allDays }) {
     marginBottom: 5,
   }
 
+  const popoverStyle = {
+    position: 'absolute', right: 0, top: 30, zIndex: 20,
+    background: 'var(--gray-0)', border: '1px solid var(--gray-200)', borderRadius: 8,
+    boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+    overflow: 'hidden', minWidth: 120,
+  }
+
+  const popoverItemStyle = {
+    display: 'block', width: '100%', padding: '8px 12px',
+    textAlign: 'left', fontSize: 'var(--text-xs)', fontWeight: 600,
+    background: 'transparent', border: 'none', cursor: 'pointer',
+  }
+
   const columnCenterStyle = {
     display: 'flex',
     flexDirection: 'column',
@@ -169,13 +188,13 @@ function HoursRow({ day, data, onChange, onCopyTo, allDays }) {
           width: 22,
           height: 22,
           borderRadius: 6,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           flexShrink: 0,
           border: 'none',
           background: data.open ? 'var(--pink-500)' : 'var(--gray-200)',
           color: 'var(--gray-0)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
           cursor: 'pointer',
           transition: 'all .1s',
         }}
@@ -186,7 +205,7 @@ function HoursRow({ day, data, onChange, onCopyTo, allDays }) {
       {/* Day label */}
       <span style={{
         width: 36,
-        fontSize: TEXT_XS,
+        fontSize: 'var(--text-xs)',
         fontWeight: 700,
         color: data.open ? 'var(--gray-900)' : 'var(--gray-400)',
         flexShrink: 0,
@@ -199,28 +218,28 @@ function HoursRow({ day, data, onChange, onCopyTo, allDays }) {
           {/* Equation: Open → First shift → Last shift → Close */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, flex: 1, flexWrap: 'wrap' }}>
             <div style={columnCenterStyle}>
-              <span style={{ fontSize: TEXT_XS, fontWeight: 600, color: 'var(--gray-400)', letterSpacing: 0.4 }}>OPEN</span>
+              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--gray-400)', letterSpacing: 0.4 }}>OPEN</span>
               <TimeSelect value={data.opening} onChange={v => onChange({ ...data, opening: v })} />
             </div>
 
-            <span style={{ color: 'var(--gray-300)', fontSize: TEXT_XS, marginTop: 14 }}>→</span>
+            <span style={{ color: 'var(--gray-300)', fontSize: 'var(--text-xs)', marginTop: 14 }}>→</span>
 
             <div style={columnCenterStyle}>
-              <span style={{ fontSize: TEXT_XS, fontWeight: 600, color: 'var(--team-purple)', letterSpacing: 0.4 }}>FIRST SHIFT</span>
+              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--team-purple)', letterSpacing: 0.4 }}>FIRST SHIFT</span>
               <TimeSelect value={data.first_shift} onChange={v => onChange({ ...data, first_shift: v })} />
             </div>
 
-            <span style={{ color: 'var(--gray-300)', fontSize: TEXT_XS, marginTop: 14 }}>→</span>
+            <span style={{ color: 'var(--gray-300)', fontSize: 'var(--text-xs)', marginTop: 14 }}>→</span>
 
             <div style={columnCenterStyle}>
-              <span style={{ fontSize: TEXT_XS, fontWeight: 600, color: 'var(--team-purple)', letterSpacing: 0.4 }}>LAST SHIFT</span>
+              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--team-purple)', letterSpacing: 0.4 }}>LAST SHIFT</span>
               <TimeSelect value={data.last_shift} onChange={v => onChange({ ...data, last_shift: v })} />
             </div>
 
-            <span style={{ color: 'var(--gray-300)', fontSize: TEXT_XS, marginTop: 14 }}>→</span>
+            <span style={{ color: 'var(--gray-300)', fontSize: 'var(--text-xs)', marginTop: 14 }}>→</span>
 
             <div style={columnCenterStyle}>
-              <span style={{ fontSize: TEXT_XS, fontWeight: 600, color: 'var(--gray-400)', letterSpacing: 0.4 }}>CLOSE</span>
+              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--gray-400)', letterSpacing: 0.4 }}>CLOSE</span>
               <TimeSelect value={data.closing} onChange={v => onChange({ ...data, closing: v })} />
             </div>
           </div>
@@ -232,24 +251,18 @@ function HoursRow({ day, data, onChange, onCopyTo, allDays }) {
               style={{
                 height: 26, padding: '0 8px', borderRadius: 6,
                 border: '1px solid var(--gray-200)', background: 'var(--gray-50)',
-                fontSize: TEXT_XS, fontWeight: 600, color: 'var(--gray-500)',
+                fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--gray-500)',
                 cursor: 'pointer', whiteSpace: 'nowrap',
               }}
             >
               Copy to
             </button>
             {showCopyTo && (
-              <div style={{
-                position: 'absolute', right: 0, top: 30, zIndex: 20,
-                background: 'var(--gray-0)', border: '1px solid var(--gray-200)', borderRadius: 8,
-                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                overflow: 'hidden', minWidth: 120,
-              }}>
+              <div style={popoverStyle}>
                 <button
                   onClick={() => { onCopyTo('all'); setShowCopyTo(false) }}
                   style={{
-                    display: 'block', width: '100%', padding: '8px 12px',
-                    textAlign: 'left', fontSize: TEXT_XS, fontWeight: 600,
+                    ...popoverItemStyle,
                     color: 'var(--pink-500)', background: 'transparent', border: 'none',
                     cursor: 'pointer', borderBottom: '1px solid var(--gray-100)',
                   }}
@@ -259,8 +272,7 @@ function HoursRow({ day, data, onChange, onCopyTo, allDays }) {
                 <button
                   onClick={() => { onCopyTo('weekdays'); setShowCopyTo(false) }}
                   style={{
-                    display: 'block', width: '100%', padding: '8px 12px',
-                    textAlign: 'left', fontSize: TEXT_XS, fontWeight: 600,
+                    ...popoverItemStyle,
                     color: 'var(--gray-700)', background: 'transparent', border: 'none',
                     cursor: 'pointer', borderBottom: '1px solid var(--gray-100)',
                   }}
@@ -270,8 +282,7 @@ function HoursRow({ day, data, onChange, onCopyTo, allDays }) {
                 <button
                   onClick={() => { onCopyTo('weekends'); setShowCopyTo(false) }}
                   style={{
-                    display: 'block', width: '100%', padding: '8px 12px',
-                    textAlign: 'left', fontSize: TEXT_XS, fontWeight: 600,
+                    ...popoverItemStyle,
                     color: 'var(--gray-700)', background: 'transparent', border: 'none',
                     cursor: 'pointer', borderBottom: '1px solid var(--gray-100)',
                   }}
@@ -283,8 +294,9 @@ function HoursRow({ day, data, onChange, onCopyTo, allDays }) {
                     key={d}
                     onClick={() => { onCopyTo(d); setShowCopyTo(false) }}
                     style={{
-                      display: 'block', width: '100%', padding: '7px 12px',
-                      textAlign: 'left', fontSize: TEXT_XS, color: 'var(--gray-700)',
+                      ...popoverItemStyle,
+                      padding: '7px 12px',
+                      color: 'var(--gray-700)',
                       background: 'transparent', border: 'none', cursor: 'pointer',
                     }}
                   >
@@ -296,7 +308,7 @@ function HoursRow({ day, data, onChange, onCopyTo, allDays }) {
           </div>
         </>
       ) : (
-        <span style={{ fontSize: TEXT_XS, color: 'var(--gray-400)', fontStyle: 'italic', flex: 1 }}>Closed</span>
+        <span style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', fontStyle: 'italic', flex: 1 }}>Closed</span>
       )}
     </div>
   )
@@ -452,7 +464,7 @@ export default function OnboardingWizard() {
               <h1 className="heading-page">
                 What's your business called?
               </h1>
-              <p style={{ fontSize: TEXT_SM, color: 'var(--gray-500)', margin: '0 0 28px' }}>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)', margin: '0 0 28px' }}>
                 This appears throughout your workspace.
               </p>
               <input
@@ -463,7 +475,7 @@ export default function OnboardingWizard() {
                 placeholder="e.g. The Crown, Riverside Retail..."
                 autoFocus
                 style={{
-                  width: '100%', padding: '14px 16px', fontSize: TEXT_LG, fontWeight: 600,
+                  width: '100%', padding: '14px 16px', fontSize: 'var(--text-lg)', fontWeight: 600,
                   border: '2px solid var(--gray-200)', borderRadius: 10, color: 'var(--gray-900)',
                   background: 'var(--gray-0)', outline: 'none', boxSizing: 'border-box',
                   transition: 'border-color .15s',
@@ -480,7 +492,7 @@ export default function OnboardingWizard() {
               <h1 className="heading-page">
                 What industry are you in?
               </h1>
-              <p style={{ fontSize: TEXT_SM, color: 'var(--gray-500)', margin: '0 0 24px' }}>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)', margin: '0 0 24px' }}>
                 We'll pre-load team presets and shift templates that match your business.
               </p>
 
@@ -506,7 +518,7 @@ export default function OnboardingWizard() {
                       <div style={{ color: on ? 'var(--pink-500)' : 'var(--gray-400)' }}>
                         <Icon size={24} />
                       </div>
-                      <span style={{ fontSize: TEXT_SM, fontWeight: 700, color: on ? 'var(--pink-500)' : 'var(--gray-700)' }}>
+                      <span style={{ fontSize: 'var(--text-sm)', fontWeight: 700, color: on ? 'var(--pink-500)' : 'var(--gray-700)' }}>
                         {label}
                       </span>
                     </button>
@@ -522,7 +534,7 @@ export default function OnboardingWizard() {
                   placeholder="Tell us your industry..."
                   autoFocus
                   style={{
-                    width: '100%', padding: '11px 14px', fontSize: TEXT_SM,
+                    width: '100%', padding: '11px 14px', fontSize: 'var(--text-sm)',
                     border: '1.5px solid var(--gray-200)', borderRadius: 8, color: 'var(--gray-900)',
                     background: 'var(--gray-0)', outline: 'none', boxSizing: 'border-box',
                     borderColor: otherIndustry.trim() ? 'var(--pink-500)' : 'var(--gray-200)',
@@ -539,7 +551,7 @@ export default function OnboardingWizard() {
               <h1 className="heading-page">
                 Select your teams
               </h1>
-              <p style={{ fontSize: TEXT_SM, color: 'var(--gray-500)', margin: '0 0 6px' }}>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)', margin: '0 0 6px' }}>
                 Each team gets its own shift patterns and scheduling rules.
               </p>
 
@@ -551,24 +563,21 @@ export default function OnboardingWizard() {
                     const colorLight = PALETTE_LIGHT[i % PALETTE_LIGHT.length]
                     return (
                       <button
+                        className="ui-chip ui-chip-button"
                         key={t.id}
                         onClick={() => toggleTeam(t.id, t.label)}
                         style={{
-                          padding: '8px 16px', borderRadius: 8, cursor: 'pointer',
+                          ['--ui-chip-padding']: '8px 16px',
                           border: on ? `2px solid ${color}` : '1.5px solid var(--gray-200)',
                           background: on ? colorLight : 'var(--gray-50)',
                           color: on ? color : 'var(--gray-500)',
-                          fontSize: TEXT_XS, fontWeight: 600,
-                          display: 'flex', alignItems: 'center', gap: 6,
-                          transition: 'all .12s',
+                          fontSize: 'var(--text-xs)', fontWeight: 600,
+                          gap: 6,
                         }}
                       >
                         {on && (
-                          <div style={{
-                            width: 14, height: 14, borderRadius: 3,
+                          <div className="ui-square-badge" style={{
                             background: color, color: 'var(--gray-0)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            flexShrink: 0,
                           }}>
                             <CheckIcon size={9} />
                           </div>
@@ -585,11 +594,12 @@ export default function OnboardingWizard() {
                 const color = PALETTE[(presetTeams.length + i) % PALETTE.length]
                 const colorLight = PALETTE_LIGHT[(presetTeams.length + i) % PALETTE_LIGHT.length]
                 return (
-                  <div key={t.id} style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 6,
-                    padding: '6px 12px', borderRadius: 8, marginBottom: 4,
+                  <div key={t.id} className="ui-chip" style={{
+                    ['--ui-chip-padding']: '6px 12px',
+                    gap: 6,
+                    marginBottom: 4,
                     background: colorLight, border: `2px solid ${color}`,
-                    color, fontSize: TEXT_XS, fontWeight: 600,
+                    color, fontSize: 'var(--text-xs)', fontWeight: 600,
                   }}>
                     {t.label}
                     <button
@@ -611,20 +621,21 @@ export default function OnboardingWizard() {
                   onKeyDown={e => e.key === 'Enter' && addCustomTeam()}
                   placeholder="Add custom team..."
                   style={{
-                    flex: 1, padding: '9px 12px', fontSize: TEXT_XS, fontWeight: 500,
+                    flex: 1, padding: '9px 12px', fontSize: 'var(--text-xs)', fontWeight: 500,
                     border: '1.5px solid var(--gray-200)', borderRadius: 8, color: 'var(--gray-900)',
                     background: 'var(--gray-0)', outline: 'none',
                   }}
                 />
                 <button
+                  className="ui-inline-action ui-inline-action-xs"
                   onClick={addCustomTeam}
                   disabled={!customTeam.trim()}
                   style={{
-                    height: 38, padding: '0 14px', borderRadius: 8, border: 'none',
+                    height: 38, border: 'none',
                     background: customTeam.trim() ? 'var(--pink-500)' : 'var(--gray-100)',
                     color: customTeam.trim() ? 'var(--gray-0)' : 'var(--gray-400)',
-                    fontSize: TEXT_XS, fontWeight: 600, cursor: customTeam.trim() ? 'pointer' : 'not-allowed',
-                    display: 'flex', alignItems: 'center', gap: 5,
+                    cursor: customTeam.trim() ? 'pointer' : 'not-allowed',
+                    gap: 5,
                   }}
                 >
                   <PlusIcon size={11} /> Add
@@ -632,7 +643,7 @@ export default function OnboardingWizard() {
               </div>
 
               {selectedTeams.length > 0 && (
-                <div style={{ fontSize: TEXT_XS, color: 'var(--gray-400)', marginTop: 8 }}>
+                <div style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', marginTop: 8 }}>
                   {selectedTeams.length} team{selectedTeams.length !== 1 ? 's' : ''} selected
                 </div>
               )}
@@ -646,7 +657,7 @@ export default function OnboardingWizard() {
               <h1 className='heading-page'>
                 When do you operate?
               </h1>
-              <p style={{ fontSize: TEXT_SM, color: 'var(--gray-500)', margin: '0 0 6px' }}>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)', margin: '0 0 6px' }}>
                 Open and Close times anchor your shift patterns.{' '}
                 <span style={{ color: 'var(--team-purple)', fontWeight: 600 }}>First/Last shift</span>
                 {' '}set when staff rotas begin and end.
@@ -665,7 +676,7 @@ export default function OnboardingWizard() {
                 ))}
               </div>
 
-              <p style={{ fontSize: TEXT_XS, color: 'var(--gray-400)', marginTop: 8 }}>
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', marginTop: 8 }}>
                 You can adjust these anytime in Settings. Shift patterns on the Shifts page will auto-anchor to these times.
               </p>
             </div>
@@ -677,10 +688,11 @@ export default function OnboardingWizard() {
             marginTop: 28, paddingTop: 20, borderTop: '1px solid var(--gray-100)',
           }}>
             <button
+              className="ui-inline-action"
               onClick={() => setStep(s => s - 1)}
               disabled={step === 1}
               style={{
-                padding: '10px 20px', borderRadius: 8, fontSize: TEXT_SM, fontWeight: 600,
+                padding: '10px 20px', fontSize: 'var(--text-sm)', fontWeight: 600,
                 border: '1px solid var(--gray-200)', background: 'var(--gray-0)', color: 'var(--gray-500)',
                 cursor: step === 1 ? 'default' : 'pointer',
                 opacity: step === 1 ? 0 : 1, transition: 'opacity .15s',
@@ -691,14 +703,14 @@ export default function OnboardingWizard() {
 
             {step < TOTAL ? (
               <button
+                className="ui-inline-action"
                 onClick={() => setStep(s => s + 1)}
                 disabled={!canProceed()}
                 style={{
-                  padding: '10px 24px', borderRadius: 8, fontSize: TEXT_SM, fontWeight: 700,
+                  padding: '10px 24px', fontSize: 'var(--text-sm)', fontWeight: 700,
                   border: 'none', background: canProceed() ? 'var(--pink-500)' : 'var(--gray-100)',
                   color: canProceed() ? 'var(--gray-0)' : 'var(--gray-400)',
                   cursor: canProceed() ? 'pointer' : 'not-allowed',
-                  display: 'flex', alignItems: 'center', gap: 6,
                   transition: 'all .12s',
                 }}
               >
@@ -706,14 +718,14 @@ export default function OnboardingWizard() {
               </button>
             ) : (
               <button
+                className="ui-inline-action"
                 onClick={handleSubmit}
                 disabled={!canProceed() || saving}
                 style={{
-                  padding: '10px 24px', borderRadius: 8, fontSize: TEXT_SM, fontWeight: 700,
+                  padding: '10px 24px', fontSize: 'var(--text-sm)', fontWeight: 700,
                   border: 'none', background: canProceed() && !saving ? 'var(--pink-500)' : 'var(--gray-100)',
                   color: canProceed() && !saving ? 'var(--gray-0)' : 'var(--gray-400)',
                   cursor: canProceed() && !saving ? 'pointer' : 'not-allowed',
-                  display: 'flex', alignItems: 'center', gap: 6,
                 }}
               >
                 {saving ? (

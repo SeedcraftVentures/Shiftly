@@ -7,7 +7,7 @@ import { DAYS_SHORT, decimalTimeToLabel } from '@/app/lib/timeUtils'
 import PageHeader from '@/app/wrappers/PageHeader'
 import ShiftFilterBar from './components/ShiftFilterBar'
 import ShiftWarningBar from './components/ShiftWarningBar'
-import ShiftPatternList from './components/ShiftPatternList'
+import ShiftsList from './components/ShiftsList'
 // import WeekAtAGlance from './components/WeekAtAGlance'
 // import FixGapsModal from './components/FixGapsModal'
 
@@ -102,7 +102,7 @@ export default function ShiftsPage() {
         style={{
           ...centerStateStyle,
           color: 'var(--gray-400)',
-          fontSize: '0.875rem',
+          fontSize: 'var(--text-sm)',
         }}
       >
         Loading shifts…
@@ -116,7 +116,7 @@ export default function ShiftsPage() {
         style={{
           ...centerStateStyle,
           color: 'var(--red-500)',
-          fontSize: '0.875rem',
+          fontSize: 'var(--text-sm)',
         }}
       >
         {error}
@@ -138,68 +138,79 @@ export default function ShiftsPage() {
 
       {/* ── Page header ── */}
       <div style={{
-        ...innerStyle,
         background: 'var(--gray-50)',
         paddingTop: 28,
         paddingBottom: 0
       }}>
-        <PageHeader 
-          title={`Shifts`}
-          subtitle="Define your shift patterns. The solver uses these to build rotas automatically."
-        />
+        <div style={innerStyle}>
+          <PageHeader 
+            title={`Shifts`}
+            subtitle="Define your shift patterns. The solver uses these to build rotas automatically."
+          />
+        </div>
       </div>
 
       {/* ── Sticky filter + warning bar ── */}
       <div
-        style={{
-          ...innerStyle,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 6,
-          background: 'var(--gray-50)',
+        style={{ 
           flexShrink: 0,
           position: 'sticky',
           top: 0,
           zIndex: 30,
-          paddingBottom: 8,
+          paddingBottom: 8
         }}
       >
-        <ShiftFilterBar
-          teams={teams} shifts={shifts} filterTeamId={filterTeamId}
-          onFilterChange={setFilterTeamId} onAddShift={handleAddShift}
-        />
-        <ShiftWarningBar
-          warnings={warnings} onDayClick={setSelectedDay}
-          onFixGaps={() => { setSelectedRecs({}); setShowFixModal(true) }}
-        />
+        <div
+          style={{
+            ...innerStyle,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 6,
+            background: 'var(--gray-50)'
+          }}
+        >
+          <ShiftFilterBar
+            teams={teams} shifts={shifts} filterTeamId={filterTeamId}
+            onFilterChange={setFilterTeamId} onAddShift={handleAddShift}
+          />
+          <ShiftWarningBar
+            warnings={warnings} onDayClick={setSelectedDay}
+            onFixGaps={() => { setSelectedRecs({}); setShowFixModal(true) }}
+          />
+        </div>
       </div>
 
       {/* ── Body ── */}
       <div
         style={{
-          ...innerStyle,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 14,
           flex: 1,
           overflow: 'auto',
           paddingTop: 16,
           paddingBottom: 24,
         }}
       >
-        <ShiftPatternList
-          teams={teams} shifts={shifts} filteredShifts={filteredShifts}
-          openShiftId={openShiftId} onToggleShift={handleToggleShift}
-          onUpdateShift={updateShift} onDeleteShift={deleteShift}
-          fixedLocks={fixedLocks} onSetFixedLock={handleSetFixedLock}
-          shiftLengths={shiftLengths} openTime={openTime} closeTime={closeTime}
-          scrollToId={scrollToId}
-        />
-        {/* <WeekAtAGlance
-          teams={teamsToCheck} allShifts={shifts} filteredShifts={filteredShifts}
-          selectedDay={selectedDay} openShiftId={openShiftId} warnings={warnings}
-          onSelectDay={setSelectedDay} onClickShift={handleClickShiftCard}
-        /> */}
+        <div
+          style={{
+            ...innerStyle,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 14,
+          }}
+        >
+          <ShiftsList
+            teams={teams} shifts={shifts} filteredShifts={filteredShifts}
+            openShiftId={openShiftId} onToggleShift={handleToggleShift}
+            onUpdateShift={updateShift} onDeleteShift={deleteShift}
+            fixedLocks={fixedLocks} onSetFixedLock={handleSetFixedLock}
+            shiftLengths={shiftLengths} openTime={openTime} closeTime={closeTime}
+            scrollToId={scrollToId}
+          />
+          {/* <WeekAtAGlance
+            teams={teamsToCheck} allShifts={shifts} filteredShifts={filteredShifts}
+            selectedDay={selectedDay} openShiftId={openShiftId} warnings={warnings}
+            onSelectDay={setSelectedDay} onClickShift={handleClickShiftCard}
+          /> */}
+        </div>
       </div>
 
       {/* {showFixModal && (

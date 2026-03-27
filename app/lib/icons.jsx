@@ -252,6 +252,40 @@ export function LockClosedIcon({ className = 'w-4 h-4', strokeWidth = 2, ...prop
   )
 }
 
+export function LockOpenIcon({ className = 'w-4 h-4', strokeWidth = 1.4, fill = 'none', stroke = 'currentColor', ...props }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 14 16"
+      fill={fill}
+      stroke={stroke}
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...props}
+    >
+      <rect x="2" y="7" width="10" height="9" rx="1.5" />
+      <path d="M5 7V4.5a2 2 0 014 0" />
+      <circle cx="7" cy="11.5" r="1.3" fill={stroke} stroke="none" />
+    </svg>
+  )
+}
+
+export function KeyholderIcon({ className = 'w-5 h-5', ...props }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      aria-hidden="true"
+      {...props}
+    >
+      <path fillRule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z" clipRule="evenodd" />
+    </svg>
+  )
+}
+
 export function CheckIcon({ size = 12, ...props }) {
   return (
     <svg width={size} height={size} viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" {...props}>

@@ -52,6 +52,13 @@ export function clampHours(h) {
   return Math.max(0, Math.min(24, h))
 }
 
+export function formatHours(h) {
+  if (h % 1 === 0) return `${h}h`
+  const whole = Math.floor(h)
+  const mins = Math.round((h - whole) * 60)
+  return whole > 0 ? `${whole}h ${mins}m` : `${mins}m`
+}
+
 export function getDayLabel(days) {
   if (!days || days.length === 0) return '-'
   if (days.length === 7) return 'All days'

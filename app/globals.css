@@ -52,6 +52,8 @@
   --pink-800: #aa1045;
   --pink-900: #8d123c;
 
+  --pink-accent: #FF1F7D;
+
   --red-50: #FEF2F2;
   --red-200: #FECACA;
   --red-500: #EF4444;
@@ -72,6 +74,15 @@
   --team-orange-light: #FFF7ED;
   --team-red-light: #FEF2F2;
   --team-indigo-light: #EEF2FF;
+
+  --text-xs: theme('fontSize.xs');
+  --text-sm: theme('fontSize.sm');
+  --text-base: theme('fontSize.base');
+  --text-lg: theme('fontSize.lg');
+  --text-xl: theme('fontSize.xl');
+  --text-2xl: theme('fontSize.2xl');
+  --text-3xl: theme('fontSize.3xl');
+  --text-4xl: theme('fontSize.4xl');
 }
 
 /* @media (prefers-color-scheme: dark) {
@@ -107,6 +118,70 @@ body {
 }
 
 /* ============================================
+   ROUNDED UI SHELLS
+   ============================================ */
+
+.ui-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ui-chip-gap, 0);
+  padding: var(--ui-chip-padding, 5px 12px);
+  border-radius: 8px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ui-chip-button {
+  cursor: pointer;
+  transition: all .12s;
+}
+
+.ui-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+
+.ui-square-toggle {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ui-square-badge {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ui-inline-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 8px;
+  white-space: nowrap;
+  transition: all .12s;
+}
+
+.ui-inline-action-xs {
+  padding: 5px 14px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+/* ============================================
    SHIFTLY TYPOGRAPHY SYSTEM WITH CAL SANS
    ============================================ */
 
@@ -115,51 +190,10 @@ body {
   font-family: 'Cal Sans', sans-serif;
 }
 
-/* Typography Scale */
-.text-xs {
-  font-size: 0.75rem;    /* 12px - Captions, metadata */
-  line-height: 1rem;
-}
-
-.text-sm {
-  font-size: 0.875rem;   /* 14px - Secondary text, labels */
-  line-height: 1.25rem;
-}
-
-.text-base {
-  font-size: 1rem;       /* 16px - Body text (default) */
-  line-height: 1.5rem;
-}
-
-.text-lg {
-  font-size: 1.125rem;   /* 18px - Lead paragraphs */
-  line-height: 1.75rem;
-}
-
-.text-xl {
-  font-size: 1.25rem;    /* 20px - Subheadings */
-  line-height: 1.75rem;
-}
-
-.text-2xl {
-  font-size: 1.5rem;     /* 24px - Section headers (h2) */
-  line-height: 2rem;
-}
-
-.text-3xl {
-  font-size: 1.875rem;   /* 30px - Page titles (h1) */
-  line-height: 2.25rem;
-}
-
-.text-4xl {
-  font-size: 2.25rem;    /* 36px - Hero titles */
-  line-height: 2.5rem;
-}
-
 /* Semantic Classes - Cal Sans for ALL headings */
 .heading-page {
   font-family: 'Cal Sans', sans-serif;
-  font-size: 2rem;       /* 32px - larger than before */
+  font-size: var(--text-3xl); /* 32px → closest text-3xl (30px) */
   font-weight: 600;
   line-height: 2.5rem;
   color: var(--gray-900);
@@ -168,7 +202,7 @@ body {
 
 .heading-section {
   font-family: 'Cal Sans', sans-serif;
-  font-size: 1.5rem;     /* 24px */
+  font-size: var(--text-2xl); /* 24px */
   font-weight: 600;
   line-height: 2rem;
   color: var(--gray-900);
@@ -178,7 +212,7 @@ body {
 
 .heading-subsection {
   font-family: 'Cal Sans', sans-serif;
-  font-size: 1.25rem;    /* 20px */
+  font-size: var(--text-xl); /* 20px */
   font-weight: 600;
   line-height: 1.75rem;
   color: var(--gray-900);
@@ -191,28 +225,28 @@ body {
 }
 
 .body-text {
-  font-size: 1rem;       /* 16px */
+  font-size: var(--text-base); /* 16px */
   font-weight: 400;
   line-height: 1.5rem;
   color: var(--gray-700);
 }
 
 .body-small {
-  font-size: 0.875rem;   /* 14px */
+  font-size: var(--text-sm); /* 14px */
   font-weight: 400;
   line-height: 1.25rem;
   color: var(--gray-600);
 }
 
 .caption {
-  font-size: 0.75rem;    /* 12px */
+  font-size: var(--text-xs); /* 12px */
   font-weight: 400;
   line-height: 1rem;
   color: var(--gray-400);
 }
 
 .lead {
-  font-size: 1.125rem;   /* 18px */
+  font-size: var(--text-lg); /* 18px */
   font-weight: 400;
   line-height: 1.75rem;
   color: var(--gray-600);
@@ -447,7 +481,7 @@ textarea.success:focus {
   align-items: center;
   padding: 0.25rem 0.75rem;
   border-radius: 9999px;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-weight: 600;
   line-height: 1rem;
   transition: all 0.15s ease;
@@ -525,7 +559,7 @@ textarea.success:focus {
 .react-datepicker__current-month {
   color: var(--gray-900);
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: var(--text-base); /* 0.95rem → closest text-base */
   padding: 8px 0;
 }
 
@@ -536,7 +570,7 @@ textarea.success:focus {
 .react-datepicker__day-name {
   color: var(--gray-600);
   font-weight: 500;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
 }
 
 /* Day cells */

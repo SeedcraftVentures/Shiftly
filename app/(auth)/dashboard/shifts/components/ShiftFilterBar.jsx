@@ -4,8 +4,8 @@ export default function ShiftFilterBar({ teams, shifts, filterTeamId, onFilterCh
   const barStyle = {
     background: 'var(--gray-0)',
     padding: '10px 24px',
-    borderRadius: 12,
     border: '1px solid var(--gray-200)',
+    borderRadius: 12,
     display: 'flex',
     alignItems: 'center',
     gap: 6,
@@ -13,7 +13,7 @@ export default function ShiftFilterBar({ teams, shifts, filterTeamId, onFilterCh
   }
 
   const filterLabelStyle = {
-    fontSize: '0.75rem',
+    fontSize: 'var(--text-xs)',
     fontWeight: 600,
     color: 'var(--gray-400)',
     letterSpacing: 0.8,
@@ -23,8 +23,7 @@ export default function ShiftFilterBar({ teams, shifts, filterTeamId, onFilterCh
 
   const chipBaseStyle = {
     padding: '5px 12px',
-    borderRadius: 8,
-    fontSize: '0.75rem',
+    fontSize: 'var(--text-xs)',
     fontWeight: 600,
     cursor: 'pointer',
     whiteSpace: 'nowrap',
@@ -39,6 +38,7 @@ export default function ShiftFilterBar({ teams, shifts, filterTeamId, onFilterCh
       </span>
 
       <button
+        className="ui-chip ui-chip-button"
         onClick={() => onFilterChange('all')}
         style={{
           ...chipBaseStyle,
@@ -62,6 +62,7 @@ export default function ShiftFilterBar({ teams, shifts, filterTeamId, onFilterCh
         const on = filterTeamId === String(team.id)
         return (
           <button
+            className="ui-chip ui-chip-button"
             key={team.id}
             onClick={() => onFilterChange(String(team.id))}
             style={{
@@ -75,12 +76,11 @@ export default function ShiftFilterBar({ teams, shifts, filterTeamId, onFilterCh
             }}
           >
             <div
+              className="ui-dot"
               style={{
                 width: 7,
                 height: 7,
-                borderRadius: 99,
                 background: team.color,
-                flexShrink: 0,
               }}
             />
             {team.team_name}{' '}
@@ -97,18 +97,14 @@ export default function ShiftFilterBar({ teams, shifts, filterTeamId, onFilterCh
       })}
 
       <button
+        className="ui-inline-action ui-inline-action-xs"
         onClick={onAddShift}
         style={{
           marginLeft: 'auto',
-          padding: '7px 18px',
-          borderRadius: 8,
           border: 'none',
           background: 'var(--pink-500)',
           color: 'var(--gray-0)',
-          fontSize: '0.75rem',
-          fontWeight: 600,
           cursor: 'pointer',
-          whiteSpace: 'nowrap',
           flexShrink: 0,
         }}
       >

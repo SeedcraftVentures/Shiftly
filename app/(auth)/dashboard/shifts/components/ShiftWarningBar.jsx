@@ -23,13 +23,13 @@ export default function ShiftWarningBar({ warnings, onDayClick, onFixGaps }) {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    fontSize: '0.75rem',
+    fontSize: 'var(--text-xs)',
     fontWeight: 700,
     flexShrink: 0,
   }
 
   const warningLabelStyle = {
-    fontSize: '0.75rem',
+    fontSize: 'var(--text-xs)',
     fontWeight: 600,
     color: 'var(--red-500)',
     flexShrink: 0,
@@ -43,7 +43,7 @@ export default function ShiftWarningBar({ warnings, onDayClick, onFixGaps }) {
   }
 
   const warningChipStyle = {
-    fontSize: '0.75rem',
+    fontSize: 'var(--text-xs)',
     padding: '3px 8px',
     borderRadius: 6,
     background: 'var(--gray-0)',
@@ -58,24 +58,21 @@ export default function ShiftWarningBar({ warnings, onDayClick, onFixGaps }) {
   const teamDotStyle = {
     width: 6,
     height: 6,
-    borderRadius: 99,
     flexShrink: 0,
   }
 
   const moreLabelStyle = {
-    fontSize: '0.75rem',
+    fontSize: 'var(--text-xs)',
     color: 'var(--red-500)',
     fontWeight: 600,
     alignSelf: 'center',
   }
 
   const fixGapsButtonStyle = {
-    padding: '5px 14px',
-    borderRadius: 8,
     border: 'none',
     background: 'var(--red-500)',
     color: 'var(--gray-0)',
-    fontSize: '0.75rem',
+    fontSize: 'var(--text-xs)',
     fontWeight: 600,
     cursor: 'pointer',
     whiteSpace: 'nowrap',
@@ -93,11 +90,13 @@ export default function ShiftWarningBar({ warnings, onDayClick, onFixGaps }) {
       <div style={warningsListStyle}>
         {warnings.slice(0, 7).map((w, i) => (
           <span
+            className="ui-chip ui-chip-button"
             key={i}
             onClick={() => onDayClick(w.di)}
             style={warningChipStyle}
           >
             <div
+              className="ui-dot"
               style={{
                 ...teamDotStyle,
                 background: w.teamColor,
@@ -114,6 +113,7 @@ export default function ShiftWarningBar({ warnings, onDayClick, onFixGaps }) {
       </div>
 
       <button
+        className="ui-inline-action ui-inline-action-xs"
         onClick={onFixGaps}
         style={fixGapsButtonStyle}
       >
