@@ -1,14 +1,9 @@
-// import { auth } from '@clerk/nextjs/server'
-import { auth } from '@/app/lib/authless'
-import { createClient } from '@supabase/supabase-js'
+import { auth } from '@clerk/nextjs/server'
+// import { auth } from '@/app/lib/authless'
 import { NextResponse } from 'next/server'
 import { notifyUser, notifyTeam } from '@/app/lib/createNotification'
 import { DB_TABLES } from '@/app/lib/constants'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
+import { supabaseService as supabase } from '@/app/lib/supabaseService'
 
 // GET - Fetch requests for user's teams
 export async function GET(request) {

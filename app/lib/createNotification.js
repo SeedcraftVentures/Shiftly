@@ -1,10 +1,5 @@
-import { createClient } from '@supabase/supabase-js'
 import { DB_TABLES } from '@/app/lib/constants'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
+import { supabaseService as supabase } from '@/app/lib/supabaseService'
 
 /**
  * Create notification(s) directly via Supabase (server-side only)

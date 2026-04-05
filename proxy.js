@@ -1,7 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
-
-import { auth } from '@/app/lib/authless'
+// import { auth } from '@/app/lib/authless'
 
 const isPublicRoute = createRouteMatcher([
   '/',
@@ -18,7 +17,7 @@ const isPublicRoute = createRouteMatcher([
 const isCheckoutRoute = createRouteMatcher(['/checkout(.*)'])
 const isApiRoute = createRouteMatcher(['/api/(.*)'])
 
-export default clerkMiddleware(async (auth99, request) => {
+export default clerkMiddleware(async (auth, request) => {
   // Allow all API routes through
   if (isApiRoute(request)) {
     return NextResponse.next()

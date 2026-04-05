@@ -1,5 +1,5 @@
-// import { auth } from '@clerk/nextjs/server'
-import { auth } from '@/app/lib/authless'
+import { auth } from '@clerk/nextjs/server'
+// import { auth } from '@/app/lib/authless'
 import { NextResponse } from 'next/server'
 import { supabase } from '@/app/lib/supabaseAnon'
 import { DB_TABLES } from '@/app/lib/constants'
