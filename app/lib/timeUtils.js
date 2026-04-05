@@ -59,6 +59,14 @@ export function formatHours(h) {
   return whole > 0 ? `${whole}h ${mins}m` : `${mins}m`
 }
 
+export function getWeekdays() {
+  return DAYS_FULL.slice(0, 5)
+}
+
+export function getWeekends() {
+  return DAYS_FULL.slice(5)
+}
+
 export function getDayLabel(days) {
   if (!days || days.length === 0) return '-'
   if (days.length === 7) return 'All days'

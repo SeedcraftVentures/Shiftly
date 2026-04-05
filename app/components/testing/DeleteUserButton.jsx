@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useClerk, useUser } from '@clerk/nextjs'
 
-export default function FloatingDeleteUserButton() {
+export default function DeleteUserButton() {
   const { user, isLoaded } = useUser()
   const { signOut } = useClerk()
   const router = useRouter()

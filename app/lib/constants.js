@@ -1,6 +1,14 @@
 // Database Table Names ────────────────────────────────────────────────────
 export const DB_TABLES = {
     users: 'Users',
+    organizations: 'Organizations',
+    organizationMembers: 'Organization Members',
+    locations: 'Locations',
+    teamsNew: 'Teams_new',
+    locationDayHours: 'Location Day hours',
+    teamDayHours: 'Team Day Hours',
+
+    
     teams: 'Teams',
     staff: 'Staff',
     rotas: 'Rotas',

@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { PALETTE, PALETTE_LIGHT } from '@/app/lib/shiftUtils'
-import { DAYS_FULL, TIME_OPTIONS } from '@/app/lib/timeUtils'
+import { DAYS_FULL, TIME_OPTIONS, getWeekdays, getWeekends } from '@/app/lib/timeUtils'
 import {
-  ArrowIcon, BusinessIcon, CheckIcon, ClockIcon, IndustryHospitalityIcon, IndustryOtherIcon, PlusIcon, IndustryRetailIcon, TeamIcon,
+  ArrowIcon, BusinessIcon, CheckIcon, ClockIcon, IndustryHospitalityIcon, IndustryOtherIcon, PlusIcon, IndustryRetailIcon, TeamIcon, LocationIcon
 } from '@/app/lib/icons'
 
 const INDUSTRY_TEAMS = {
@@ -100,7 +100,7 @@ function StepChip({ icon, label, active }) {
   }
 
   return (
-    <div className="ui-chip ui-chip-button" style={{
+    <div className="ui-chip" style={{
       ...chipBaseStyle,
       background: active ? 'var(--pink-50)' : 'var(--gray-50)',
       border: `1px solid ${active ? 'rgb(from var(--pink-500) r g b / 27%)' : 'var(--gray-200)'}`,
@@ -174,6 +174,15 @@ function HoursRow({ day, data, onChange, onCopyTo, allDays }) {
     gap: 2,
   }
 
+  const hoursSelectStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 5,
+    flex: 1,
+    flexWrap: 'wrap',
+    flexDirection: 'column'
+  }
+
   return (
     <div style={{
       ...rowBaseStyle,
@@ -215,34 +224,35 @@ function HoursRow({ day, data, onChange, onCopyTo, allDays }) {
 
       {data.open ? (
         <>
-          {/* Equation: Open → First shift → Last shift → Close */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, flex: 1, flexWrap: 'wrap' }}>
-            <div style={columnCenterStyle}>
-              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--gray-400)', letterSpacing: 0.4 }}>OPEN</span>
-              <TimeSelect value={data.opening} onChange={v => onChange({ ...data, opening: v })} />
+            {/* Open ↓ Close */}
+            <div style={hoursSelectStyle}>
+              <div style={columnCenterStyle}>
+                <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--gray-400)', letterSpacing: 0.4 }}>OPEN FOR PUBLIC</span>
+                <TimeSelect value={data.opening} onChange={v => onChange({ ...data, opening: v })} />
+              </div>
+
+              <span style={{ color: 'var(--gray-300)', fontSize: 'var(--text-xs)' }}>↓</span>
+
+              <div style={columnCenterStyle}>
+                <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--gray-400)', letterSpacing: 0.4 }}>CLOSED FOR PUBLIC</span>
+                <TimeSelect value={data.closing} onChange={v => onChange({ ...data, closing: v })} />
+              </div>
             </div>
 
-            <span style={{ color: 'var(--gray-300)', fontSize: 'var(--text-xs)', marginTop: 14 }}>→</span>
+            {/* First shift starts ↓ Last shift ends */}
+            <div style={hoursSelectStyle}>
+              <div style={columnCenterStyle}>
+                <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--team-purple)', letterSpacing: 0.4 }}>FIRST SHIFT START</span>
+                <TimeSelect value={data.first_shift} onChange={v => onChange({ ...data, first_shift: v })} />
+              </div>
 
-            <div style={columnCenterStyle}>
-              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--team-purple)', letterSpacing: 0.4 }}>FIRST SHIFT</span>
-              <TimeSelect value={data.first_shift} onChange={v => onChange({ ...data, first_shift: v })} />
+              <span style={{ color: 'var(--gray-300)', fontSize: 'var(--text-xs)' }}>↓</span>
+
+              <div style={columnCenterStyle}>
+                <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--team-purple)', letterSpacing: 0.4 }}>LAST SHIFT END</span>
+                <TimeSelect value={data.last_shift} onChange={v => onChange({ ...data, last_shift: v })} />
+              </div>
             </div>
-
-            <span style={{ color: 'var(--gray-300)', fontSize: 'var(--text-xs)', marginTop: 14 }}>→</span>
-
-            <div style={columnCenterStyle}>
-              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--team-purple)', letterSpacing: 0.4 }}>LAST SHIFT</span>
-              <TimeSelect value={data.last_shift} onChange={v => onChange({ ...data, last_shift: v })} />
-            </div>
-
-            <span style={{ color: 'var(--gray-300)', fontSize: 'var(--text-xs)', marginTop: 14 }}>→</span>
-
-            <div style={columnCenterStyle}>
-              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--gray-400)', letterSpacing: 0.4 }}>CLOSE</span>
-              <TimeSelect value={data.closing} onChange={v => onChange({ ...data, closing: v })} />
-            </div>
-          </div>
 
           {/* Copy to */}
           <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -320,11 +330,12 @@ export default function OnboardingWizard() {
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [saving, setSaving] = useState(false)
-  const TOTAL = 4
+  const TOTAL = 5
 
   const [businessName, setBusinessName] = useState('')
   const [industry, setIndustry] = useState(null)
   const [otherIndustry, setOtherIndustry] = useState('')
+  const [address, setAddress] = useState('')
   const [selectedTeams, setSelectedTeams] = useState([])
   const [customTeam, setCustomTeam] = useState('')
   const [hours, setHours] = useState(defaultHours())
@@ -355,8 +366,8 @@ export default function OnboardingWizard() {
     const source = hours[sourceDay]
     setHours(prev => {
       const updated = { ...prev }
-      const weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
-      const weekends = ['Saturday', 'Sunday']
+      const weekdays = getWeekdays()
+      const weekends = getWeekends()
       const targets = target === 'all' ? DAYS_FULL
         : target === 'weekdays' ? weekdays
         : target === 'weekends' ? weekends
@@ -373,8 +384,9 @@ export default function OnboardingWizard() {
   const canProceed = () => {
     if (step === 1) return businessName.trim().length > 0
     if (step === 2) return industry !== null && (industry !== 'other' || otherIndustry.trim().length > 0)
-    if (step === 3) return selectedTeams.length > 0
-    if (step === 4) return DAYS_FULL.some(d => hours[d].open)
+    if (step === 3) return address.trim().length > 0
+    if (step === 4) return selectedTeams.length > 0
+    if (step === 5) return DAYS_FULL.some(d => hours[d].open)
     return false
   }
 
@@ -392,7 +404,9 @@ export default function OnboardingWizard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           business_name: businessName.trim(),
-          industry: industry === 'other' ? otherIndustry.trim() : industry,
+          industry: industry.trim(),
+          otherIndustry: otherIndustry.trim(),
+          address: address.trim(),
           teams: teamsWithColors,
           operating_hours: hours,
         }),
@@ -411,13 +425,6 @@ export default function OnboardingWizard() {
       setSaving(false)
     }
   }
-
-  const stepMeta = [
-    { icon: <BusinessIcon size={13} />, label: 'Business' },
-    { icon: <IndustryOtherIcon size={13} />, label: 'Industry' },
-    { icon: <TeamIcon size={13} />, label: 'Teams' },
-    { icon: <ClockIcon size={13} />, label: 'Hours' },
-  ]
 
   const stepPanelStyle = {
     flex: 1,
@@ -446,7 +453,7 @@ export default function OnboardingWizard() {
         </div>
       </div>
 
-      <div style={{ width: '100%', maxWidth: 620 }}>
+      <div style={{ width: '100%', maxWidth: 600 }}>
         <ProgressBar step={step} total={TOTAL} />
 
         <div style={{
@@ -544,12 +551,45 @@ export default function OnboardingWizard() {
             </div>
           )}
 
-          {/* ── Step 3: Teams ── */}
+          {/* ── Step 3: Location Address ── */}
           {step === 3 && (
+            <div style={stepPanelStyle}>
+              <StepChip icon={<LocationIcon size={13} />} label="Location" active />
+              <h1 className="heading-page">
+                Add a location for {businessName.trim()}
+              </h1>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)', margin: '0 0 28px' }}>
+                Your teams and rota are tied to this location.
+              </p>
+
+              <input
+                type="text"
+                value={address}
+                onChange={e => setAddress(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && canProceed() && setStep(4)}
+                placeholder="e.g. 123 High Street, London"
+                autoFocus
+                style={{
+                  width: '100%', padding: '14px 16px', fontSize: 'var(--text-lg)', fontWeight: 600,
+                  border: '2px solid var(--gray-200)', borderRadius: 10, color: 'var(--gray-900)',
+                  background: 'var(--gray-0)', outline: 'none', boxSizing: 'border-box',
+                  transition: 'border-color .15s',
+                  borderColor: address.trim() ? 'var(--pink-500)' : 'var(--gray-200)',
+                }}
+              />
+
+              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', marginTop: 8 }}>
+                You can add more locations later from Settings.
+              </p>
+            </div>
+          )}
+
+          {/* ── Step 4: Teams ── */}
+          {step === 4 && (
             <div style={stepPanelStyle}>
               <StepChip icon={<TeamIcon size={13} />} label="Teams" active />
               <h1 className="heading-page">
-                Select your teams
+                Select your teams for {address.trim()}
               </h1>
               <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)', margin: '0 0 6px' }}>
                 Each team gets its own shift patterns and scheduling rules.
@@ -650,8 +690,8 @@ export default function OnboardingWizard() {
             </div>
           )}
 
-          {/* ── Step 4: Hours ── */}
-          {step === 4 && (
+          {/* ── Step 5: Hours ── */}
+          {step === 5 && (
             <div style={stepPanelStyle}>
               <StepChip icon={<ClockIcon size={13} />} label="Hours" active />
               <h1 className='heading-page'>

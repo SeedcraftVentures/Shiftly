@@ -1,7 +1,7 @@
 import { ClerkProvider } from '@clerk/nextjs'
 import './globals.css'
 import { Inter } from 'next/font/google'
-import FloatingDeleteUserButton from '@/app/components/testing/FloatingDeleteUserButton'
+import DeleteUserButton from '@/app/components/testing/DeleteUserButton'
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -30,7 +30,7 @@ export default function RootLayout({ children }) {
       <html lang="en" className={inter.variable}>
         <body className="font-sans antialiased">
           {children}
-          <FloatingDeleteUserButton />
+          <DeleteUserButton />
         </body>
       </html>
     </ClerkProvider>

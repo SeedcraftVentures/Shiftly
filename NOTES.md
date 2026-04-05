@@ -3,6 +3,7 @@
 3. Replace raw ANON_KEY clients with lib/supabase
 4. Instead of arbitrary font sizes, uses tailwind's theme variables
 5. Need to reuse rounded containers and button styles. Some buttons shadow on hover, some don't.
+6. Replace unicode icons (→, ↓) with actual icons
 
 FF1F7D - pink-500
 F8F9FA - gray-50
