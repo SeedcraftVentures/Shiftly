@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-// import { useUser } from '@clerk/nextjs'
-import { useUser } from '@/app/lib/authless'
+import { useUser } from '@clerk/nextjs'
+// import { useUser } from '@/app/lib/authless'
 import { STORAGE_KEYS, STORAGE_VALUES } from '@/app/lib/constants'
 
 export default function OnboardingCheck({ children }) {
@@ -60,7 +60,7 @@ export default function OnboardingCheck({ children }) {
         }
 
         // Step 2: User is a manager — check onboarding status
-        const response = await fetch('/api/teams')
+        const response = await fetch('/api/organization')
         if (response.ok) {
           const teams = await response.json()
           const defaultTeam = teams.find(t => t.is_default) || teams[0]

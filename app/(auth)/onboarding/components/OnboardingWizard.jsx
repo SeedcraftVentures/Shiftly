@@ -8,22 +8,26 @@ import {
   ArrowIcon, BusinessIcon, CheckIcon, ClockIcon, IndustryHospitalityIcon, IndustryOtherIcon, PlusIcon, IndustryRetailIcon, TeamIcon, LocationIcon
 } from '@/app/lib/icons'
 
+const industryHospitality = "Hospitality"
+const industryRetail = "Retail"
+const industryOther = "Other"
+
 const INDUSTRY_TEAMS = {
-  hospitality: [
+  [industryHospitality]: [
     { id: 'foh', label: 'Front of House' },
     { id: 'bar', label: 'Bar' },
     { id: 'kitchen', label: 'Kitchen' },
     { id: 'kp', label: 'KP' },
     { id: 'management', label: 'Management' },
   ],
-  retail: [
+  [industryRetail]: [
     { id: 'shopfloor', label: 'Shop Floor' },
     { id: 'stockroom', label: 'Stock Room' },
     { id: 'management', label: 'Management' },
     { id: 'customerservice', label: 'Customer Service' },
     { id: 'checkout', label: 'Checkout' },
   ],
-  other: [],
+  [industryOther]: [],
 }
 
 const defaultHours = () => {
@@ -403,7 +407,7 @@ export default function OnboardingWizard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          business_name: businessName.trim(),
+          organization_name: businessName.trim(),
           industry: industry.trim(),
           otherIndustry: otherIndustry.trim(),
           address: address.trim(),
@@ -505,9 +509,9 @@ export default function OnboardingWizard() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 16 }}>
                 {[
-                  { value: 'hospitality', label: 'Hospitality', Icon: IndustryHospitalityIcon },
-                  { value: 'retail', label: 'Retail', Icon: IndustryRetailIcon },
-                  { value: 'other', label: 'Other', Icon: IndustryOtherIcon },
+                  { value: industryHospitality, label: industryHospitality, Icon: IndustryHospitalityIcon },
+                  { value: industryRetail, label: industryRetail, Icon: IndustryRetailIcon },
+                  { value: [industryOther], label: industryOther, Icon: IndustryOtherIcon },
                 ].map(({ value, label, Icon }) => {
                   const on = industry === value
                   return (

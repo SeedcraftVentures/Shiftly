@@ -16,7 +16,7 @@ import {
   DAYS_SHORT as DAYS,
 } from '@/app/lib/timeUtils'
 import {
-  DEFAULT_SHIFT_LENGTHS,
+  DEFAULT_LOCALE,
   getPaidHours,
   getOnSiteHours,
   applyTimeChange,
@@ -457,10 +457,10 @@ export default function ShiftRow({
     ? shift.end + shift.break_duration_mins / 60
     : shift.end
 
-  const allLengths = [...new Set([...DEFAULT_SHIFT_LENGTHS, ...(shiftLengths || []), shiftLen])].filter(l => l > 0).sort((a, b) => a - b)
+  const allLengths = [...new Set([...DEFAULT_LOCALE.shift_lengths, ...(shiftLengths || []), shiftLen])].filter(l => l > 0).sort((a, b) => a - b)
   const lenOptions = allLengths.map(l => ({
     value: l,
-    label: DEFAULT_SHIFT_LENGTHS.includes(l) || shiftLengths?.includes(l) ? `${l}h` : `${l}h (custom)`,
+    label: DEFAULT_LOCALE.shift_lengths.includes(l) || shiftLengths?.includes(l) ? `${l}h` : `${l}h (custom)`,
   }))
 
   const up = (field, val) => {

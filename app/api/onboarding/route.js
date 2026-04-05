@@ -3,6 +3,8 @@ import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { supabaseService } from '@/app/lib/supabaseService'
 import { DB_TABLES } from '@/app/lib/constants'
+import { DEFAULT_LOCALE } from '@/app/lib/shiftUtils'
+import { convertTimeToTimetz } from '@/app/lib/timeUtils'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,9 +13,9 @@ export async function POST(request) {
     const { userId } = await auth()
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { business_name, industry, otherIndustry, address, teams, operating_hours } = await request.json()
+    const { organization_name, industry, otherIndustry, address, teams, operating_hours } = await request.json()
 
-    if (!business_name || !industry || !address || !teams?.length) {
+    if (!organization_name || !industry || !address || !teams?.length) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -26,6 +28,7 @@ export async function POST(request) {
     const { data: organization, error: organizationInsertError } = await supabaseService
       .from(DB_TABLES.organizations)
       .insert({
+        organization_name: organization_name,
         owner_user_id: userId,
         industry: industry,
         other_industry: otherIndustry || "",
@@ -55,6 +58,10 @@ export async function POST(request) {
       .insert({
         name: address,
         organization_id: organization_id,
+        // TODO: Replace with locale
+        shift_lengths: DEFAULT_LOCALE.shift_lengths,
+        max_consecutive_days: DEFAULT_LOCALE.max_consecutive_days,
+        min_wage: DEFAULT_LOCALE.min_wage
       })
       .select('location_id')
       .single()
@@ -81,12 +88,13 @@ export async function POST(request) {
     const locationDayHoursRows = dayEntries
       .filter(([, dayData]) => dayData?.open)
       .map(([day, dayData]) => ({
-        location_id,
-        day,
-        opening_time: dayData.opening,
-        closing_time: dayData.closing,
-        start_time: dayData.first_shift,
-        end_time: dayData.last_shift,
+        // row_id: `${location_id}_${day}`,
+        location_id: location_id,
+        day: day,
+        opening_time: convertTimeToTimetz(dayData.opening),
+        closing_time: convertTimeToTimetz(dayData.closing),
+        start_time: convertTimeToTimetz(dayData.first_shift),
+        end_time: convertTimeToTimetz(dayData.last_shift),
       }))
 
     if (locationDayHoursRows.length > 0) {
@@ -102,6 +110,7 @@ export async function POST(request) {
       dayEntries
       .filter(([, dayData]) => dayData.open)
       .map(([day]) => ({
+        // row_id: `${teamRow.team_id}_${day}`,
         team_id: teamRow.team_id,
         day: day,
       }))
@@ -115,8 +124,8 @@ export async function POST(request) {
       if (teamDayHoursInsertError) throw teamDayHoursInsertError
     }
 
-    // return NextResponse.json({ success: true })
-    throw new Error('Testing ongoing onboarding work - not actually saving data yet')
+    return NextResponse.json({ success: true })
+    // throw new Error('Testing ongoing onboarding work - not actually saving data yet')
   } catch (error) {
     console.error('Onboarding error:', error)
     return NextResponse.json({ error: 'Failed to save onboarding data' }, { status: 500 })

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { assignTeamColors, DEFAULT_SHIFT_LENGTHS } from '@/app/lib/shiftUtils'
+import { assignTeamColors, DEFAULT_LOCALE } from '@/app/lib/shiftUtils'
 import { timeStringToDecimal } from '@/app/lib/timeUtils'
 
 export function useShifts() {
@@ -51,7 +51,7 @@ export function useShifts() {
   const shiftLengths = useMemo(() => {
     const raw = defaultTeam?.shift_lengths
     if (Array.isArray(raw) && raw.length) return raw
-    return DEFAULT_SHIFT_LENGTHS
+    return DEFAULT_LOCALE.shift_lengths
   }, [defaultTeam])
 
   // ── CRUD ────────────────────────────────────────────────────────────────────

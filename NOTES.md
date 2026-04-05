@@ -4,6 +4,7 @@
 4. Instead of arbitrary font sizes, uses tailwind's theme variables
 5. Need to reuse rounded containers and button styles. Some buttons shadow on hover, some don't.
 6. Replace unicode icons (→, ↓) with actual icons
+7. Load locale during onboarding to populate shift_lengths, min_wage etc.
 
 FF1F7D - pink-500
 F8F9FA - gray-50

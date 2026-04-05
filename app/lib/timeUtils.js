@@ -59,6 +59,16 @@ export function formatHours(h) {
   return whole > 0 ? `${whole}h ${mins}m` : `${mins}m`
 }
 
+// 18:00 -> 18:00:00
+export function convertTimeToTimetz(time) {
+  return `${time}:00`
+}
+
+// 18:00:00 -> 18:00
+export function convertTimetzToTime(timetz) {
+  return timetz.slice(0, 5)
+}
+
 export function getWeekdays() {
   return DAYS_FULL.slice(0, 5)
 }

@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-// import { useUser } from '@clerk/nextjs'
-import { useUser } from '@/app/lib/authless'
+import { useUser } from '@clerk/nextjs'
+// import { useUser } from '@/app/lib/authless'
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(

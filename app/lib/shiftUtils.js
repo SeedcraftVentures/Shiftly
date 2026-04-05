@@ -27,7 +27,12 @@ export const PALETTE_LIGHT = [
 export const GANTT_START = 7
 export const GANTT_END = 23
 export const GANTT_HOURS = GANTT_END - GANTT_START
-export const DEFAULT_SHIFT_LENGTHS = [4, 6, 8, 10, 12]
+export const DEFAULT_MAX_CONSECUTIVE_DAYS = 5
+export const DEFAULT_LOCALE = {
+  shift_lengths: [4, 6, 8, 10, 12],
+  max_consecutive_days: 5,
+  min_wage: 11.44
+}
 
 // ── Break / hours helpers ─────────────────────────────────────────────────────
 

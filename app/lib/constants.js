@@ -5,7 +5,7 @@ export const DB_TABLES = {
     organizationMembers: 'Organization Members',
     locations: 'Locations',
     teamsNew: 'Teams_new',
-    locationDayHours: 'Location Day hours',
+    locationDayHours: 'Location Day Hours',
     teamDayHours: 'Team Day Hours',
 
     

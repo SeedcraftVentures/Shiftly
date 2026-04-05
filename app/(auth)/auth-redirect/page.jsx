@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-// import { useUser } from '@clerk/nextjs'
-import { useUser } from '@/app/lib/authless'
+import { useUser } from '@clerk/nextjs'
+// import { useUser } from '@/app/lib/authless'
 import { useRouter } from 'next/navigation'
 
 export default function AuthRedirectPage() {
