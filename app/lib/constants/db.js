@@ -8,13 +8,15 @@ export const DB_TABLES = {
     locationDayHours: 'Location Day Hours',
     teamDayHours: 'Team Day Hours',
 
-    
+
     teams: 'Teams',
     staff: 'Staff',
+    staffNew: 'Staff_new',
     rotas: 'Rotas',
     requests: 'requests',
     notifications: 'notifications',
     shifts: 'Shifts',
+    locationRules: 'Location Rules',
 }
 
 // localStorage Keys and Values
