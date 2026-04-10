@@ -1,28 +1,8 @@
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-function getCSSVarValue(name) {
-  if (typeof window === 'undefined') return '#000'
-  const value = window.getComputedStyle(document.documentElement).getPropertyValue(name).trim()
-  return value
-}
-
-export const PALETTE = [
-  getCSSVarValue('--team-purple'),
-  getCSSVarValue('--team-green'),
-  getCSSVarValue('--team-blue'),
-  getCSSVarValue('--team-orange'),
-  getCSSVarValue('--team-red'),
-  getCSSVarValue('--team-indigo'),
-]
-
-export const PALETTE_LIGHT = [
-  getCSSVarValue('--team-purple-light'),
-  getCSSVarValue('--team-green-light'),
-  getCSSVarValue('--team-blue-light'),
-  getCSSVarValue('--team-orange-light'),
-  getCSSVarValue('--team-red-light'),
-  getCSSVarValue('--team-indigo-light'),
-]
+// Re-export palette from canonical source for backwards compatibility
+export { PALETTE, PALETTE_LIGHT, assignTeamColor } from './constants/palette'
+import { PALETTE, PALETTE_LIGHT } from './constants/palette'
 
 export const GANTT_START = 7
 export const GANTT_END = 23

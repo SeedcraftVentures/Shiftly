@@ -1,7 +1,8 @@
 // Shared shift conversion helpers used by both UI and API code.
 
-export const DAYS_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-export const DAYS_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+// Re-export day constants from canonical source for backwards compatibility
+export { DAYS_SHORT, DAYS_FULL, getWeekdays, getWeekends } from './constants/days'
+import { DAYS_SHORT, DAYS_FULL } from './constants/days'
 
 // 15-min increment time options 00:00 → 23:45
 export const TIME_OPTIONS = []
@@ -67,14 +68,6 @@ export function convertTimeToTimetz(time) {
 // 18:00:00 -> 18:00
 export function convertTimetzToTime(timetz) {
   return timetz.slice(0, 5)
-}
-
-export function getWeekdays() {
-  return DAYS_FULL.slice(0, 5)
-}
-
-export function getWeekends() {
-  return DAYS_FULL.slice(5)
 }
 
 export function getDayLabel(days) {
