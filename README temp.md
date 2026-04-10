@@ -7,6 +7,20 @@ All APIs lie inside [`app/api`](app/api/) folder.
 
 > For example, [`app\lib\constants.js`](app\lib\constants.js) contains DB table names, and [`app\lib\authless.js`](app\lib\authless.js) is for non-auth testing (look for `authless` across all files to see usage).
 
+## Importing from Claude's Shiftly app
+1. Keep 2 copies of the repo: `main` and your own branch
+2. Transfer files one by one, fixing stuff on the go.
+3. These are the usual things you gotta watch out for:
+   1. Raw colour values. Refer to tailwind's classes or stuff in [`app\globals.css`](app\globals.css).
+   2. Raw icons. Add/use stuff from [`app\lib\icons.jsx`](app\lib\icons.jsx)
+   3. ASCII icons. Replace with actual SVG icons
+   4. Repeated inline styles. If possible, move to reusable style vars.
+   5. Arbitrary font sizes. Use tailwind's theme vars.
+   6. Redefined button/rounded box styles. Use from globals.
+   7. Raw DB table names. Add/use stuff from [`app\lib\constants.js`](app\lib\constants.js)
+   8. Randomly mixing Supabase's service and anon keys. Stick to service key.
+   9. Redefined components, like dropdowns.
+   10. Unnecessary component files. Some components can be absorbed into a larger file, if they are tiny and are used in only that file.
 
 # Basics
 ## 1. `use server` and `use client`
