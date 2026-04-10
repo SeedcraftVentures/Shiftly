@@ -17,6 +17,7 @@ export async function GET() {
       .from(DB_TABLES.organizations)
       .select('*')
       .eq('owner_user_id', userId)
+      .single()
 
     if (error) throw error
 

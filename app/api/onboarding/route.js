@@ -32,6 +32,7 @@ export async function POST(request) {
         owner_user_id: userId,
         industry: industry,
         other_industry: otherIndustry || "",
+        onboarding_completed: true,
       })
       .select('organization_id')
       .single()

@@ -17,6 +17,13 @@ export const DB_TABLES = {
     shifts: 'Shifts',
 }
 
+// Strings
+export const USER_TYPE = {
+    manager: 'Manager',
+    payroll: 'Payroll',
+    staff: 'Staff'
+}
+
 // localStorage Keys and Values
 // ───────────────────────────────────────────────────────
 // Functions where the key includes a dynamic ID, plain strings otherwise.

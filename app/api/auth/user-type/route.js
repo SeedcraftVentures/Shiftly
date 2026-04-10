@@ -1,53 +1,40 @@
 import { auth } from '@clerk/nextjs/server'
 // import { auth } from '@/app/lib/authless'
 import { NextResponse } from 'next/server'
-import { STORAGE_VALUES, DB_TABLES } from '@/app/lib/constants'
-import { supabaseService as supabase } from '@/app/lib/supabaseService'
+import { DB_TABLES, USER_TYPE } from '@/app/lib/constants'
+import { supabaseService } from '@/app/lib/supabaseService'
 
 // GET /api/auth/user-type
-// Returns the user type: 'employee', 'manager', or 'unknown'
+// Returns the user type from Organization Members.
 export async function GET() {
   try {
     const { userId } = await auth()
     
-    if (!userId) {
-      return NextResponse.json({ type: STORAGE_VALUES.userType.unknown }, { status: 401 })
-    }
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    // Check if user is a MANAGER first (owns teams)
-    const { data: teams } = await supabase
-      .from(DB_TABLES.teams)
-      .select('id')
-      .eq('user_id', userId)
-      .limit(1)
-
-    if (teams && teams.length > 0) {
-      return NextResponse.json({ type: STORAGE_VALUES.userType.manager })
-    }
-
-    // Then check if user is an employee (has clerk_user_id in Staff table)
-    const { data: staffProfile, error: staffError } = await supabase
-      .from(DB_TABLES.staff)
-      .select('id, name, role')
-      .eq('clerk_user_id', userId)
+    const { data, error: getAccessError } = await supabaseService
+      .from(DB_TABLES.organizationMembers)
+      .select('access')
+      .eq('member_user_id', userId)
       .single()
 
-    if (staffProfile && !staffError) {
-      return NextResponse.json({
-        type: STORAGE_VALUES.userType.employee,
-        profile: {
-          id: staffProfile.id,
-          name: staffProfile.name,
-          role: staffProfile.role
-        }
-      })
+    if (getAccessError) {
+      throw getAccessError
     }
 
-    // New user - default to manager (will create a team)
-    return NextResponse.json({ type: STORAGE_VALUES.userType.manager })
+    if (!data) {
+      throw new Error('User not found')
+    }
+
+    const allUserTypes = Object.values(USER_TYPE)
+    if (!allUserTypes.includes(data.access)) {
+      throw new Error(`Unsupported access: ${data.access}`)
+    }
+
+    return NextResponse.json({ userType: data.access })
 
   } catch (error) {
     console.error('Error checking user type:', error)
-    return NextResponse.json({ type: STORAGE_VALUES.userType.unknown, error: error.message }, { status: 500 })
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useUser } from '@clerk/nextjs'
 // import { useUser } from '@/app/lib/authless'
-import { STORAGE_KEYS, STORAGE_VALUES } from '@/app/lib/constants'
+import { USER_TYPE } from '@/app/lib/constants'
 
 export default function OnboardingCheck({ children }) {
   const router = useRouter()
@@ -14,6 +14,8 @@ export default function OnboardingCheck({ children }) {
   const [shouldShow, setShouldShow] = useState(false)
 
   useEffect(() => {
+    const isOnboardingPage = pathname === '/onboarding'
+
     // Wait for Clerk to load — stay on spinner
     if (!isLoaded) return
     
@@ -24,55 +26,38 @@ export default function OnboardingCheck({ children }) {
       return
     }
 
-    // Don't redirect if already on onboarding page
-    if (pathname === '/onboarding') {
-      setShouldShow(true)
-      setChecking(false)
-      return
-    }
-
     const checkAccess = async () => {
-      try {
-        // Step 1: Check if user is an employee — redirect before showing ANY manager UI
-        const cacheKey = STORAGE_KEYS.userType(user.id)
-        const cachedType = localStorage.getItem(cacheKey)
+      try
+      {
+        const typeResponse = await fetch('/api/auth/user-type')
+        const { userType } = await typeResponse.json()
+        console.log(userType);
 
-        if (cachedType === STORAGE_VALUES.userType.employee) {
+        if (userType == USER_TYPE.staff) {
           router.replace('/employee')
-          return // Stay on spinner forever — redirect will unmount us
+          return
         }
+        // TODO: Handle payroll users
+        else if (userType == USER_TYPE.manager) {
+          // Step 2: User is a manager — check onboarding status
+          const response = await fetch('/api/organization')
+          if (response.ok) {
+            const organization = await response.json()
 
-        // If no cache, check the API
-        if (!cachedType) {
-          const typeResponse = await fetch('/api/auth/user-type')
-          const typeData = await typeResponse.json()
+            if (isOnboardingPage && organization.onboarding_completed) {
+              router.replace('/dashboard')
+              return
+            }
 
-          if (typeData.type === STORAGE_VALUES.userType.employee) {
-            localStorage.setItem(cacheKey, STORAGE_VALUES.userType.employee)
-            router.replace('/employee')
-            return // Stay on spinner
+            if (!isOnboardingPage && !organization.onboarding_completed) {
+              router.replace('/onboarding')
+              return
+            }
+
+            setShouldShow(true)
+          } else {
+            setShouldShow(true)
           }
-
-          // Cache as manager so we skip this check next time
-          if (typeData.type === STORAGE_VALUES.userType.manager) {
-            localStorage.setItem(cacheKey, STORAGE_VALUES.userType.manager)
-          }
-        }
-
-        // Step 2: User is a manager — check onboarding status
-        const response = await fetch('/api/organization')
-        if (response.ok) {
-          const teams = await response.json()
-          const defaultTeam = teams.find(t => t.is_default) || teams[0]
-
-          if (!defaultTeam?.onboarding_completed) {
-            router.push('/onboarding')
-            return
-          }
-
-          setShouldShow(true)
-        } else {
-          setShouldShow(true)
         }
       } catch (error) {
         console.error('Error checking access:', error)
