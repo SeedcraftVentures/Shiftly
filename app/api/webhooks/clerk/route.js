@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { Webhook } from 'svix'
 import { headers } from 'next/headers'
 import { DB_TABLES } from '@/app/lib/constants'
-import { createSupabaseServiceClient } from '@/app/lib/supabase/server'
+import { createSupabaseAdminClient } from '@/app/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,7 +39,7 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
-  const supabase = createSupabaseServiceClient()
+  const supabase = createSupabaseAdminClient()
   const { type, data } = event
 
   try {

@@ -1,6 +1,6 @@
-import { auth } from '@clerk/nextjs/server'
+import { auth, clerkClient } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/app/lib/supabase/server'
+import { createSupabaseServerClient, createSupabaseAdminClient } from '@/app/lib/supabase/server'
 import { DB_TABLES, DEFAULT_SHIFT_LENGTHS, DEFAULT_MAX_CONSECUTIVE_HOURS, DEFAULT_LOCATION_RULES, DEFAULT_STAFF } from '@/app/lib/constants'
 import { convertTimeToTimetz } from '@/app/lib/timeUtils'
 
@@ -11,6 +11,23 @@ export async function POST(request) {
   try {
     const { userId } = await auth()
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    // 0. Upsert current user into Users table (admin client bypasses RLS)
+    const clerk = await clerkClient()
+    const clerkUser = await clerk.users.getUser(userId)
+    const admin = createSupabaseAdminClient()
+
+    const { error: userErr } = await admin
+      .from(DB_TABLES.users)
+      .upsert({
+        user_id: userId,
+        email: clerkUser.emailAddresses[0]?.emailAddress ?? '',
+        first_name: clerkUser.firstName,
+        last_name: clerkUser.lastName,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' })
+
+    if (userErr) throw userErr
 
     supabase = await createSupabaseServerClient()
 

@@ -25,7 +25,7 @@ export async function createSupabaseServerClient() {
  * Service-role client for admin operations (webhooks, background jobs).
  * Bypasses RLS — use sparingly.
  */
-export function createSupabaseServiceClient() {
+export function createSupabaseAdminClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
