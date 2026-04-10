@@ -5,6 +5,7 @@
 5. Need to reuse rounded containers and button styles. Some buttons shadow on hover, some don't.
 6. Replace unicode icons (→, ↓) with actual icons
 7. Load locale during onboarding to populate shift_lengths, min_wage etc.
+8. Multiple time dropdowns (select in Onboarding, Sel in ShiftRow)
 
 FF1F7D - pink-500
 F8F9FA - gray-50
@@ -34,4 +35,7 @@ with
 Logic/visual updates:
 1. Some colours aligned with pink-*
 2. 'new' removed from /api/auth/user-type and usages. Forced to 'manager'
-3. 
+
+
+NEXT:
+OnboardingCheck fails to redirect to dashboard. Refers old tables for the check.
