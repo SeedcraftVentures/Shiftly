@@ -9,8 +9,9 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
 /**
  * React hook that returns a Supabase client authenticated with the
- * current Clerk session's JWT. RLS policies will resolve to the
- * logged-in user.
+ * current Clerk session token. Uses the native Clerk ↔ Supabase
+ * integration — no JWT template needed. RLS policies will resolve
+ * to the logged-in user.
  *
  * Usage:
  *   const supabase = useSupabaseClient()
@@ -21,16 +22,7 @@ export function useSupabaseClient() {
 
   return useMemo(() => {
     return createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        fetch: async (url, options = {}) => {
-          const token = await session?.getToken({ template: 'supabase' })
-          const headers = new Headers(options.headers)
-          if (token) {
-            headers.set('Authorization', `Bearer ${token}`)
-          }
-          return fetch(url, { ...options, headers })
-        },
-      },
+      accessToken: () => session?.getToken(),
     })
   }, [session])
 }
