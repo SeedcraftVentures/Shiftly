@@ -1,3 +1,13 @@
+# For new developers
+Everything begins at [`app\(auth)\layout.jsx`](app\\(auth)\layout.jsx). This file is wrapped with a `ClerkProvider` which ensures every child page has access to auth.
+> Look for `await auth()` to see how Clerk's authentication is accessed and used. Also, notice that all the app's pages are nestled inside the [`app/(auth)`](app\\(auth)) folder.
+
+All APIs lie inside [`app/api`](app/api/) folder.
+[`app/lib`](app/lib/) contains utils used across the app.
+
+> For example, [`app\lib\constants.js`](app\lib\constants.js) contains DB table names, and [`app\lib\authless.js`](app\lib\authless.js) is for non-auth testing (look for `authless` across all files to see usage).
+
+
 # Basics
 ## 1. `use server` and `use client`
 
