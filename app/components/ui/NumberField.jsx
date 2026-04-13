@@ -3,6 +3,7 @@
 export default function NumberField({
   value,
   onChange,
+  onBlur,
   placeholder,
   min,
   max,
@@ -30,6 +31,7 @@ export default function NumberField({
         type="number"
         value={value}
         onChange={e => onChange(e.target.value === '' ? '' : Number(e.target.value))}
+        onBlur={onBlur}
         placeholder={placeholder}
         min={min}
         max={max}

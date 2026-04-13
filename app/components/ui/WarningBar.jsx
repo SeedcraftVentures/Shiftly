@@ -11,10 +11,10 @@ const VARIANTS = {
     text: 'var(--red-600)',
   },
   warning: {
-    bg: '#FFF7ED',
-    border: '#FED7AA',
-    badgeBg: '#F97316',
-    text: '#C2410C',
+    bg: 'var(--gray-50)',
+    border: 'var(--gray-200)',
+    badgeBg: 'var(--gray-500)',
+    text: 'var(--gray-700)',
   },
 }
 

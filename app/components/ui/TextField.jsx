@@ -4,6 +4,7 @@ export default function TextField({
   value,
   onChange,
   onKeyDown,
+  onBlur,
   placeholder,
   autoFocus,
   size = 'lg',
@@ -24,6 +25,7 @@ export default function TextField({
       value={value}
       onChange={e => onChange(e.target.value)}
       onKeyDown={onKeyDown}
+      onBlur={onBlur}
       placeholder={placeholder}
       autoFocus={autoFocus}
       style={{
