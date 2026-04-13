@@ -2,6 +2,7 @@
 // These operate on decimal hours and day indices (0=Mon … 6=Sun).
 
 import { DAYS_FULL } from '@/app/lib/constants/days'
+import { timetzToDecimal, decimalToLabel } from '@/app/lib/utils/timeUtils'
 
 /**
  * Resolve the effective start/end time for a given team on a given day.
@@ -131,20 +132,3 @@ export function formatShiftTimeLabel(startTime, endTime) {
   return `${decimalToLabel(startTime)} - ${decimalToLabel(endTime)}`
 }
 
-// ── Internal helpers ─────────────────────────────────────────────────────────
-
-function timetzToDecimal(timetz) {
-  if (!timetz) return null
-  // "HH:MM:SS" or "HH:MM" → decimal
-  const parts = timetz.split(':')
-  const h = parseInt(parts[0], 10)
-  const m = parseInt(parts[1] || '0', 10)
-  return h + m / 60
-}
-
-function decimalToLabel(d) {
-  if (d == null) return '--:--'
-  const h = Math.floor(d)
-  const m = Math.round((d - h) * 60)
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
-}

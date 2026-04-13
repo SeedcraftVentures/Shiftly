@@ -2,7 +2,7 @@
 
 import { DAYS_SHORT } from '@/app/lib/constants/days'
 import { resolveAnchorTime } from '@/app/lib/utils/shiftUtils'
-import { decimalTimeToLabel } from '@/app/lib/timeUtils'
+import { decimalTimeToLabel } from '@/app/lib/utils/timeUtils'
 import { KeyholderBadge } from '@/app/components/ui'
 
 export default function ShiftDayCard({

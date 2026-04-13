@@ -14,7 +14,7 @@ import {
   KeyholderBadge,
 } from '@/app/components/ui'
 import { resolveShiftTimes, computeShiftHours } from '@/app/lib/utils/shiftUtils'
-import { decimalTimeToLabel, getDayLabel, formatHours, TIME_OPTIONS, TIME_OPTIONS_END } from '@/app/lib/timeUtils'
+import { decimalTimeToLabel, getDayLabel, formatHours, TIME_OPTIONS, TIME_OPTIONS_END } from '@/app/lib/utils/timeUtils'
 import { DAYS_SHORT } from '@/app/lib/constants/days'
 
 // ── Styles ───────────────────────────────────────────────────────────────────

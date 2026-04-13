@@ -1,3 +1,5 @@
+import { DEFAULT_DAY_HOURS } from './defaults'
+
 export const DAYS_FULL = [
   'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
 ]
@@ -18,11 +20,8 @@ export function defaultHours() {
   const h = {}
   DAYS_FULL.forEach(day => {
     h[day] = {
+      ...DEFAULT_DAY_HOURS,
       open: !['Saturday', 'Sunday'].includes(day),
-      opening: '09:00',
-      first_shift: '09:00',
-      last_shift: '17:00',
-      closing: '17:00',
     }
   })
   return h

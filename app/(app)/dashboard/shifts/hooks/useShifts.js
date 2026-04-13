@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { assignTeamColors } from '@/app/lib/shiftUtils'
+import { assignTeamColor } from '@/app/lib/constants'
 import { buildResolvedHours } from '@/app/lib/utils/shiftUtils'
 
 export function useShifts() {
@@ -38,7 +38,7 @@ export function useShifts() {
 
   // ── Derived ─────────────────────────────────────────────────────────────────
 
-  const teamsWithColor = useMemo(() => assignTeamColors(teams), [teams])
+  const teamsWithColor = useMemo(() => assignTeamColor(teams), [teams])
 
   const resolvedHours = useMemo(
     () => buildResolvedHours(locationHours, teamHourOverrides),

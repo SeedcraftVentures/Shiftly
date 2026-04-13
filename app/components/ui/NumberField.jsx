@@ -1,8 +1,11 @@
 'use client'
 
+import { useState } from 'react'
+
 export default function NumberField({
   value,
   onChange,
+  onFocus,
   onBlur,
   placeholder,
   min,
@@ -11,6 +14,8 @@ export default function NumberField({
   prefix,
   style,
 }) {
+  const [focused, setFocused] = useState(false)
+
   return (
     <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', ...style }}>
       {prefix && (
@@ -31,7 +36,14 @@ export default function NumberField({
         type="number"
         value={value}
         onChange={e => onChange(e.target.value === '' ? '' : Number(e.target.value))}
-        onBlur={onBlur}
+        onFocus={e => {
+          setFocused(true)
+          onFocus?.(e)
+        }}
+        onBlur={e => {
+          setFocused(false)
+          onBlur?.(e)
+        }}
         placeholder={placeholder}
         min={min}
         max={max}
@@ -42,12 +54,13 @@ export default function NumberField({
           paddingLeft: prefix ? 30 : 14,
           fontSize: 'var(--text-sm)',
           fontWeight: 500,
-          border: '1.5px solid var(--gray-200)',
+          border: `1.5px solid ${focused ? 'var(--pink-500)' : 'var(--gray-200)'}`,
           borderRadius: 8,
           color: 'var(--gray-900)',
           background: 'var(--gray-0)',
           outline: 'none',
           boxSizing: 'border-box',
+          transition: 'border-color .15s',
         }}
       />
     </div>

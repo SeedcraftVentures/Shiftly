@@ -1,87 +1,87 @@
-import { NextResponse } from 'next/server'
 import { Webhook } from 'svix'
 import { headers } from 'next/headers'
-import { DB_TABLES } from '@/app/lib/constants'
+import { NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/app/lib/supabase/server'
+import { DB_TABLES } from '@/app/lib/constants'
 
 export const dynamic = 'force-dynamic'
 
-async function verifyWebhook(request) {
-  const SIGNING_SECRET = process.env.CLERK_WEBHOOK_SIGNING_SECRET
-  if (!SIGNING_SECRET) {
-    throw new Error('CLERK_WEBHOOK_SIGNING_SECRET is not set')
+export async function POST(req) {
+  const secret = process.env.CLERK_WEBHOOK_SIGNING_SECRET
+  if (!secret) {
+    console.error('Missing CLERK_WEBHOOK_SIGNING_SECRET')
+    return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
   }
 
-  const wh = new Webhook(SIGNING_SECRET)
+  // Verify svix signature
   const headerPayload = await headers()
   const svixId = headerPayload.get('svix-id')
   const svixTimestamp = headerPayload.get('svix-timestamp')
   const svixSignature = headerPayload.get('svix-signature')
 
   if (!svixId || !svixTimestamp || !svixSignature) {
-    throw new Error('Missing svix headers')
+    return NextResponse.json({ error: 'Missing svix headers' }, { status: 400 })
   }
 
-  const body = await request.text()
-  return wh.verify(body, {
-    'svix-id': svixId,
-    'svix-timestamp': svixTimestamp,
-    'svix-signature': svixSignature,
-  })
-}
+  const body = await req.text()
 
-export async function POST(request) {
-  let event
+  let evt
   try {
-    event = await verifyWebhook(request)
+    evt = new Webhook(secret).verify(body, {
+      'svix-id': svixId,
+      'svix-timestamp': svixTimestamp,
+      'svix-signature': svixSignature,
+    })
   } catch (err) {
-    console.error('Clerk webhook verification failed:', err.message)
+    console.error('Webhook signature verification failed:', err)
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
   }
 
-  const supabase = createSupabaseAdminClient()
-  const { type, data } = event
+  const admin = createSupabaseAdminClient()
 
   try {
-    switch (type) {
+    switch (evt.type) {
       case 'user.created':
       case 'user.updated': {
-        const { id, email_addresses, first_name, last_name } = data
-        const primaryEmail = email_addresses?.find(e => e.id === data.primary_email_address_id)?.email_address
-          || email_addresses?.[0]?.email_address
-          || ''
-        const name = [first_name, last_name].filter(Boolean).join(' ') || 'User'
+        const { id, email_addresses, first_name, last_name } = evt.data
+        const primaryEmail =
+          email_addresses?.find(e => e.id === evt.data.primary_email_address_id)
+            ?.email_address ?? email_addresses?.[0]?.email_address ?? ''
 
-        const { error } = await supabase
+        const { error } = await admin
           .from(DB_TABLES.users)
           .upsert(
-            { user_id: id, name, email: primaryEmail },
+            {
+              user_id: id,
+              email: primaryEmail,
+              first_name,
+              last_name,
+              updated_at: new Date().toISOString(),
+            },
             { onConflict: 'user_id' }
           )
-
         if (error) throw error
         break
       }
 
       case 'user.deleted': {
-        const { id } = data
-        const { error } = await supabase
+        const { id } = evt.data
+        const { error } = await admin
           .from(DB_TABLES.users)
           .delete()
           .eq('user_id', id)
-
         if (error) throw error
         break
       }
 
       default:
-        // Ignore unhandled event types
+        // Ignore other event types
         break
     }
 
     return NextResponse.json({ received: true })
   } catch (err) {
-    console.error(`Clerk webhook handler error (${type}):`, err)
-    return NextResponse.json({ error: 'Webhook handler failed' }, { status: 500 })
+    console.error('Webhook handler error:', err)
+    return NextResponse.json({ error: 'Handler failed' }, { status: 500 })
   }
 }

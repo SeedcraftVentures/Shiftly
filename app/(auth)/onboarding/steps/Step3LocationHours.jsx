@@ -1,7 +1,7 @@
 'use client'
 
 import { DAYS_FULL } from '@/app/lib/constants'
-import { StepChip, DayHoursRow } from '@/app/components/ui'
+import { StepChip, DayHoursGantt } from '@/app/components/ui'
 import { ClockIcon } from '@/app/lib/icons'
 
 export default function Step3LocationHours({ state }) {
@@ -20,7 +20,7 @@ export default function Step3LocationHours({ state }) {
 
       <div style={{ flex: 1, overflowY: 'auto', marginTop: 14 }}>
         {DAYS_FULL.map(day => (
-          <DayHoursRow
+          <DayHoursGantt
             key={day}
             day={day}
             data={hours[day]}

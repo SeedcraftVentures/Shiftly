@@ -1,8 +1,8 @@
 // Shared shift conversion helpers used by both UI and API code.
 
 // Re-export day constants from canonical source for backwards compatibility
-export { DAYS_SHORT, DAYS_FULL, getWeekdays, getWeekends } from './constants/days'
-import { DAYS_SHORT, DAYS_FULL } from './constants/days'
+export { DAYS_SHORT, DAYS_FULL, getWeekdays, getWeekends } from '../constants/days'
+import { DAYS_SHORT, DAYS_FULL } from '../constants/days'
 
 // 15-min increment time options 00:00 → 23:45
 export const TIME_OPTIONS = []
@@ -76,4 +76,41 @@ export function getDayLabel(days) {
   if (days.length === 5 && !days.includes(5) && !days.includes(6)) return 'Weekdays'
   if (days.length === 2 && days.includes(5) && days.includes(6)) return 'Weekends'
   return days.map(d => DAYS_SHORT[d]).join(', ')
+}
+
+export function timeAgo(dateStr) {
+  const now = new Date()
+  const date = new Date(dateStr)
+  const seconds = Math.floor((now - date) / 1000)
+  if (seconds < 60) return 'Just now'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days}d ago`
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+}
+
+/**
+ * Convert a Postgres timetz string ("HH:MM:SS" or "HH:MM") to decimal hours.
+ * Returns null for null/undefined input.
+ */
+export function timetzToDecimal(timetz) {
+  if (!timetz) return null
+  const parts = timetz.split(':')
+  const h = parseInt(parts[0], 10)
+  const m = parseInt(parts[1] || '0', 10)
+  return h + m / 60
+}
+
+/**
+ * Convert decimal hours to a "HH:MM" display label.
+ * Returns "--:--" for null/undefined input.
+ */
+export function decimalToLabel(d) {
+  if (d == null) return '--:--'
+  const h = Math.floor(d)
+  const m = Math.round((d - h) * 60)
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }

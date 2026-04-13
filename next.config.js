@@ -32,3 +32,7 @@ const nextConfig = {
 }
 
 module.exports = withBundleAnalyzer(withPWA(nextConfig))
+
+module.exports = {
+  allowedDevOrigins: ['prognathous-awhirl-demarcus.ngrok-free.dev'], // ngrok so that clerk webhooks work in dev
+}

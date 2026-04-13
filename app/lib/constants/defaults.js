@@ -23,3 +23,30 @@ export const DEFAULT_LOCATION_RULES = {
   enforce_rest_between_shifts: true,
   min_rest_hours: 11,
 }
+
+// Default times (as "HH:MM" strings — match what DayHoursGantt expects)
+export const DEFAULT_OPENING_TIME = '09:00'
+export const DEFAULT_CLOSING_TIME = '17:00'
+export const DEFAULT_FIRST_SHIFT_TIME = '09:00'
+export const DEFAULT_LAST_SHIFT_TIME = '17:00'
+
+export const DEFAULT_DAY_HOURS = {
+  open: false,
+  opening: DEFAULT_OPENING_TIME,
+  closing: DEFAULT_CLOSING_TIME,
+  first_shift: DEFAULT_FIRST_SHIFT_TIME,
+  last_shift: DEFAULT_LAST_SHIFT_TIME,
+}
+
+// Currency
+export const DEFAULT_CURRENCY = 'GBP'
+
+export const CURRENCY_PREFIXES = {
+  GBP: '\u00A3', // £
+  EUR: '\u20AC', // €
+  USD: '$',
+}
+
+export function getCurrencyPrefix(currency) {
+  return CURRENCY_PREFIXES[currency] || CURRENCY_PREFIXES[DEFAULT_CURRENCY]
+}

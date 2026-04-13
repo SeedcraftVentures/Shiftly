@@ -2,34 +2,16 @@ import { auth, clerkClient } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient, createSupabaseAdminClient } from '@/app/lib/supabase/server'
 import { DB_TABLES, DEFAULT_SHIFT_LENGTHS, DEFAULT_MAX_CONSECUTIVE_HOURS, DEFAULT_LOCATION_RULES, DEFAULT_STAFF } from '@/app/lib/constants'
-import { convertTimeToTimetz } from '@/app/lib/timeUtils'
+import { convertTimeToTimetz } from '@/app/lib/utils/timeUtils'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request) {
-  let supabase
   try {
     const { userId } = await auth()
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    // 0. Upsert current user into Users table (admin client bypasses RLS)
-    const clerk = await clerkClient()
-    const clerkUser = await clerk.users.getUser(userId)
-    const admin = createSupabaseAdminClient()
-
-    const { error: userErr } = await admin
-      .from(DB_TABLES.users)
-      .upsert({
-        user_id: userId,
-        email: clerkUser.emailAddresses[0]?.emailAddress ?? '',
-        first_name: clerkUser.firstName,
-        last_name: clerkUser.lastName,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id' })
-
-    if (userErr) throw userErr
-
-    supabase = await createSupabaseServerClient()
+    const supabase = await createSupabaseServerClient()
 
     const {
       organization_name,
@@ -136,22 +118,6 @@ export async function POST(request) {
       .select('team_id, name')
 
     if (teamsErr) throw teamsErr
-
-    // Team Day Hours (open days per team)
-    const teamDayRows = insertedTeams.flatMap(t =>
-      openDays.map(([day]) => ({
-        team_id: t.team_id,
-        day,
-      }))
-    )
-
-    if (teamDayRows.length > 0) {
-      const { error: tdErr } = await supabase
-        .from(DB_TABLES.teamDayHours)
-        .insert(teamDayRows)
-
-      if (tdErr) throw tdErr
-    }
 
     // 7. Staff_new (quick-added names; all other fields from DEFAULT_STAFF)
     if (staff_by_team && Object.keys(staff_by_team).length > 0) {
