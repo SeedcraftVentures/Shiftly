@@ -1,225 +1,165 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { useShifts } from './hooks/useShifts'
-import { getTeamGaps } from '@/app/lib/shiftUtils'
-import { DAYS_SHORT, decimalTimeToLabel } from '@/app/lib/timeUtils'
+import { getCoverageGaps } from '@/app/lib/utils/shiftUtils'
 import PageHeader from '@/app/wrappers/PageHeader'
-import ShiftsFilterBar from './components/ShiftsFilterBar'
-import ShiftsWarningBar from './components/ShiftsWarningBar'
+import { PageContainer, FilterBar, WarningBar, Spinner } from '@/app/components/ui'
+import { PlusIcon } from '@/app/lib/icons'
+import Button from '@/app/components/Button'
 import ShiftsList from './components/ShiftsList'
 import ShiftsWeek from './components/ShiftsWeek'
-// import FixGapsModal from './components/FixGapsModal'
+import { DAYS_SHORT } from '@/app/lib/constants/days'
 
 export default function ShiftsPage() {
   const {
-    shifts, teams, loading, error,
-    openTime, closeTime, shiftLengths,
-    addShift, updateShift, deleteShift, addRecommendedShifts,
+    shifts, teams, resolvedHours, shiftLengths,
+    loading, error, addShift, updateShift, deleteShift,
   } = useShifts()
 
-  const [filterTeamId, setFilterTeamId] = useState('all')
+  const [filterTeamId, setFilterTeamId] = useState(null)
   const [openShiftId, setOpenShiftId] = useState(null)
   const [scrollToId, setScrollToId] = useState(null)
-  const [selectedDay, setSelectedDay] = useState(() => {
-    const d = new Date().getDay()
-    return d === 0 ? 6 : d - 1
-  })
-  const [fixedLocks, setFixedLocks] = useState({})
-  const [showFixModal, setShowFixModal] = useState(false)
-  const [selectedRecs, setSelectedRecs] = useState({})
+  const [selectedDay, setSelectedDay] = useState(null)
 
-  const filteredShifts = useMemo(() =>
-    filterTeamId === 'all' ? shifts : shifts.filter(s => s.team_id === parseInt(filterTeamId))
-  , [shifts, filterTeamId])
+  // ── Derived ─────────────────────────────────────────────────────────────────
 
-  const teamsToCheck = useMemo(() =>
-    filterTeamId === 'all' ? teams : teams.filter(t => t.id === parseInt(filterTeamId))
-  , [teams, filterTeamId])
+  const filteredShifts = filterTeamId
+    ? shifts.filter(s => s.shift_team === filterTeamId)
+    : shifts
 
-  const warnings = useMemo(() => {
-    const w = []
-    DAYS_SHORT.forEach((day, di) => {
-      teamsToCheck.forEach(team => {
-        getTeamGaps(shifts, team.id, di).forEach(g => {
-          w.push({ teamId: team.id, teamName: team.team_name, teamColor: team.color, day, di, from: decimalTimeToLabel(g.s), to: decimalTimeToLabel(g.e) })
+  // Build warnings from coverage gaps
+  const warnings = []
+  const teamsToCheck = filterTeamId
+    ? teams.filter(t => t.team_id === filterTeamId)
+    : teams
+
+  teamsToCheck.forEach(team => {
+    for (let di = 0; di < 7; di++) {
+      const gaps = getCoverageGaps(shifts, team.team_id, di, resolvedHours)
+      gaps.forEach((gap, gi) => {
+        const startH = Math.floor(gap.start)
+        const startM = Math.round((gap.start - startH) * 60)
+        const endH = Math.floor(gap.end)
+        const endM = Math.round((gap.end - endH) * 60)
+        warnings.push({
+          id: `${team.team_id}-${di}-${gi}`,
+          label: `${team.name} / ${DAYS_SHORT[di]} ${String(startH).padStart(2, '0')}:${String(startM).padStart(2, '0')}-${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`,
+          color: team.color,
+          onClick: () => setSelectedDay(di),
         })
       })
-    })
-    return w
-  }, [shifts, teamsToCheck])
+    }
+  })
+
+  // Filter bar items
+  const filterItems = teams.map(t => ({
+    id: t.team_id,
+    label: t.name,
+    count: shifts.filter(s => s.shift_team === t.team_id).length,
+    color: t.color,
+    colorLight: t.colorLight,
+  }))
+
+  // ── Handlers ────────────────────────────────────────────────────────────────
 
   const handleAddShift = useCallback(async () => {
     try {
       const newShift = await addShift(filterTeamId)
       if (newShift) {
-        setOpenShiftId(newShift.id)
-        setScrollToId(newShift.id)
-        setTimeout(() => setScrollToId(null), 300)
+        setOpenShiftId(newShift.shift_id)
+        setScrollToId(newShift.shift_id)
       }
-    } catch (err) { console.error('Failed to add shift:', err) }
+    } catch (err) {
+      console.error('Failed to add shift:', err)
+    }
   }, [addShift, filterTeamId])
 
-  const handleToggleShift = useCallback((id) => {
-    setOpenShiftId(prev => prev === id ? null : id)
+  const handleToggleShift = useCallback((shiftId) => {
+    setOpenShiftId(prev => prev === shiftId ? null : shiftId)
   }, [])
 
-  const handleClickShiftCard = useCallback((id) => {
-    setOpenShiftId(prev => prev === id ? null : id)
-    setScrollToId(id)
-    setTimeout(() => setScrollToId(null), 300)
+  const handleClickShiftCard = useCallback((shiftId) => {
+    setOpenShiftId(shiftId)
+    setScrollToId(shiftId)
   }, [])
 
-  const handleSetFixedLock = useCallback((id, val) => {
-    setFixedLocks(prev => ({ ...prev, [id]: val }))
-  }, [])
-
-  const handleConfirmRecs = useCallback(async (recommendations) => {
-    try {
-      await addRecommendedShifts(recommendations, selectedRecs)
-      setShowFixModal(false)
-      setSelectedRecs({})
-    } catch (err) { console.error('Failed to add recommended shifts:', err) }
-  }, [addRecommendedShifts, selectedRecs])
-
-  const centerStateStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100vh',
-    fontFamily: 'var(--font-secondary)',
-  }
-
-  const innerStyle = {
-    maxWidth: 1000,
-    margin: '0 auto',
-    padding: '0 24px',
-  }
+  // ── Render ──────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
-      <div
-        style={{
-          ...centerStateStyle,
-          color: 'var(--gray-400)',
-          fontSize: 'var(--text-sm)',
-        }}
-      >
-        Loading shifts…
-      </div>
+      <PageContainer>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}>
+          <Spinner />
+        </div>
+      </PageContainer>
     )
   }
 
   if (error) {
     return (
-      <div
-        style={{
-          ...centerStateStyle,
-          color: 'var(--red-500)',
-          fontSize: 'var(--text-sm)',
-        }}
-      >
-        {error}
-      </div>
+      <PageContainer>
+        <div style={{ padding: 40, textAlign: 'center', color: 'var(--red-500)' }}>
+          {error}
+        </div>
+      </PageContainer>
     )
   }
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        minHeight: '100vh',
-        fontFamily: 'var(--font-secondary)',
-        background: 'var(--gray-50)',
-        color: 'var(--gray-900)',
-      }}
-    >
+    <PageContainer>
+      <PageHeader
+        title="Shifts"
+        subtitle="Manage shift patterns across your teams"
+      />
 
-      {/* ── Page header ── */}
-      <div style={{
-        background: 'var(--gray-50)',
-        paddingTop: 28,
-        paddingBottom: 0
-      }}>
-        <div style={innerStyle}>
-          <PageHeader 
-            title={`Shifts`}
-            subtitle="Define your shift patterns. The solver uses these to build rotas automatically."
-          />
-        </div>
-      </div>
-
-      {/* ── Sticky filter + warning bar ── */}
-      <div
-        style={{ 
-          flexShrink: 0,
-          position: 'sticky',
-          top: 0,
-          paddingBottom: 8
-        }}
-      >
-        <div
-          style={{
-            ...innerStyle,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 6,
-            background: 'var(--gray-50)'
-          }}
-        >
-          <ShiftsFilterBar
-            teams={teams} shifts={shifts} filterTeamId={filterTeamId}
-            onFilterChange={setFilterTeamId} onAddShift={handleAddShift}
-          />
-          <ShiftsWarningBar
-            warnings={warnings} onDayClick={setSelectedDay}
-            onFixGaps={() => { setSelectedRecs({}); setShowFixModal(true) }}
-          />
-        </div>
-      </div>
-
-      {/* ── Body ── */}
-      <div
-        style={{
-          flex: 1,
-          overflow: 'auto',
-          paddingTop: 16,
-          paddingBottom: 24,
-        }}
-      >
-        <div
-          style={{
-            ...innerStyle,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 14,
-          }}
-        >
-          <ShiftsList
-            teams={teams} shifts={shifts} filteredShifts={filteredShifts}
-            openShiftId={openShiftId} onToggleShift={handleToggleShift}
-            onUpdateShift={updateShift} onDeleteShift={deleteShift}
-            fixedLocks={fixedLocks} onSetFixedLock={handleSetFixedLock}
-            shiftLengths={shiftLengths} openTime={openTime} closeTime={closeTime}
-            scrollToId={scrollToId}
-          />
-          <ShiftsWeek
-            teams={teamsToCheck} allShifts={shifts} filteredShifts={filteredShifts}
-            selectedDay={selectedDay} openShiftId={openShiftId} warnings={warnings}
-            onSelectDay={setSelectedDay} onClickShift={handleClickShiftCard}
-          />
-        </div>
-      </div>
-
-      {/* {showFixModal && (
-        <FixGapsModal
-          allShifts={shifts} teams={teamsToCheck} selectedRecs={selectedRecs}
-          onToggleRec={(recId) => setSelectedRecs(prev => ({ ...prev, [recId]: !prev[recId] }))}
-          onConfirm={handleConfirmRecs}
-          onClose={() => setShowFixModal(false)}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 24 }}>
+        <FilterBar
+          items={filterItems}
+          activeId={filterTeamId}
+          onSelect={setFilterTeamId}
+          allLabel="All Teams"
+          allCount={shifts.length}
+          rightSlot={
+            <Button variant="primary" size="sm" icon={<PlusIcon />} onClick={handleAddShift}>
+              Add Shift
+            </Button>
+          }
         />
-      )} */}
-    </div>
+
+        {warnings.length > 0 && (
+          <WarningBar
+            count={warnings.length}
+            label="Coverage gaps detected"
+            items={warnings}
+            variant="danger"
+          />
+        )}
+
+        <ShiftsList
+          teams={teams}
+          shifts={shifts}
+          filteredShifts={filteredShifts}
+          openShiftId={openShiftId}
+          onToggleShift={handleToggleShift}
+          onUpdateShift={updateShift}
+          onDeleteShift={deleteShift}
+          resolvedHours={resolvedHours}
+          scrollToId={scrollToId}
+        />
+
+        <ShiftsWeek
+          teams={teams}
+          allShifts={shifts}
+          filteredShifts={filteredShifts}
+          selectedDay={selectedDay}
+          openShiftId={openShiftId}
+          warnings={warnings}
+          onSelectDay={setSelectedDay}
+          onClickShift={handleClickShiftCard}
+          resolvedHours={resolvedHours}
+        />
+      </div>
+    </PageContainer>
   )
 }

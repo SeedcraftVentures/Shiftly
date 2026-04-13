@@ -1,78 +1,67 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { assignTeamColors, DEFAULT_LOCALE } from '@/app/lib/shiftUtils'
-import { timeStringToDecimal } from '@/app/lib/timeUtils'
+import { assignTeamColors } from '@/app/lib/shiftUtils'
+import { buildResolvedHours } from '@/app/lib/utils/shiftUtils'
 
 export function useShifts() {
-  const [teams, setTeams] = useState([])
   const [shifts, setShifts] = useState([])
+  const [teams, setTeams] = useState([])
+  const [locationHours, setLocationHours] = useState([])
+  const [teamHourOverrides, setTeamHourOverrides] = useState([])
+  const [shiftLengths, setShiftLengths] = useState([4, 6, 8])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   // ── Load ────────────────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true)
-      setError(null)
-      try {
-        const [tr, sr] = await Promise.all([fetch('/api/teams'), fetch('/api/shifts')])
-        const [td, sd] = await Promise.all([tr.json(), sr.json()])
-        setTeams(Array.isArray(td) ? td : [])
-        setShifts(Array.isArray(sd) ? sd : [])
-      } catch (err) {
-        console.error('Failed to load shifts:', err)
-        setError('Failed to load - please refresh')
-      } finally {
-        setLoading(false)
-      }
+  const reload = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/shifts')
+      if (!res.ok) throw new Error('Failed to fetch shifts')
+      const data = await res.json()
+
+      setShifts(data.shifts || [])
+      setTeams(data.teams || [])
+      setLocationHours(data.locationHours || [])
+      setTeamHourOverrides(data.teamHourOverrides || [])
+      setShiftLengths(data.shiftLengths || [4, 6, 8])
+    } catch (err) {
+      console.error('Failed to load shifts:', err)
+      setError('Failed to load - please refresh')
+    } finally {
+      setLoading(false)
     }
-    load()
   }, [])
 
-  // ── Derived team data ───────────────────────────────────────────────────────
+  useEffect(() => { reload() }, [reload])
+
+  // ── Derived ─────────────────────────────────────────────────────────────────
 
   const teamsWithColor = useMemo(() => assignTeamColors(teams), [teams])
 
-  const defaultTeam = useMemo(
-    () => teamsWithColor.find(t => t.is_default) || teamsWithColor[0],
-    [teamsWithColor]
+  const resolvedHours = useMemo(
+    () => buildResolvedHours(locationHours, teamHourOverrides),
+    [locationHours, teamHourOverrides]
   )
-
-  const openTime = useMemo(
-    () => timeStringToDecimal(defaultTeam?.open_time) ?? 7,
-    [defaultTeam]
-  )
-
-  const closeTime = useMemo(
-    () => timeStringToDecimal(defaultTeam?.close_time) ?? 23,
-    [defaultTeam]
-  )
-
-  const shiftLengths = useMemo(() => {
-    const raw = defaultTeam?.shift_lengths
-    if (Array.isArray(raw) && raw.length) return raw
-    return DEFAULT_LOCALE.shift_lengths
-  }, [defaultTeam])
 
   // ── CRUD ────────────────────────────────────────────────────────────────────
 
-  const addShift = useCallback(async (filterTeamId) => {
-    const teamId = filterTeamId !== 'all'
-      ? parseInt(filterTeamId)
-      : teamsWithColor[0]?.id
-    if (!teamId) return null
+  const addShift = useCallback(async (teamId) => {
+    const targetTeam = teamId || teamsWithColor[0]?.team_id
+    if (!targetTeam) return null
 
     const body = {
-      team_id: teamId,
-      name: 'New Shift',
-      anchor_type: 'fixed',
-      start: openTime,
-      end: openTime + 8,
-      days: [0, 1, 2, 3, 4, 5, 6],
-      staff: 1,
-      keyholder: false,
-      break_duration_mins: 0,
-      break_type: 'unpaid',
+      shift_team: targetTeam,
+      shift_name: 'New Shift',
+      shift_type: 'open',
+      start_time: null,
+      end_time: null,
+      days: [0, 1, 2, 3, 4],
+      break_duration: 0.5,
+      break_is_paid: false,
+      is_keyholder: true,
+      num_staff_needed: 1,
     }
 
     const res = await fetch('/api/shifts', {
@@ -85,72 +74,44 @@ export function useShifts() {
     const newShift = await res.json()
     setShifts(prev => [...prev, newShift])
     return newShift
-  }, [teamsWithColor, openTime])
+  }, [teamsWithColor])
 
-  const updateShift = useCallback(async (id, updated, persist = false) => {
-    // Optimistic update immediately
-    setShifts(prev => prev.map(s => s.id === id ? { ...updated, id } : s))
+  const updateShift = useCallback(async (shiftId, updates, persist = false) => {
+    // Optimistic update
+    setShifts(prev => prev.map(s =>
+      s.shift_id === shiftId ? { ...s, ...updates } : s
+    ))
 
     if (persist) {
-      const res = await fetch('/api/shifts', {
-        method: 'PUT',
+      const res = await fetch(`/api/shifts/${shiftId}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, ...updated }),
+        body: JSON.stringify(updates),
       })
       if (!res.ok) throw new Error('Save failed')
       const saved = await res.json()
-      // Reconcile with server response
-      setShifts(prev => prev.map(s => s.id === id ? saved : s))
+      setShifts(prev => prev.map(s => s.shift_id === shiftId ? saved : s))
     }
   }, [])
 
-  const deleteShift = useCallback(async (id) => {
-    const res = await fetch(`/api/shifts?id=${id}`, { method: 'DELETE' })
+  const deleteShift = useCallback(async (shiftId) => {
+    const res = await fetch(`/api/shifts/${shiftId}`, { method: 'DELETE' })
     if (!res.ok) throw new Error('Delete failed')
-    setShifts(prev => prev.filter(s => s.id !== id))
-  }, [])
-
-  const addRecommendedShifts = useCallback(async (recommendations, selectedRecs) => {
-    const toAdd = recommendations.filter(r => selectedRecs[r.id])
-    if (!toAdd.length) return
-
-    const created = await Promise.all(
-      toAdd.map(rec =>
-        fetch('/api/shifts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            team_id: rec.teamId,
-            name: `Gap Fill ${rec.fromLabel}–${rec.toLabel}`,
-            anchor_type: 'fixed',
-            start: rec.startH,
-            end: rec.endH,
-            days: [...rec.days],
-            staff: 1,
-            keyholder: false,
-            break_duration_mins: 0,
-            break_type: 'unpaid',
-          }),
-        }).then(r => r.json())
-      )
-    )
-    setShifts(prev => [...prev, ...created])
+    setShifts(prev => prev.filter(s => s.shift_id !== shiftId))
   }, [])
 
   return {
-    // State
     shifts,
     teams: teamsWithColor,
+    locationHours,
+    teamHourOverrides,
+    resolvedHours,
+    shiftLengths,
     loading,
     error,
-    // Business settings derived from default team
-    openTime,
-    closeTime,
-    shiftLengths,
-    // CRUD
     addShift,
     updateShift,
     deleteShift,
-    addRecommendedShifts,
+    reload,
   }
 }

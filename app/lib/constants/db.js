@@ -16,6 +16,7 @@ export const DB_TABLES = {
     requests: 'requests',
     notifications: 'notifications',
     shifts: 'Shifts',
+    shiftPatterns: 'Shift Patterns',
     locationRules: 'Location Rules',
 }
 
@@ -51,6 +52,9 @@ export const QUERY_KEYS = {
     employeeShifts: (profileId) => ['employee-shifts', profileId],
     employeeRequests: ['employee-requests'],
     openShifts: (teamId) => ['open-shifts', teamId],
+
+    // Location-scoped (new schema)
+    shiftPatterns: ['shift-patterns'],
 
     // Team-scoped
     staff: (teamId) => ['staff', teamId],

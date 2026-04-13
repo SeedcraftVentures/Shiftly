@@ -1,73 +1,72 @@
 import { auth } from '@clerk/nextjs/server'
-// import { auth } from '@/app/lib/authless'
 import { NextResponse } from 'next/server'
-import { supabase } from '@/app/lib/supabaseAnon'
+import { createSupabaseServerClient } from '@/app/lib/supabase/server'
 import { DB_TABLES } from '@/app/lib/constants'
-import {
-  timeStringToDecimal,
-  decimalToTimeString,
-  dayNamesToIndices,
-  indicesToDayNames,
-} from '@/app/lib/timeUtils'
 
 export const dynamic = 'force-dynamic'
 
-// Map a DB row → UI-friendly shape
-function toClient(row) {
-  return {
-    id: row.id,
-    team_id: row.team_id,
-    name: row.shift_name,
-    anchor_type: row.anchor_type || 'fixed',
-    start: timeStringToDecimal(row.start_time),
-    end: timeStringToDecimal(row.end_time),
-    days: dayNamesToIndices(row.days_of_week || []),
-    staff: row.staff_required || 1,
-    keyholder: row.keyholder_required || false,
-    break_duration_mins: row.break_duration_mins || 0,
-    break_type: row.break_type || 'unpaid',
-    created_at: row.created_at,
-  }
-}
-
-// Map UI payload → DB shape
-function toDB(body, userId) {
-  return {
-    user_id: userId,
-    team_id: body.team_id,
-    shift_name: body.name,
-    anchor_type: body.anchor_type || 'fixed',
-    start_time: decimalToTimeString(body.start),
-    end_time: decimalToTimeString(body.end),
-    days_of_week: indicesToDayNames(body.days || []),
-    staff_required: body.staff || 1,
-    keyholder_required: body.keyholder || false,
-    break_duration_mins: body.break_duration_mins || 0,
-    break_type: body.break_type || 'unpaid',
-  }
-}
-
 // ── GET ───────────────────────────────────────────────────────────────────────
+// Returns { shifts, teams, locationHours, teamHourOverrides } for the current
+// user's location. RLS handles org-scoping automatically.
 
-export async function GET(request) {
+export async function GET() {
   try {
     const { userId } = await auth()
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { searchParams } = new URL(request.url)
-    const teamId = searchParams.get('team_id')
+    const supabase = await createSupabaseServerClient()
 
-    let query = supabase
-      .from(DB_TABLES.shifts)
-      .select('*')
-      .eq('user_id', userId)
+    // Find the user's organization → location
+    const { data: member, error: memErr } = await supabase
+      .from(DB_TABLES.organizationMembers)
+      .select('organization_id')
+      .eq('member_user_id', userId)
+      .single()
 
-    if (teamId) query = query.eq('team_id', teamId)
+    if (memErr) throw memErr
 
-    const { data, error } = await query.order('created_at', { ascending: true })
-    if (error) throw error
+    const { data: location, error: locErr } = await supabase
+      .from(DB_TABLES.locations)
+      .select('location_id, shift_lengths')
+      .eq('organization_id', member.organization_id)
+      .limit(1)
+      .single()
 
-    return NextResponse.json(data.map(toClient))
+    if (locErr) throw locErr
+    const locationId = location.location_id
+
+    // Parallel fetch: teams, shifts, location hours, team hour overrides
+    const [teamsRes, shiftsRes, hoursRes, overridesRes] = await Promise.all([
+      supabase
+        .from(DB_TABLES.teamsNew)
+        .select('team_id, name')
+        .eq('location_id', locationId)
+        .order('created_at', { ascending: true }),
+      supabase
+        .from(DB_TABLES.shiftPatterns)
+        .select('*')
+        .order('created_at', { ascending: true }),
+      supabase
+        .from(DB_TABLES.locationDayHours)
+        .select('*')
+        .eq('location_id', locationId),
+      supabase
+        .from(DB_TABLES.teamDayHours)
+        .select('*'),
+    ])
+
+    if (teamsRes.error) throw teamsRes.error
+    if (shiftsRes.error) throw shiftsRes.error
+    if (hoursRes.error) throw hoursRes.error
+    if (overridesRes.error) throw overridesRes.error
+
+    return NextResponse.json({
+      shifts: shiftsRes.data || [],
+      teams: teamsRes.data || [],
+      locationHours: hoursRes.data || [],
+      teamHourOverrides: overridesRes.data || [],
+      shiftLengths: location.shift_lengths || [4, 6, 8],
+    })
   } catch (error) {
     console.error('Error fetching shifts:', error)
     return NextResponse.json({ error: 'Failed to fetch shifts' }, { status: 500 })
@@ -81,75 +80,36 @@ export async function POST(request) {
     const { userId } = await auth()
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+    const supabase = await createSupabaseServerClient()
     const body = await request.json()
-    if (!body.team_id) return NextResponse.json({ error: 'team_id is required' }, { status: 400 })
+
+    if (!body.shift_team) {
+      return NextResponse.json({ error: 'shift_team is required' }, { status: 400 })
+    }
+
+    const row = {
+      shift_team: body.shift_team,
+      shift_name: body.shift_name || 'New Shift',
+      shift_type: body.shift_type || 'open',
+      start_time: body.start_time ?? null,
+      end_time: body.end_time ?? null,
+      days: body.days || [0, 1, 2, 3, 4],
+      break_duration: body.break_duration ?? 0.5,
+      break_is_paid: body.break_is_paid ?? false,
+      is_keyholder: body.is_keyholder ?? true,
+      num_staff_needed: body.num_staff_needed ?? 1,
+    }
 
     const { data, error } = await supabase
-      .from(DB_TABLES.shifts)
-      .insert([toDB(body, userId)])
+      .from(DB_TABLES.shiftPatterns)
+      .insert([row])
       .select()
 
     if (error) throw error
 
-    return NextResponse.json(toClient(data[0]))
+    return NextResponse.json(data[0])
   } catch (error) {
     console.error('Error creating shift:', error)
     return NextResponse.json({ error: 'Failed to create shift' }, { status: 500 })
-  }
-}
-
-// ── PUT ───────────────────────────────────────────────────────────────────────
-
-export async function PUT(request) {
-  try {
-    const { userId } = await auth()
-    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const body = await request.json()
-    if (!body.id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
-
-    const { id, ...rest } = body
-    const dbPayload = toDB({ ...rest, team_id: rest.team_id }, userId)
-    delete dbPayload.user_id // don't overwrite user_id on update
-
-    const { data, error } = await supabase
-      .from(DB_TABLES.shifts)
-      .update(dbPayload)
-      .eq('id', id)
-      .eq('user_id', userId)
-      .select()
-
-    if (error) throw error
-
-    return NextResponse.json(toClient(data[0]))
-  } catch (error) {
-    console.error('Error updating shift:', error)
-    return NextResponse.json({ error: 'Failed to update shift' }, { status: 500 })
-  }
-}
-
-// ── DELETE ────────────────────────────────────────────────────────────────────
-
-export async function DELETE(request) {
-  try {
-    const { userId } = await auth()
-    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-    const { searchParams } = new URL(request.url)
-    const id = searchParams.get('id')
-    if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
-
-    const { error } = await supabase
-      .from(DB_TABLES.shifts)
-      .delete()
-      .eq('id', id)
-      .eq('user_id', userId)
-
-    if (error) throw error
-
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error('Error deleting shift:', error)
-    return NextResponse.json({ error: 'Failed to delete shift' }, { status: 500 })
   }
 }
