@@ -7,6 +7,7 @@ import { UserButton } from '@clerk/nextjs'
 import Image from 'next/image'
 import NotificationBell from '@/app/components/NotificationBell'
 import {
+  BuildingIcon,
   CalendarIcon,
   ClockIcon,
   CloseIcon,
@@ -114,8 +115,14 @@ export default function NavigationSideBar() {
       dividerAfter: true
     },
     {
+      id: 'nav-org-profile',
+      name: 'Organization',
+      path: '/dashboard/org-profile',
+      icon: BuildingIcon,
+    },
+    {
       id: 'nav-settings',
-      name: 'Settings', 
+      name: 'Settings',
       path: '/dashboard/settings',
       icon: GearIcon
     },
