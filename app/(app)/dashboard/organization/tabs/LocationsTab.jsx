@@ -6,16 +6,9 @@ import { Section } from '@/app/components/ui'
 import LocationCard from '../components/LocationCard'
 import { useLocationContext } from '@/app/lib/contexts/LocationContext'
 
-export default function LocationsTab({ organization, locations, isOwner, onReload, autoOpenAdd }) {
+export default function LocationsTab({ organization, locations, isOwner, onReload }) {
   const router = useRouter()
   const { switchLocation } = useLocationContext()
-
-  // If someone arrived with ?action=add-location, redirect them straight to the wizard
-  useEffect(() => {
-    if (autoOpenAdd) {
-      router.push('/dashboard/organization/add-location')
-    }
-  }, [autoOpenAdd, router])
 
   const handleLocationClick = async (locationId) => {
     await switchLocation(locationId)

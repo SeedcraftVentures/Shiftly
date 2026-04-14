@@ -98,7 +98,7 @@ export default function LocationSwitcher() {
         <button
             onClick={() => {
             close()
-            router.push('/dashboard/organization?action=add-location')
+            router.push('/dashboard/organization/add-location')
             }}
             className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors text-shiftly-pink font-medium"
         >

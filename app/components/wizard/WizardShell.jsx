@@ -41,6 +41,7 @@ export default function WizardShell({
         padding: '24px 32px',
         display: 'flex',
         flexDirection: 'column',
+        alignItems: 'center',
         gap: 24,
       }
 
@@ -92,12 +93,12 @@ export default function WizardShell({
 
       {/* Inline header: cancel button sits inline, not absolute */}
       {onCancel && !isFullscreen && (
-        <div>
-          <Button variant="secondary" size="sm" onClick={onCancel}>
+        <div style={{ width: '100%', maxWidth: 720 }}>
+            <Button variant="secondary" size="sm" onClick={onCancel}>
             ← {cancelLabel}
-          </Button>
+            </Button>
         </div>
-      )}
+        )}
 
       <div style={{ width: '100%', maxWidth: isFullscreen ? 600 : 720, margin: isFullscreen ? '0 auto' : 0 }}>
         <ProgressBar step={step} total={totalSteps} />

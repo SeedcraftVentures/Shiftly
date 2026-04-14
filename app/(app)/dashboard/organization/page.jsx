@@ -99,7 +99,6 @@ export default function OrganizationPage() {
             locations={locations}
             isOwner={isOwner}
             onReload={load}
-            autoOpenAdd={searchParams.get('action') === 'add-location'}
           />
         )}
         {activeTab === 'members' && (
