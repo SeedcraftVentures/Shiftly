@@ -1,6 +1,6 @@
 'use client'
 
-import NavigationSideBar from '@/app/wrappers/NavigationSideBar'
+import NavigationSideBar from '@/app/components/navigation/NavigationSideBar'
 import DesktopTopBar from '@/app/wrappers/DesktopTopBar'
 import OnboardingCheck from '@/app/(auth)/onboarding/components/OnboardingCheck'
 // import OnboardingTour from '@/components/OnboardingTour'

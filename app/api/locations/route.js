@@ -1,30 +1,43 @@
 import { auth } from '@clerk/nextjs/server'
-// import { auth } from '@/app/lib/authless'
 import { NextResponse } from 'next/server'
-import { supabaseService } from '@/app/lib/supabaseService'
+import { createSupabaseServerClient } from '@/app/lib/supabase/server'
 import { DB_TABLES } from '@/app/lib/constants'
 
-// GET - Fetch all locations for the logged-in user's organization
+export const dynamic = 'force-dynamic'
+
+// GET — list all locations the current user can access (via their org membership)
 export async function GET() {
   try {
     const { userId } = await auth()
-    
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const supabase = await createSupabaseServerClient()
+
+    // Find the user's organization(s)
+    const { data: memberships, error: memErr } = await supabase
+      .from(DB_TABLES.organizationMembers)
+      .select('organization_id')
+      .eq('member_user_id', userId)
+
+    if (memErr) throw memErr
+    if (!memberships || memberships.length === 0) {
+      return NextResponse.json({ locations: [] })
     }
 
-    // const { data, error } = await supabase
-    //   .from(DB_TABLES.teams)
-    //   .select('*')
-    //   .eq('user_id', userId)
-    //   .order('is_default', { ascending: false }) // Default team first
-    //   .order('created_at', { ascending: true })
+    const orgIds = memberships.map(m => m.organization_id)
 
-    // if (error) throw error
+    // Fetch all locations across those orgs
+    const { data: locations, error: locErr } = await supabase
+      .from(DB_TABLES.locations)
+      .select('location_id, name, organization_id')
+      .in('organization_id', orgIds)
+      .order('name', { ascending: true })
 
-    return NextResponse.json(data)
-  } catch (error) {
-    console.error('Error fetching teams:', error)
-    return NextResponse.json({ error: 'Failed to fetch teams' }, { status: 500 })
+    if (locErr) throw locErr
+
+    return NextResponse.json({ locations: locations || [] })
+  } catch (err) {
+    console.error('Error fetching locations:', err)
+    return NextResponse.json({ error: 'Failed to fetch locations' }, { status: 500 })
   }
 }

@@ -2,10 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 
-/**
- * Fetches org profile data and provides patch helpers.
- * All patches optimistically update via reload() after the request completes.
- */
 export default function useOrgProfile() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -28,26 +24,24 @@ export default function useOrgProfile() {
 
   useEffect(() => { load() }, [load])
 
-  // ── Patch helpers ──────────────────────────────────────────────────────────
-
-  const patch = useCallback(async (section, body) => {
+  const patchTo = useCallback(async (path, body) => {
     try {
-      const res = await fetch('/api/org-profile', {
+      const res = await fetch(path, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ section, ...body }),
+        body: JSON.stringify(body),
       })
-      if (!res.ok) throw new Error(`Failed to patch ${section}`)
+      if (!res.ok) throw new Error(`Failed to patch ${path}`)
       await load()
     } catch (err) {
       console.error(err)
     }
   }, [load])
 
-  const patchOrg = useCallback((fields) => patch('organization', fields), [patch])
-  const patchLocation = useCallback((fields) => patch('location', fields), [patch])
-  const patchRules = useCallback((fields) => patch('rules', fields), [patch])
-  const patchLocationHours = useCallback((fields) => patch('location_hours', fields), [patch])
+  const patchOrg = useCallback((fields) => patchTo('/api/org-profile/organization', fields), [patchTo])
+  const patchLocation = useCallback((fields) => patchTo('/api/org-profile/location', fields), [patchTo])
+  const patchRules = useCallback((fields) => patchTo('/api/org-profile/location-rules', fields), [patchTo])
+  const patchLocationHours = useCallback((fields) => patchTo('/api/org-profile/location-hours', fields), [patchTo])
 
   return {
     data,
