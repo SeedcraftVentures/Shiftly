@@ -80,7 +80,7 @@ export default function Step4Teams({ state }) {
           style={{
             height: 38,
             border: 'none',
-            background: customTeam.trim() ? 'var(--pink-500)' : 'var(--gray-100)',
+            background: customTeam.trim() ? 'var(--shiftly-pink)' : 'var(--gray-100)',
             color: customTeam.trim() ? 'var(--gray-0)' : 'var(--gray-400)',
             cursor: customTeam.trim() ? 'pointer' : 'not-allowed',
             gap: 5,

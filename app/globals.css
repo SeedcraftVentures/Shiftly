@@ -41,7 +41,11 @@
 
   --gray-999: #000000;
 
-  --pink-50: #fef1f7;
+  /* Shiftly brand pink, use these everywhere */
+  --shiftly-pink: #FF1F7D;
+  --shiftly-pink-light: #FFE4F0;
+  --shiftly-pink-dark: #C71460;
+  /* --pink-50: #fef1f7;
   --pink-100: #fee5f0;
   --pink-200: #fecce3;
   --pink-300: #ffa3ca;
@@ -52,7 +56,7 @@
   --pink-800: #aa1045;
   --pink-900: #8d123c;
 
-  --pink-accent: #FF1F7D;
+  --pink-accent: #FF1F7D; */
 
   --red-50: #FEF2F2;
   --red-200: #FECACA;
@@ -115,11 +119,11 @@ body {
 }
 
 .accent-bg-color {
-  background-color: var(--pink-500);
+  background-color: var(--shiftly-pink);
 }
 
 .accent-text-colour {
-  color: var(--pink-500);
+  color: var(--shiftly-pink);
 }
 
 /* ============================================
@@ -265,19 +269,19 @@ body {
 /* Primary Button (Pink) */
 .btn-primary {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  background: linear-gradient(135deg, var(--pink-600) 0%, var(--pink-700) 100%);
+  background: linear-gradient(135deg, var(--shiftly-pink) 0%, var(--shiftly-pink) 100%);
 }
 
 .btn-primary:hover:not(:disabled) {
   transform: translateY(-1px) scale(1.02);
   box-shadow:
-  0 10px 25px -5px rgb(from var(--pink-600) r g b / 35%),
-  0 8px 10px -6px rgb(from var(--pink-600) r g b / 25%);
+  0 10px 25px -5px rgb(from var(--shiftly-pink) r g b / 35%),
+  0 8px 10px -6px rgb(from var(--shiftly-pink) r g b / 25%);
 }
 
 .btn-primary:active:not(:disabled) {
   transform: translateY(0) scale(0.98);
-  box-shadow: 0 4px 10px -2px rgb(from var(--pink-600) r g b / 30%);
+  box-shadow: 0 4px 10px -2px rgb(from var(--shiftly-pink) r g b / 30%);
 }
 
 /* Secondary Button (Gray/White) */
@@ -287,8 +291,8 @@ body {
 }
 
 .btn-secondary:hover:not(:disabled) {
-  border-color: var(--pink-600);
-  background-color: var(--pink-50);
+  border-color: var(--shiftly-pink);
+  background-color: var(--shiftly-pink-light);
   transform: translateY(-1px);
 }
 
@@ -315,7 +319,7 @@ body {
 
 .btn-icon:hover:not(:disabled) {
   transform: scale(1.1);
-  color: var(--pink-600);
+  color: var(--shiftly-pink);
 }
 
 .btn-icon:active:not(:disabled) {
@@ -348,9 +352,9 @@ textarea:disabled {
 
 /* Exclude buttons and navigation links from global hover styles */
 a:not(.btn-primary):not(.btn-secondary):not([id^='nav-']):hover {
-  color: var(--pink-600);
+  color: var(--shiftly-pink);
   text-decoration: underline;
-  text-decoration-color: var(--pink-600);
+  text-decoration-color: var(--shiftly-pink);
   text-underline-offset: 2px;
 }
 
@@ -363,7 +367,7 @@ table tbody tr:nth-child(even) {
 }
 
 table tbody tr:hover {
-  background-color: var(--pink-50);
+  background-color: var(--shiftly-pink-light);
 }
 
 /* ============================================
@@ -588,14 +592,14 @@ textarea.success:focus {
 }
 
 .react-datepicker__day:hover {
-  background-color: var(--pink-50);
-  color: var(--pink-700);
+  background-color: var(--shiftly-pink-light);
+  color: var(--shiftly-pink-dark);
 }
 
 /* Selected day - PINK! */
 .react-datepicker__day--selected,
 .react-datepicker__day--keyboard-selected {
-  background-color: var(--pink-700) !important;
+  background-color: var(--shiftly-pink-dark) !important;
   color: white !important;
   font-weight: 600;
 }
@@ -627,7 +631,7 @@ textarea.success:focus {
 }
 
 .react-datepicker__navigation:hover .react-datepicker__navigation-icon::before {
-  border-color: var(--pink-700);
+  border-color: var(--shiftly-pink-dark);
 }
 
 /* Month container */
@@ -719,7 +723,7 @@ textarea.success:focus {
 
 /* Clear, visible focus ring for keyboard navigation */
 *:focus-visible {
-  outline: 2px solid var(--pink-600);
+  outline: 2px solid var(--shiftly-pink);
   outline-offset: 2px;
   border-radius: 0.375rem;
 }
@@ -731,7 +735,7 @@ textarea.success:focus {
 
 /* Button focus states */
 button:focus-visible {
-  outline: 2px solid var(--pink-600);
+  outline: 2px solid var(--shiftly-pink);
   outline-offset: 2px;
 }
 
@@ -739,9 +743,9 @@ button:focus-visible {
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
-  outline: 2px solid var(--pink-600);
+  outline: 2px solid var(--shiftly-pink);
   outline-offset: 0;
-  border-color: var(--pink-600);
+  border-color: var(--shiftly-pink);
 }
 
 /* ============================================

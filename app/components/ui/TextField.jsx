@@ -44,7 +44,7 @@ export default function TextField({
         padding: s.padding,
         fontSize: s.fontSize,
         fontWeight: s.fontWeight,
-        border: `${s.borderWidth} solid ${focused ? 'var(--pink-500)' : 'var(--gray-200)'}`,
+        border: `${s.borderWidth} solid ${focused ? 'var(--shiftly-pink)' : 'var(--gray-200)'}`,
         borderRadius: 10,
         color: 'var(--gray-900)',
         background: 'var(--gray-0)',

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Section, FieldRow, TextField, NumberField, Chip } from '@/app/components/ui'
-import Button from '@/app/components/Button'
+import Button from '@/app/components/ui/Button'
 import { getCurrencyPrefix, DEFAULT_CURRENCY } from '@/app/lib/constants'
 
 export default function LocationSection({ location, onSave }) {

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { UserButton } from '@clerk/nextjs'
 import Image from 'next/image'
-import NotificationBell from '@/app/components/NotificationBell'
+import NotificationBell from '@/app/components/ui/NotificationBell'
 import {
   BuildingIcon,
   CalendarIcon,
@@ -152,7 +152,7 @@ export default function NavigationSideBar() {
             href={item.path}
             className={`flex items-center justify-between px-4 py-3 rounded-xl transition-all ${
               isActive(item.path)
-                ? 'bg-white text-pink-600 shadow-lg'
+                ? 'bg-white text-shiftly-pink shadow-lg'
                 : 'text-white/90 hover:bg-white/10 hover:text-white'
             }`}
           >

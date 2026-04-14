@@ -8,8 +8,8 @@ export default function SelectableCard({ selected, onClick, icon, label, style }
         padding: '20px 12px',
         borderRadius: 10,
         cursor: 'pointer',
-        border: selected ? '2px solid var(--pink-500)' : '2px solid var(--gray-200)',
-        background: selected ? 'var(--pink-50)' : 'var(--gray-50)',
+        border: selected ? '2px solid var(--shiftly-pink)' : '2px solid var(--gray-200)',
+        background: selected ? 'var(--shiftly-pink-light)' : 'var(--gray-50)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -19,7 +19,7 @@ export default function SelectableCard({ selected, onClick, icon, label, style }
       }}
     >
       {icon && (
-        <div style={{ color: selected ? 'var(--pink-500)' : 'var(--gray-400)' }}>
+        <div style={{ color: selected ? 'var(--shiftly-pink)' : 'var(--gray-400)' }}>
           {icon}
         </div>
       )}
@@ -27,7 +27,7 @@ export default function SelectableCard({ selected, onClick, icon, label, style }
         style={{
           fontSize: 'var(--text-sm)',
           fontWeight: 700,
-          color: selected ? 'var(--pink-500)' : 'var(--gray-700)',
+          color: selected ? 'var(--shiftly-pink)' : 'var(--gray-700)',
         }}
       >
         {label}

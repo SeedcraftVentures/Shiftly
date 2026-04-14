@@ -4,7 +4,7 @@ export default function PageHeader({ title, subtitle, action, backLink }) {
       {backLink && (
         <a 
           href={backLink.href} 
-          className="inline-flex items-center gap-2 text-sm font-medium mb-3 transition-colors text-pink-500"
+          className="inline-flex items-center gap-2 text-sm font-medium mb-3 transition-colors text-shiftly-pink"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />

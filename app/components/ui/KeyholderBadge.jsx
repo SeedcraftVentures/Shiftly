@@ -6,9 +6,9 @@ import { KeyholderIcon } from '@/app/lib/icons'
  * KeyholderBadge — Badge indicating keyholder status.
  * @param {object} props
  * @param {'default'|'light'} [props.variant='default'] — Visual variant
- * @param {string} [props.color='var(--pink-500)'] — Badge accent color
+ * @param {string} [props.color='var(--shiftly-pink)'] — Badge accent color
  */
-export default function KeyholderBadge({ variant = 'default', color = 'var(--pink-500)' }) {
+export default function KeyholderBadge({ variant = 'default', color = 'var(--shiftly-pink)' }) {
   const isLight = variant === 'light'
 
   return (

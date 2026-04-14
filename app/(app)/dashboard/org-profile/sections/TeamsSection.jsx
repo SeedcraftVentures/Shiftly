@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Section } from '@/app/components/ui'
-import Button from '@/app/components/Button'
+import Button from '@/app/components/ui/Button'
 import { assignTeamColor } from '@/app/lib/constants'
 import TeamRow from './components/TeamRow'
 

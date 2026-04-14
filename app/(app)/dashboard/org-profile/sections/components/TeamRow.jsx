@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import Button from '@/app/components/Button'
+import Button from '@/app/components/ui/Button'
 import { ChevronDownIcon, TrashIcon } from '@/app/lib/icons'
 import TeamHoursOverride from './TeamHoursOverride'
 

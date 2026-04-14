@@ -102,7 +102,7 @@ export default function SignUpPage() {
   if (!isLoaded) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pink-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-shiftly-pink-dark"></div>
       </div>
     )
   }
@@ -134,7 +134,7 @@ export default function SignUpPage() {
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-gray-900"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-shiftly-pink focus:border-transparent text-gray-900"
                   />
                 </div>
                 <div>
@@ -146,7 +146,7 @@ export default function SignUpPage() {
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     required
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-gray-900"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-shiftly-pink focus:border-transparent text-gray-900"
                   />
                 </div>
               </div>
@@ -160,7 +160,7 @@ export default function SignUpPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-gray-900"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-shiftly-pink focus:border-transparent text-gray-900"
                 />
               </div>
 
@@ -173,13 +173,13 @@ export default function SignUpPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-gray-900"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-shiftly-pink focus:border-transparent text-gray-900"
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-pink-600 hover:bg-pink-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
+                className="w-full bg-shiftly-pink hover:bg-shiftly-pink-dark  text-white font-semibold py-3 px-4 rounded-lg transition-colors"
               >
                 Continue
               </button>
@@ -188,7 +188,7 @@ export default function SignUpPage() {
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-600">
                 Already have an account?{' '}
-                <a href="/sign-in" className="text-pink-600 hover:text-pink-700 font-semibold">
+                <a href="/sign-in" className="text-shiftly-pink hover:text-shiftly-pink-dark  font-semibold">
                   Sign in
                 </a>
               </p>
@@ -218,13 +218,13 @@ export default function SignUpPage() {
                   onChange={(e) => setCode(e.target.value)}
                   placeholder="Enter code"
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-transparent text-center text-2xl tracking-widest"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-shiftly-pink focus:border-transparent text-center text-2xl tracking-widest"
                 />
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-pink-600 hover:bg-pink-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
+                className="w-full bg-shiftly-pink hover:bg-shiftly-pink-dark  text-white font-semibold py-3 px-4 rounded-lg transition-colors"
               >
                 Verify Email
               </button>

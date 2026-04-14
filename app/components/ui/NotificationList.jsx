@@ -15,7 +15,7 @@ export default function NotificationList({ notifications, loading, onMarkRead })
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="w-8 h-8 border-2 border-gray-200 border-t-pink-500 rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-gray-200 border-t-shiftly-pink rounded-full animate-spin" />
       </div>
     )
   }
@@ -39,7 +39,7 @@ export default function NotificationList({ notifications, loading, onMarkRead })
           key={notif.id}
           onClick={() => { if (!notif.read) onMarkRead(notif.id) }}
           className={`w-full text-left px-5 py-3.5 border-b border-gray-50 hover:bg-gray-50 transition-colors ${
-            !notif.read ? 'bg-pink-50/50' : ''
+            !notif.read ? 'bg-shiftly-pink-light/50' : ''
           }`}
         >
           <div className="flex gap-3">
@@ -52,7 +52,7 @@ export default function NotificationList({ notifications, loading, onMarkRead })
                   {notif.title}
                 </p>
                 {!notif.read && (
-                  <div className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5 bg-pink-500" />
+                  <div className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5 bg-shiftly-pink" />
                 )}
               </div>
               {notif.message && (

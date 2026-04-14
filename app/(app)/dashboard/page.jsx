@@ -20,8 +20,8 @@ import {
   TrashIcon,
 } from '@/app/lib/icons'
 import PageHeader from '@/app/wrappers/PageHeader'
-import Button from '@/app/components/Button'
-import Badge from '@/app/components/Badge'
+import Button from '@/app/components/ui/Button'
+import Badge from '@/app/components/ui/Badge'
 
 export default function DashboardPage() {
   const { user, isLoaded } = useUser()
@@ -157,7 +157,7 @@ export default function DashboardPage() {
     return (
       <main className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-gray-200 border-t-pink-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-12 h-12 border-4 border-gray-200 border-t-shiftly-pink rounded-full animate-spin mx-auto mb-4"></div>
           <p className="body-text">Loading your dashboard...</p>
         </div>
       </main>
@@ -198,16 +198,16 @@ export default function DashboardPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-8">
-        <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 p-3 sm:p-6 text-center hover:shadow-lg hover:shadow-pink-500/10 transition-all">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-pink-100 rounded-lg sm:rounded-xl flex items-center justify-center mx-auto mb-2 sm:mb-3">
+        <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 p-3 sm:p-6 text-center hover:shadow-lg hover:shadow-shiftly-pink/10 transition-all">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-shiftly-pink-light rounded-lg sm:rounded-xl flex items-center justify-center mx-auto mb-2 sm:mb-3">
             <ClockIcon className="w-5 h-5 sm:w-6 sm:h-6 text-pink-600" />
           </div>
           <p className="text-xl sm:text-3xl font-bold text-gray-900 mb-0.5 sm:mb-1">{stats.timeSaved}h</p>
           <p className="caption">Time Saved</p>
         </div>
 
-        <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 p-3 sm:p-6 text-center hover:shadow-lg hover:shadow-pink-500/10 transition-all">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-pink-100 rounded-lg sm:rounded-xl flex items-center justify-center mx-auto mb-2 sm:mb-3">
+        <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-200 p-3 sm:p-6 text-center hover:shadow-lg hover:shadow-shiftly-pink/10 transition-all">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-shiftly-pink-light rounded-lg sm:rounded-xl flex items-center justify-center mx-auto mb-2 sm:mb-3">
             <CheckCircleIcon className="w-5 h-5 sm:w-6 sm:h-6 text-pink-600" />
           </div>
           <p className="text-xl sm:text-3xl font-bold text-gray-900 mb-0.5 sm:mb-1">{stats.weeksApproved}</p>
@@ -216,7 +216,7 @@ export default function DashboardPage() {
 
         <Link 
           href="/dashboard/requests"
-          className={`bg-white rounded-xl sm:rounded-2xl border p-3 sm:p-6 text-center hover:shadow-lg hover:shadow-pink-500/10 transition-colors transition-shadow ${
+          className={`bg-white rounded-xl sm:rounded-2xl border p-3 sm:p-6 text-center hover:shadow-lg hover:shadow-shiftly-pink/10 transition-colors transition-shadow ${
             pendingRequestsCount > 0 ? 'border-amber-300 ring-2 ring-amber-100' : 'border-gray-200'
           }`}
         >
@@ -251,7 +251,7 @@ export default function DashboardPage() {
 
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="w-8 h-8 border-2 border-gray-200 border-t-pink-500 rounded-full animate-spin"></div>
+            <div className="w-8 h-8 border-2 border-gray-200 border-t-shiftly-pink rounded-full animate-spin"></div>
           </div>
         ) : upcomingRotas.length === 0 ? (
           <div className="text-center py-8 sm:py-12 px-4 sm:px-6">
@@ -278,7 +278,7 @@ export default function DashboardPage() {
                   onClick={() => handleRotaClick(rota.id)}
                   className="flex-1 px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-3 sm:gap-4 text-left"
                 >
-                  <div className="w-9 h-9 sm:w-10 sm:h-10 bg-pink-100 rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
+                  <div className="w-9 h-9 sm:w-10 sm:h-10 bg-shiftly-pink-light rounded-lg sm:rounded-xl flex items-center justify-center flex-shrink-0">
                     <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5 text-pink-600" />
                   </div>
                   <div className="min-w-0">

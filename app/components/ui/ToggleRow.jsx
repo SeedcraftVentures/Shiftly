@@ -105,7 +105,7 @@ export default function ToggleRow({
           height: 22,
           borderRadius: 11,
           border: 'none',
-          background: enabled ? 'var(--pink-500)' : 'var(--gray-200)',
+          background: enabled ? 'var(--shiftly-pink)' : 'var(--gray-200)',
           cursor: 'pointer',
           transition: 'background .15s',
           flexShrink: 0,

@@ -13,11 +13,11 @@ export default function Button({
     const baseStyles = 'inline-flex items-center justify-center gap-2 font-medium rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed'
     
     const variants = {
-      primary: 'btn-primary text-white hover:shadow-lg hover:shadow-pink-500/25 focus-visible:ring-pink-500',
-      secondary: 'btn-secondary bg-white text-gray-700 hover:bg-pink-50 hover:text-pink-700 hover:border-pink-300 focus-visible:ring-pink-500',
+      primary: 'btn-primary text-white hover:shadow-lg hover:shadow-shiftly-pink/25 focus-visible:ring-shiftly-pink',
+      secondary: 'btn-secondary bg-white text-gray-700 hover:bg-shiftly-pink-light hover:text-shiftly-pink-dark hover:border-shiftly-pink-light focus-visible:ring-shiftly-pink',
       danger: 'btn-danger text-white hover:shadow-lg focus-visible:ring-red-500',
       ghost: 'bg-transparent text-gray-700 hover:bg-gray-100 focus-visible:ring-gray-500',
-      link: 'bg-transparent hover:bg-transparent underline-offset-4 hover:underline focus-visible:ring-pink-500',
+      link: 'bg-transparent hover:bg-transparent underline-offset-4 hover:underline focus-visible:ring-shiftly-pink',
     }
     
     const sizes = {

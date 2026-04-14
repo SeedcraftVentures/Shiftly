@@ -34,7 +34,7 @@ export default function AnchorTypeSelector({ value, onChange }) {
               fontWeight: 600,
               border: 'none',
               borderLeft: i > 0 ? '1.5px solid var(--gray-200)' : 'none',
-              background: active ? 'var(--pink-500)' : 'var(--gray-0)',
+              background: active ? 'var(--shiftly-pink)' : 'var(--gray-0)',
               color: active ? 'var(--gray-0)' : 'var(--gray-500)',
               cursor: 'pointer',
               transition: 'all .12s',

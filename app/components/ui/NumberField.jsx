@@ -54,7 +54,7 @@ export default function NumberField({
           paddingLeft: prefix ? 30 : 14,
           fontSize: 'var(--text-sm)',
           fontWeight: 500,
-          border: `1.5px solid ${focused ? 'var(--pink-500)' : 'var(--gray-200)'}`,
+          border: `1.5px solid ${focused ? 'var(--shiftly-pink)' : 'var(--gray-200)'}`,
           borderRadius: 8,
           color: 'var(--gray-900)',
           background: 'var(--gray-0)',

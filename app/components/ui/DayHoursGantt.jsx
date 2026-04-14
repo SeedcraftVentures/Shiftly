@@ -51,7 +51,7 @@ function InlineTimeEditor({ value, onChange, onClose, color }) {
         padding: '4px 6px',
         fontSize: 'var(--text-xs)',
         fontWeight: 700,
-        border: '1.5px solid var(--pink-500)',
+        border: '1.5px solid var(--shiftly-pink)',
         borderRadius: 6,
         color,
         background: 'var(--gray-0)',
@@ -239,8 +239,8 @@ export default function DayHoursGantt({
             height: 20,
             borderRadius: 5,
             border: '1.5px solid',
-            borderColor: data.open ? 'var(--pink-500)' : 'var(--gray-200)',
-            background: data.open ? 'var(--pink-500)' : 'var(--gray-0)',
+            borderColor: data.open ? 'var(--shiftly-pink)' : 'var(--gray-200)',
+            background: data.open ? 'var(--shiftly-pink)' : 'var(--gray-0)',
             color: 'var(--gray-0)',
             cursor: 'pointer',
             display: 'flex',
@@ -278,8 +278,8 @@ export default function DayHoursGantt({
                 endTime={displayData.closing}
                 onStartChange={v => update('opening', v)}
                 onEndChange={v => update('closing', v)}
-                fillColor="var(--pink-200)"
-                textColor="var(--pink-500)"
+                fillColor="var(--shiftly-pink-light)"
+                textColor="var(--shiftly-pink)"
                 editingField={isEditing('public', 'start') ? 'start' : isEditing('public', 'end') ? 'end' : null}
                 onEditStart={field => setEditing(`public-${field}`)}
                 onEditEnd={() => setEditing(null)}
@@ -311,9 +311,9 @@ export default function DayHoursGantt({
                 padding: '6px 10px',
                 fontSize: 'var(--text-xs)',
                 fontWeight: 600,
-                color: inherited ? 'var(--gray-500)' : 'var(--pink-500)',
-                background: inherited ? 'var(--gray-50)' : 'var(--pink-50)',
-                border: `1.5px solid ${inherited ? 'var(--gray-200)' : 'var(--pink-200)'}`,
+                color: inherited ? 'var(--gray-500)' : 'var(--shiftly-pink)',
+                background: inherited ? 'var(--gray-50)' : 'var(--shiftly-pink-light)',
+                border: `1.5px solid ${inherited ? 'var(--gray-200)' : 'var(--shiftly-pink-light)'}`,
                 borderRadius: 6,
                 cursor: 'pointer',
                 flexShrink: 0,

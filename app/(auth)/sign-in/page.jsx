@@ -10,7 +10,7 @@ export default function SignInPage() {
         forceRedirectUrl="/dashboard"
         appearance={{
           elements: {
-            formButtonPrimary: 'bg-pink-600 hover:bg-pink-700 text-sm normal-case',
+            formButtonPrimary: 'bg-shiftly-pink hover:bg-shiftly-pink-dark  text-sm normal-case',
             card: 'shadow-xl',
             headerTitle: 'text-2xl font-bold',
             headerSubtitle: 'text-gray-600',

@@ -32,7 +32,7 @@ function ProgressBar({ step, total }) {
         <div
           style={{
             height: '100%',
-            background: 'linear-gradient(90deg, var(--pink-500), var(--pink-400))',
+            background: 'linear-gradient(90deg, var(--shiftly-pink), var(--shiftly-pink-light))',
             borderRadius: 99,
             transition: 'width 0.4s ease',
             width: `${pct}%`,
@@ -112,7 +112,7 @@ export default function OnboardingWizard() {
     <div
       style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, var(--pink-50) 0%, var(--gray-0) 50%, var(--team-purple-light) 100%)',
+        background: 'linear-gradient(135deg, var(--shiftly-pink-light) 0%, var(--gray-0) 50%, var(--team-purple-light) 100%)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -135,7 +135,7 @@ export default function OnboardingWizard() {
           }}
         >
           <span className="heading-page">
-            Shift<span style={{ color: 'var(--pink-500)' }}>ly</span>
+            Shift<span style={{ color: 'var(--shiftly-pink)' }}>ly</span>
           </span>
         </div>
       </div>

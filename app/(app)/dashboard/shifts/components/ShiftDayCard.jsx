@@ -27,7 +27,7 @@ export default function ShiftDayCard({
         padding: 10,
         borderRadius: 10,
         border: isSelected
-          ? '2px solid var(--pink-500)'
+          ? '2px solid var(--shiftly-pink)'
           : hasGap
             ? '2px solid var(--red-200)'
             : '1.5px solid var(--gray-100)',

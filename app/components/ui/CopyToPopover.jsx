@@ -60,7 +60,7 @@ export default function CopyToPopover({ sourceDay, onCopy }) {
         <div style={popoverStyle}>
           <button
             onClick={() => handle('all')}
-            style={{ ...itemStyle, color: 'var(--pink-500)', borderBottom: '1px solid var(--gray-100)' }}
+            style={{ ...itemStyle, color: 'var(--shiftly-pink)', borderBottom: '1px solid var(--gray-100)' }}
           >
             All days
           </button>

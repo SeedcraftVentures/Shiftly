@@ -7,13 +7,13 @@ import { DAYS_SHORT } from '@/app/lib/constants/days'
  * @param {object} props
  * @param {number[]} props.days — Array of selected day indices (0=Mon ... 6=Sun)
  * @param {function} props.onChange — Called with updated days array
- * @param {string} [props.color='var(--pink-500)'] — Accent color for selected state
+ * @param {string} [props.color='var(--shiftly-pink)'] — Accent color for selected state
  * @param {boolean} [props.showQuickButtons=true] — Show All/Weekdays/Weekends buttons
  */
 export default function DayToggleGroup({
   days = [],
   onChange,
-  color = 'var(--pink-500)',
+  color = 'var(--shiftly-pink)',
   showQuickButtons = true,
 }) {
   const toggleDay = (idx) => {

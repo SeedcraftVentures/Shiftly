@@ -15,7 +15,7 @@ export default function PrimaryButton({ children, onClick, disabled, loading, st
         fontSize: 'var(--text-sm)',
         fontWeight: 700,
         border: 'none',
-        background: isDisabled ? 'var(--gray-100)' : 'var(--pink-500)',
+        background: isDisabled ? 'var(--gray-100)' : 'var(--shiftly-pink)',
         color: isDisabled ? 'var(--gray-400)' : 'var(--gray-0)',
         cursor: isDisabled ? 'not-allowed' : 'pointer',
         transition: 'all .12s',

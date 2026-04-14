@@ -355,15 +355,15 @@ export default function ShiftRow({
               gap: 6,
               padding: '6px 12px',
               borderRadius: 6,
-              border: shift.is_keyholder ? '2px solid var(--pink-500)' : BORDER_DEFAULT,
-              background: shift.is_keyholder ? 'var(--pink-50)' : 'var(--gray-0)',
-              color: shift.is_keyholder ? 'var(--pink-500)' : 'var(--gray-400)',
+              border: shift.is_keyholder ? '2px solid var(--shiftly-pink)' : BORDER_DEFAULT,
+              background: shift.is_keyholder ? 'var(--shiftly-pink-light)' : 'var(--gray-0)',
+              color: shift.is_keyholder ? 'var(--shiftly-pink)' : 'var(--gray-400)',
               fontSize: 'var(--text-xs)',
               fontWeight: 600,
               cursor: 'pointer',
             }}
           >
-            <KeyholderBadge variant={shift.is_keyholder ? 'default' : 'light'} color={shift.is_keyholder ? 'var(--pink-500)' : 'var(--gray-300)'} />
+            <KeyholderBadge variant={shift.is_keyholder ? 'default' : 'light'} color={shift.is_keyholder ? 'var(--shiftly-pink)' : 'var(--gray-300)'} />
             {shift.is_keyholder ? 'Required' : 'Not required'}
           </button>
         </div>
