@@ -1,17 +1,17 @@
 export const CURRENCIES = [
-  { value: 'GBP', symbol: '\u00A3', defaultMinWage: 12.71 },
-  { value: 'USD', symbol: '$', defaultMinWage: 7.25 },
-  { value: 'EUR', symbol: '\u20AC', defaultMinWage: 12.0 },
+  { code: 'GBP', symbol: '\u00A3', defaultMinWage: 12.71 },
+  { code: 'USD', symbol: '$', defaultMinWage: 7.25 },
+  { code: 'EUR', symbol: '\u20AC', defaultMinWage: 12.0 },
 ].map(c => ({
   ...c,
-  label: `${c.value} (${c.symbol})`,
+  label: `${c.code} (${c.symbol})`,
 }))
 
 
 export function getCurrencySymbol(currency) {
-  const found = CURRENCIES.find(c => c.value === currency)
+  const found = CURRENCIES.find(c => c.code === currency)
   if (found) return found.symbol
 
-  const fallback = CURRENCIES.find(c => c.value === DEFAULT_CURRENCY)
+  const fallback = CURRENCIES.find(c => c.code === DEFAULT_CURRENCY)
   return fallback?.symbol || ''
 }

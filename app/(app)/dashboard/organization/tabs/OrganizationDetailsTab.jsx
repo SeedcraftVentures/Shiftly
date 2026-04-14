@@ -70,7 +70,7 @@ export default function OrganizationDetailsTab({ organization, onSave, isOwner }
           }}
         >
           {CURRENCIES.map(c => (
-            <option key={c.value} value={c.value}>{c.label}</option>
+            <option key={c.code} value={c.code}>{c.label}</option>
           ))}
         </select>
       </FieldRow>

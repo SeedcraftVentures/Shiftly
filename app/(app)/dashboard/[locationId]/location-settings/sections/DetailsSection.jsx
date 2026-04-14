@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { Section, FieldRow, TextField, NumberField, Chip, Button } from '@/app/components/ui'
-import { effectiveCurrencyPrefix, effectiveCurrency } from '@/app/lib/utils/currencyUtils'
+import { CURRENCIES } from '@/app/lib/constants'
+import { effectiveCurrency, effectiveCurrencyPrefix } from '@/app/lib/utils/currencyUtils'
 
 export default function DetailsSection({ location, organization, onSave }) {
   const [nickname, setNickname] = useState(location.name || '')
@@ -30,9 +31,24 @@ export default function DetailsSection({ location, organization, onSave }) {
     onSave({ shift_lengths: updated })
   }
 
+  // ── Currency logic ────────────────────────────────────────────────────────
+  const orgCurrencyCode = effectiveCurrency(null, organization)
+  const activeCurrencyCode = effectiveCurrency(location, organization)
   const currencyPrefix = effectiveCurrencyPrefix(location, organization)
-  const currencyCode = effectiveCurrency(location, organization)
-  const isInheritingCurrency = !location.currency
+  const isCurrencyOverridden = !!location.currency
+
+  // Available override options exclude the org's currency
+  const overrideOptions = CURRENCIES.filter(c => c.code !== orgCurrencyCode)
+
+  const handleOverrideCurrency = () => {
+    // Default to first non-org option
+    const first = overrideOptions[0]
+    if (first) onSave({ currency: first.code })
+  }
+
+  const handleResetCurrency = () => {
+    onSave({ currency: null })
+  }
 
   return (
     <Section
@@ -61,21 +77,63 @@ export default function DetailsSection({ location, organization, onSave }) {
 
       <FieldRow
         label="Currency"
-        description={isInheritingCurrency ? 'Inherited from organization' : 'Overridden for this location'}
+        description={
+          isCurrencyOverridden
+            ? 'Overridden for this location'
+            : 'Inherited from organization'
+        }
       >
-        <div
-          style={{
-            display: 'inline-flex',
-            padding: '8px 14px',
-            borderRadius: 8,
-            background: 'var(--gray-50)',
-            border: '1.5px solid var(--gray-200)',
-            fontSize: 'var(--text-sm)',
-            fontWeight: 600,
-            color: 'var(--gray-500)',
-          }}
-        >
-          {currencyCode}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          {isCurrencyOverridden ? (
+            <>
+              <select
+                value={location.currency}
+                onChange={e => onSave({ currency: e.target.value })}
+                style={{
+                  padding: '8px 14px',
+                  fontSize: 'var(--text-sm)',
+                  fontWeight: 600,
+                  border: '1.5px solid var(--shiftly-pink)',
+                  borderRadius: 8,
+                  color: 'var(--gray-800)',
+                  background: 'var(--gray-0)',
+                  outline: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                {overrideOptions.map(c => (
+                  <option key={c.code} value={c.code}>
+                    {c.code} ({c.symbol})
+                  </option>
+                ))}
+              </select>
+              <Button variant="secondary" size="sm" onClick={handleResetCurrency}>
+                Reset to {orgCurrencyCode}
+              </Button>
+            </>
+          ) : (
+            <>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  padding: '8px 14px',
+                  borderRadius: 8,
+                  background: 'var(--gray-50)',
+                  border: '1.5px solid var(--gray-200)',
+                  fontSize: 'var(--text-sm)',
+                  fontWeight: 600,
+                  color: 'var(--gray-500)',
+                }}
+              >
+                {activeCurrencyCode}
+              </div>
+              {overrideOptions.length > 0 && (
+                <Button variant="secondary" size="sm" onClick={handleOverrideCurrency}>
+                  Override
+                </Button>
+              )}
+            </>
+          )}
         </div>
       </FieldRow>
 

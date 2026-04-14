@@ -9,6 +9,7 @@ import {
   BarChartIcon,
   GearIcon,
   HelpIcon,
+  BuildingIcon
 } from '@/app/lib/icons'
 
 export const NAV_ITEMS = [
@@ -20,6 +21,6 @@ export const NAV_ITEMS = [
   { id: 'nav-requests', name: 'Inbox', path: '/dashboard/requests', icon: InboxIcon },
   { id: 'nav-payroll', name: 'Payroll', path: '/dashboard/payroll', icon: CoinIcon, locked: true },
   { id: 'nav-reports', name: 'Reports', path: '/dashboard/reports', icon: BarChartIcon, dividerAfter: true },
-  { id: 'nav-settings', name: 'Settings', path: '/dashboard/settings', icon: GearIcon },
+  { id: 'nav-location-settings', name: 'Location Settings', path: '/location-settings', icon: GearIcon, locationScoped: true},
   { id: 'nav-help', name: 'Help Centre', path: '/dashboard/help', icon: HelpIcon },
 ]

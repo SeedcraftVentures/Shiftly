@@ -1,8 +1,10 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 
-export function useLocations() {
+const LocationContext = createContext(null)
+
+export function LocationProvider({ children }) {
   const [locations, setLocations] = useState([])
   const [currentLocationId, setCurrentLocationId] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -19,7 +21,6 @@ export function useLocations() {
       const locs = locsJson.locations || []
       setLocations(locs)
 
-      // Pick current: last-used if still accessible, else first available, else null
       const lastId = lastJson.last_location_id
       const isAccessible = lastId && locs.some(l => l.location_id === lastId)
       setCurrentLocationId(isAccessible ? lastId : (locs[0]?.location_id ?? null))
@@ -45,14 +46,27 @@ export function useLocations() {
     }
   }, [])
 
+  // Called after creating/deleting a location — refetches the list
+  const refresh = useCallback(() => load(), [load])
+
   const currentLocation = locations.find(l => l.location_id === currentLocationId) || null
 
-  return {
+  const value = {
     locations,
     currentLocation,
     currentLocationId,
     switchLocation,
+    refresh,
     loading,
-    reload: load,
   }
+
+  return <LocationContext.Provider value={value}>{children}</LocationContext.Provider>
+}
+
+export function useLocationContext() {
+  const ctx = useContext(LocationContext)
+  if (!ctx) {
+    throw new Error('useLocationContext must be used within a LocationProvider')
+  }
+  return ctx
 }

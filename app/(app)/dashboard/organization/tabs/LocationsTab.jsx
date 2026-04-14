@@ -3,25 +3,28 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Section, Button } from '@/app/components/ui'
+import { useLocationContext } from '@/app/lib/contexts/LocationContext'
 import LocationCard from '../components/LocationCard'
 import AddLocationModal from '../components/AddLocationModal'
 
 export default function LocationsTab({ organization, locations, isOwner, onReload, autoOpenAdd }) {
   const router = useRouter()
+  const { switchLocation, refresh } = useLocationContext()
   const [showAdd, setShowAdd] = useState(false)
 
-  // Auto-open add modal if ?action=add-location was in URL
   useEffect(() => {
     if (autoOpenAdd) setShowAdd(true)
   }, [autoOpenAdd])
 
-  const handleLocationClick = (locationId) => {
+  const handleLocationClick = async (locationId) => {
+    await switchLocation(locationId)
     router.push(`/dashboard/${locationId}/location-settings`)
   }
 
   const handleAdded = async () => {
     setShowAdd(false)
-    await onReload()
+    await refresh()        // updates the shared provider state
+    await onReload()       // refreshes the org page's own data
   }
 
   return (

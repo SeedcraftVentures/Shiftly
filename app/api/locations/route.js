@@ -78,6 +78,7 @@ export async function POST(request) {
         name: body.name.trim(),
         address: body.address?.trim() || '',
         currency: body.currency || null,
+        min_wage: body.min_wage ?? null,
         shift_lengths: DEFAULT_SHIFT_LENGTHS,
         max_consecutive_hours: DEFAULT_MAX_CONSECUTIVE_HOURS,
       })

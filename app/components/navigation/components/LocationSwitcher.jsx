@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronDownIcon, BuildingIcon, PlusIcon, CheckIcon } from '@/app/lib/icons'
-import { useLocations } from '@/app/lib/hooks/useLocations'
+import { useLocationContext } from '@/app/lib/contexts/LocationContext'
 import { useOutsideClick } from '@/app/lib/hooks/useOutsideClick'
 import { useEscapeKey } from '@/app/lib/hooks/useEscapeKey'
 
@@ -13,7 +13,7 @@ export default function LocationSwitcher() {
   const [open, setOpen] = useState(false)
   const containerRef = useRef(null)
 
-  const { locations, currentLocation, switchLocation, loading } = useLocations()
+  const { locations, currentLocation, switchLocation, loading } = useLocationContext()
 
   const close = () => setOpen(false)
   useOutsideClick(containerRef, close, open)

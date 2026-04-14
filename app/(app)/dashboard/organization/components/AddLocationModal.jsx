@@ -1,16 +1,32 @@
 'use client'
 
 import { useState } from 'react'
-import { TextField, Button } from '@/app/components/ui'
+import { TextField, NumberField, CurrencySelect, Button } from '@/app/components/ui'
+import { CURRENCIES } from '@/app/lib/constants'
 import { effectiveCurrency } from '@/app/lib/utils/currencyUtils'
 
 export default function AddLocationModal({ organization, onClose, onAdded }) {
+  const orgCurrencyCode = effectiveCurrency(null, organization)
+  const orgCurrency = CURRENCIES.find(c => c.code === orgCurrencyCode) || CURRENCIES[0]
+
   const [name, setName] = useState('')
   const [address, setAddress] = useState('')
+  const [currencyOverride, setCurrencyOverride] = useState('') // '' = inherit
+  const [minWage, setMinWage] = useState(String(orgCurrency.defaultMinWage))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
-  const inheritedCurrency = effectiveCurrency(null, organization)
+  // Selectable currencies in the override dropdown — exclude the org's current currency
+  const overrideOptions = CURRENCIES.filter(c => c.code !== orgCurrencyCode)
+
+  // Currency used for the min wage prefix: override if chosen, else org
+  const activeCurrency = currencyOverride
+    ? CURRENCIES.find(c => c.code === currencyOverride) || orgCurrency
+    : orgCurrency
+
+  const isCurrencyOverridden = currencyOverride !== ''
+  const isMinWageOverridden =
+    minWage !== '' && Number(minWage) !== Number(orgCurrency.defaultMinWage)
 
   const handleSubmit = async () => {
     if (!name.trim()) return
@@ -23,6 +39,8 @@ export default function AddLocationModal({ organization, onClose, onAdded }) {
         body: JSON.stringify({
           name: name.trim(),
           address: address.trim(),
+          currency: isCurrencyOverridden ? currencyOverride : null,
+          min_wage: minWage === '' ? null : Number(minWage),
         }),
       })
       if (!res.ok) {
@@ -35,6 +53,21 @@ export default function AddLocationModal({ organization, onClose, onAdded }) {
     } finally {
       setSaving(false)
     }
+  }
+
+  const labelStyle = {
+    display: 'block',
+    fontSize: 'var(--text-xs)',
+    fontWeight: 600,
+    color: 'var(--gray-600)',
+    marginBottom: 6,
+  }
+
+  const overrideHintStyle = {
+    fontSize: 'var(--text-xs)',
+    color: 'var(--shiftly-pink)',
+    fontWeight: 500,
+    marginLeft: 6,
   }
 
   return (
@@ -79,43 +112,23 @@ export default function AddLocationModal({ organization, onClose, onAdded }) {
             margin: '0 0 20px',
           }}
         >
-          You can configure hours, teams, and rules after creating the location.
+          Defaults are inherited from your organization. Change them here to override for this location only.
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <label
-              style={{
-                display: 'block',
-                fontSize: 'var(--text-xs)',
-                fontWeight: 600,
-                color: 'var(--gray-600)',
-                marginBottom: 6,
-              }}
-            >
-              Location name
-            </label>
+            <label style={labelStyle}>Location name</label>
             <TextField
               value={name}
               onChange={setName}
               size="sm"
-              placeholder="e.g. Main Street, Riverside"
+              placeholder="e.g. Main Street"
               autoFocus
             />
           </div>
 
           <div>
-            <label
-              style={{
-                display: 'block',
-                fontSize: 'var(--text-xs)',
-                fontWeight: 600,
-                color: 'var(--gray-600)',
-                marginBottom: 6,
-              }}
-            >
-              Address (optional)
-            </label>
+            <label style={labelStyle}>Address</label>
             <TextField
               value={address}
               onChange={setAddress}
@@ -124,9 +137,68 @@ export default function AddLocationModal({ organization, onClose, onAdded }) {
             />
           </div>
 
-          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--gray-400)', margin: 0 }}>
-            Currency: <strong>{inheritedCurrency}</strong> (inherited from organization)
-          </p>
+          <div>
+            <label style={labelStyle}>
+              Currency
+              {isCurrencyOverridden && <span style={overrideHintStyle}>Overridden</span>}
+            </label>
+            {overrideOptions.length > 0 ? (
+              <select
+                value={currencyOverride}
+                onChange={e => setCurrencyOverride(e.target.value)}
+                style={{
+                  padding: '8px 14px',
+                  fontSize: 'var(--text-sm)',
+                  fontWeight: 600,
+                  border: `1.5px solid ${isCurrencyOverridden ? 'var(--shiftly-pink)' : 'var(--gray-200)'}`,
+                  borderRadius: 8,
+                  color: 'var(--gray-800)',
+                  background: 'var(--gray-0)',
+                  outline: 'none',
+                  cursor: 'pointer',
+                  width: '100%',
+                  transition: 'border-color .15s',
+                }}
+              >
+                <option value="">{orgCurrencyCode} (from organization)</option>
+                {overrideOptions.map(c => (
+                  <option key={c.code} value={c.code}>
+                    {c.code} ({c.symbol})
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div
+                style={{
+                  display: 'inline-flex',
+                  padding: '8px 14px',
+                  borderRadius: 8,
+                  background: 'var(--gray-50)',
+                  border: '1.5px solid var(--gray-200)',
+                  fontSize: 'var(--text-sm)',
+                  fontWeight: 600,
+                  color: 'var(--gray-500)',
+                }}
+              >
+                {orgCurrencyCode}
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label style={labelStyle}>
+              Min wage
+              {isMinWageOverridden && <span style={overrideHintStyle}>Overridden</span>}
+            </label>
+            <NumberField
+              value={minWage}
+              onChange={setMinWage}
+              prefix={activeCurrency.symbol}
+              step={0.01}
+              min={0}
+              style={{ width: 140 }}
+            />
+          </div>
 
           {error && (
             <p style={{ fontSize: 'var(--text-xs)', color: 'var(--red-500)', margin: 0 }}>
