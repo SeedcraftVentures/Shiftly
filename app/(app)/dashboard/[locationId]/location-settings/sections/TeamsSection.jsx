@@ -1,8 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Section } from '@/app/components/ui'
-import Button from '@/app/components/ui/Button'
+import { Section, Button } from '@/app/components/ui'
 import { assignTeamColor } from '@/app/lib/constants'
 import TeamRow from './components/TeamRow'
 
@@ -10,7 +9,7 @@ function assignTeamColors(teams) {
   return teams.map((t, i) => ({ ...t, ...assignTeamColor(i) }))
 }
 
-export default function TeamsSection({ teams, teamHours, locationHours, onReload }) {
+export default function TeamsSection({ locationId, teams, teamHours, locationHours, onReload }) {
   const [newTeamName, setNewTeamName] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [expandedTeam, setExpandedTeam] = useState(null)
@@ -19,7 +18,7 @@ export default function TeamsSection({ teams, teamHours, locationHours, onReload
   const addTeam = async () => {
     if (!newTeamName.trim()) return
     try {
-      await fetch('/api/org-profile/teams', {
+      await fetch(`/api/locations/${locationId}/teams`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newTeamName.trim() }),
@@ -34,7 +33,7 @@ export default function TeamsSection({ teams, teamHours, locationHours, onReload
   const renameTeam = async (teamId, name) => {
     if (!name.trim()) return
     try {
-      await fetch(`/api/org-profile/teams/${teamId}`, {
+      await fetch(`/api/teams/${teamId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: name.trim() }),
@@ -47,7 +46,7 @@ export default function TeamsSection({ teams, teamHours, locationHours, onReload
 
   const deleteTeam = async (teamId) => {
     try {
-      await fetch(`/api/org-profile/teams/${teamId}`, { method: 'DELETE' })
+      await fetch(`/api/teams/${teamId}`, { method: 'DELETE' })
       setDeleteConfirm(null)
       await onReload()
     } catch (err) {
@@ -57,7 +56,7 @@ export default function TeamsSection({ teams, teamHours, locationHours, onReload
 
   const saveTeamHours = async (teamId, day, startOverride, endOverride) => {
     try {
-      await fetch(`/api/org-profile/teams/${teamId}/hours`, {
+      await fetch(`/api/teams/${teamId}/hours`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

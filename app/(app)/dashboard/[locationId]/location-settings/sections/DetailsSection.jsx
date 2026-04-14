@@ -1,11 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { Section, FieldRow, TextField, NumberField, Chip } from '@/app/components/ui'
-import Button from '@/app/components/ui/Button'
-import { getCurrencyPrefix, DEFAULT_CURRENCY } from '@/app/lib/constants'
+import { Section, FieldRow, TextField, NumberField, Chip, Button } from '@/app/components/ui'
+import { effectiveCurrencyPrefix, effectiveCurrency } from '@/app/lib/utils/currencyUtils'
 
-export default function LocationSection({ location, onSave }) {
+export default function DetailsSection({ location, organization, onSave }) {
   const [nickname, setNickname] = useState(location.name || '')
   const [address, setAddress] = useState(location.address || '')
   const [minWage, setMinWage] = useState(location.min_wage ?? '')
@@ -31,14 +30,16 @@ export default function LocationSection({ location, onSave }) {
     onSave({ shift_lengths: updated })
   }
 
-  const currencyPrefix = getCurrencyPrefix(location.currency)
+  const currencyPrefix = effectiveCurrencyPrefix(location, organization)
+  const currencyCode = effectiveCurrency(location, organization)
+  const isInheritingCurrency = !location.currency
 
   return (
     <Section
-      title="Location"
-      description="Address, currency, and wage settings"
+      title="Location Details"
+      description="Address, currency, and wage settings for this location"
     >
-      <FieldRow label="Location nickname">
+      <FieldRow label="Location name">
         <TextField
           value={nickname}
           onChange={setNickname}
@@ -58,7 +59,10 @@ export default function LocationSection({ location, onSave }) {
         />
       </FieldRow>
 
-      <FieldRow label="Currency" description="Contact support to change">
+      <FieldRow
+        label="Currency"
+        description={isInheritingCurrency ? 'Inherited from organization' : 'Overridden for this location'}
+      >
         <div
           style={{
             display: 'inline-flex',
@@ -71,7 +75,7 @@ export default function LocationSection({ location, onSave }) {
             color: 'var(--gray-500)',
           }}
         >
-          {location.currency || DEFAULT_CURRENCY}
+          {currencyCode}
         </div>
       </FieldRow>
 

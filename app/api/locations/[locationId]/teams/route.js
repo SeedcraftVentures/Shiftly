@@ -5,31 +5,34 @@ import { DB_TABLES } from '@/app/lib/constants'
 
 export const dynamic = 'force-dynamic'
 
-// POST — create a new team
-export async function POST(request) {
+// POST — create a new team in this location
+export async function POST(request, { params }) {
   try {
     const { userId } = await auth()
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+    const { locationId } = await params
     const supabase = await createSupabaseServerClient()
 
-    // Owner check
+    // Owner check via the location's org
+    const { data: location, error: locErr } = await supabase
+      .from(DB_TABLES.locations)
+      .select('location_id, organization_id')
+      .eq('location_id', locationId)
+      .single()
+
+    if (locErr) throw locErr
+
     const { data: org, error: orgErr } = await supabase
       .from(DB_TABLES.organizations)
-      .select('organization_id, owner_user_id')
+      .select('owner_user_id')
+      .eq('organization_id', location.organization_id)
       .single()
 
     if (orgErr) throw orgErr
     if (org.owner_user_id !== userId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
-
-    const { data: location } = await supabase
-      .from(DB_TABLES.locations)
-      .select('location_id')
-      .eq('organization_id', org.organization_id)
-      .limit(1)
-      .single()
 
     const body = await request.json()
     if (!body.name?.trim()) {
@@ -38,14 +41,14 @@ export async function POST(request) {
 
     const { data, error } = await supabase
       .from(DB_TABLES.teamsNew)
-      .insert({ name: body.name.trim(), location_id: location.location_id })
+      .insert({ name: body.name.trim(), location_id: locationId })
       .select()
+      .single()
 
     if (error) throw error
-
-    return NextResponse.json(data[0])
-  } catch (error) {
-    console.error('Error creating team:', error)
+    return NextResponse.json(data)
+  } catch (err) {
+    console.error('Error creating team:', err)
     return NextResponse.json({ error: 'Failed to create team' }, { status: 500 })
   }
 }

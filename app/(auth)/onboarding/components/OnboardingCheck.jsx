@@ -62,15 +62,19 @@ export default function OnboardingCheck({ children }) {
         // Step 2: User is a manager — check onboarding status
         const response = await fetch('/api/organization')
         if (response.ok) {
-          const teams = await response.json()
-          const defaultTeam = teams.find(t => t.is_default) || teams[0]
+          const json = await response.json()
+          const org = json.organization
 
-          if (!defaultTeam?.onboarding_completed) {
+          if (!org?.onboarding_completed) {
             router.push('/onboarding')
             return
           }
 
           setShouldShow(true)
+        } else if (response.status === 404 || response.status === 500) {
+          // No org yet → onboarding
+          router.push('/onboarding')
+          return
         } else {
           setShouldShow(true)
         }

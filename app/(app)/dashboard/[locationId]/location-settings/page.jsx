@@ -1,35 +1,36 @@
 'use client'
 
 import { useState } from 'react'
+import { useParams } from 'next/navigation'
 import PageHeader from '@/app/wrappers/PageHeader'
 import { PageContainer, Tabs, Spinner } from '@/app/components/ui'
-import useOrgProfile from './hooks/useOrgProfile'
-import OrganizationSection from './sections/OrganizationSection'
-import LocationSection from './sections/LocationSection'
+import useLocationSettings from './hooks/useLocationSettings'
+import DetailsSection from './sections/DetailsSection'
 import HoursSection from './sections/HoursSection'
 import RulesSection from './sections/RulesSection'
 import TeamsSection from './sections/TeamsSection'
 
 const TABS = [
-  { value: 'organization', label: 'Organization' },
-  { value: 'location', label: 'Location' },
+  { value: 'details', label: 'Details' },
   { value: 'hours', label: 'Hours' },
   { value: 'rules', label: 'Rules' },
   { value: 'teams', label: 'Teams' },
 ]
 
-export default function OrgProfilePage() {
-  const [activeTab, setActiveTab] = useState('organization')
+export default function LocationSettingsPage() {
+  const params = useParams()
+  const locationId = params.locationId
+  const [activeTab, setActiveTab] = useState('details')
+
   const {
     data,
     loading,
     error,
     reload,
-    patchOrg,
     patchLocation,
     patchRules,
     patchLocationHours,
-  } = useOrgProfile()
+  } = useLocationSettings(locationId)
 
   if (loading) {
     return (
@@ -45,9 +46,7 @@ export default function OrgProfilePage() {
     return (
       <PageContainer>
         <div style={{ padding: 40 }}>
-          <p style={{ color: 'var(--gray-500)' }}>
-            {error || 'Failed to load organization profile.'}
-          </p>
+          <p style={{ color: 'var(--gray-500)' }}>{error || 'Failed to load.'}</p>
         </div>
       </PageContainer>
     )
@@ -59,27 +58,32 @@ export default function OrgProfilePage() {
   return (
     <PageContainer>
       <PageHeader
-        title="Organization"
-        subtitle="Manage your organization, location, and team settings"
+        title={location.name}
+        subtitle="Manage this location's details, hours, rules, and teams"
       />
 
       <div style={{ marginTop: 24 }}>
         <Tabs tabs={TABS} active={activeTab} onChange={setActiveTab} />
 
-        {activeTab === 'organization' && (
-          <OrganizationSection organization={organization} onSave={patchOrg} />
-        )}
-        {activeTab === 'location' && (
-          <LocationSection location={location} onSave={patchLocation} />
+        {activeTab === 'details' && (
+          <DetailsSection
+            location={location}
+            organization={organization}
+            onSave={patchLocation}
+          />
         )}
         {activeTab === 'hours' && (
-          <HoursSection locationHours={locationHours} onSave={patchLocationHours} />
+          <HoursSection
+            locationHours={locationHours}
+            onSave={patchLocationHours}
+          />
         )}
         {activeTab === 'rules' && (
           <RulesSection rules={rules} onSave={patchRules} />
         )}
         {activeTab === 'teams' && (
           <TeamsSection
+            locationId={locationId}
             teams={teams}
             teamHours={teamHours}
             locationHours={locationHours}

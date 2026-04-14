@@ -40,13 +40,3 @@ export const DEFAULT_DAY_HOURS = {
 
 // Currency
 export const DEFAULT_CURRENCY = 'GBP'
-
-export const CURRENCY_PREFIXES = {
-  GBP: '\u00A3', // £
-  EUR: '\u20AC', // €
-  USD: '$',
-}
-
-export function getCurrencyPrefix(currency) {
-  return CURRENCY_PREFIXES[currency] || CURRENCY_PREFIXES[DEFAULT_CURRENCY]
-}

@@ -5,47 +5,45 @@ import { DB_TABLES } from '@/app/lib/constants'
 
 export const dynamic = 'force-dynamic'
 
-// ── GET ── Full org profile payload for the current user's organization
-export async function GET() {
+// GET — full profile for a single location (details, hours, rules, teams, team hours)
+export async function GET(request, { params }) {
   try {
     const { userId } = await auth()
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+    const { locationId } = await params
     const supabase = await createSupabaseServerClient()
 
-    // Get user's org membership
-    const { data: member, error: memErr } = await supabase
-      .from(DB_TABLES.organizationMembers)
-      .select('organization_id')
-      .eq('member_user_id', userId)
-      .single()
-
-    if (memErr) throw memErr
-
-    const orgId = member.organization_id
-
-    // Get organization
-    const { data: org, error: orgErr } = await supabase
-      .from(DB_TABLES.organizations)
-      .select('*')
-      .eq('organization_id', orgId)
-      .single()
-
-    if (orgErr) throw orgErr
-
-    // Get location (single for now)
+    // Fetch location + verify it belongs to an org the user is a member of
     const { data: location, error: locErr } = await supabase
       .from(DB_TABLES.locations)
       .select('*')
-      .eq('organization_id', orgId)
-      .limit(1)
+      .eq('location_id', locationId)
       .single()
 
     if (locErr) throw locErr
 
-    const locationId = location.location_id
+    const { data: org, error: orgErr } = await supabase
+      .from(DB_TABLES.organizations)
+      .select('*')
+      .eq('organization_id', location.organization_id)
+      .single()
 
-    // Parallel fetch: location hours, location rules, teams, team hours
+    if (orgErr) throw orgErr
+
+    const { data: membership, error: memErr } = await supabase
+      .from(DB_TABLES.organizationMembers)
+      .select('member_user_id')
+      .eq('organization_id', org.organization_id)
+      .eq('member_user_id', userId)
+      .maybeSingle()
+
+    if (memErr) throw memErr
+    if (!membership) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    // Parallel fetch everything scoped to this location
     const [hoursRes, rulesRes, teamsRes, teamHoursRes] = await Promise.all([
       supabase
         .from(DB_TABLES.locationDayHours)
@@ -55,7 +53,7 @@ export async function GET() {
         .from(DB_TABLES.locationRules)
         .select('*')
         .eq('location_id', locationId)
-        .single(),
+        .maybeSingle(),
       supabase
         .from(DB_TABLES.teamsNew)
         .select('*')
@@ -67,9 +65,13 @@ export async function GET() {
     ])
 
     if (hoursRes.error) throw hoursRes.error
-    if (rulesRes.error && rulesRes.error.code !== 'PGRST116') throw rulesRes.error
+    if (rulesRes.error) throw rulesRes.error
     if (teamsRes.error) throw teamsRes.error
     if (teamHoursRes.error) throw teamHoursRes.error
+
+    // Filter team hours to only the teams in this location
+    const teamIds = new Set((teamsRes.data || []).map(t => t.team_id))
+    const filteredTeamHours = (teamHoursRes.data || []).filter(th => teamIds.has(th.team_id))
 
     return NextResponse.json({
       organization: org,
@@ -77,11 +79,11 @@ export async function GET() {
       locationHours: hoursRes.data || [],
       locationRules: rulesRes.data || null,
       teams: teamsRes.data || [],
-      teamHours: teamHoursRes.data || [],
+      teamHours: filteredTeamHours,
       isOwner: org.owner_user_id === userId,
     })
-  } catch (error) {
-    console.error('Error fetching org profile:', error)
-    return NextResponse.json({ error: 'Failed to fetch org profile' }, { status: 500 })
+  } catch (err) {
+    console.error('Error fetching location profile:', err)
+    return NextResponse.json({ error: 'Failed to fetch location profile' }, { status: 500 })
   }
 }

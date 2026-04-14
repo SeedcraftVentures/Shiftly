@@ -2,25 +2,26 @@
 
 import { useState, useEffect, useCallback } from 'react'
 
-export default function useOrgProfile() {
+export default function useLocationSettings(locationId) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const load = useCallback(async () => {
+    if (!locationId) return
     try {
-      const res = await fetch('/api/org-profile')
-      if (!res.ok) throw new Error('Failed to fetch org profile')
+      const res = await fetch(`/api/locations/${locationId}/profile`)
+      if (!res.ok) throw new Error('Failed to fetch location profile')
       const json = await res.json()
       setData(json)
       setError(null)
     } catch (err) {
-      console.error('Error loading org profile:', err)
+      console.error('Error loading location profile:', err)
       setError(err.message)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [locationId])
 
   useEffect(() => { load() }, [load])
 
@@ -38,17 +39,15 @@ export default function useOrgProfile() {
     }
   }, [load])
 
-  const patchOrg = useCallback((fields) => patchTo('/api/org-profile/organization', fields), [patchTo])
-  const patchLocation = useCallback((fields) => patchTo('/api/org-profile/location', fields), [patchTo])
-  const patchRules = useCallback((fields) => patchTo('/api/org-profile/location-rules', fields), [patchTo])
-  const patchLocationHours = useCallback((fields) => patchTo('/api/org-profile/location-hours', fields), [patchTo])
+  const patchLocation = useCallback((fields) => patchTo(`/api/locations/${locationId}`, fields), [patchTo, locationId])
+  const patchRules = useCallback((fields) => patchTo(`/api/locations/${locationId}/rules`, fields), [patchTo, locationId])
+  const patchLocationHours = useCallback((fields) => patchTo(`/api/locations/${locationId}/hours`, fields), [patchTo, locationId])
 
   return {
     data,
     loading,
     error,
     reload: load,
-    patchOrg,
     patchLocation,
     patchRules,
     patchLocationHours,

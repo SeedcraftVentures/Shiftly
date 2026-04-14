@@ -22,8 +22,7 @@ export default function LocationSwitcher() {
   const handleSwitch = async (locationId) => {
     await switchLocation(locationId)
     close()
-    // In B2, this becomes router.push(`/dashboard/${locationId}`)
-    router.refresh()
+    router.push(`/dashboard/${locationId}`)
   }
 
   if (loading) {
