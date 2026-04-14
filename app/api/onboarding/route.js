@@ -1,8 +1,8 @@
-import { auth, clerkClient } from '@clerk/nextjs/server'
+import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
-import { createSupabaseServerClient, createSupabaseAdminClient } from '@/app/lib/supabase/server'
-import { DB_TABLES, DEFAULT_SHIFT_LENGTHS, DEFAULT_MAX_CONSECUTIVE_HOURS, DEFAULT_LOCATION_RULES, DEFAULT_STAFF } from '@/app/lib/constants'
-import { convertTimeToTimetz } from '@/app/lib/utils/timeUtils'
+import { createSupabaseServerClient } from '@/app/lib/supabase/server'
+import { DB_TABLES } from '@/app/lib/constants'
+import { createLocationWithChildren } from '@/app/lib/server/createLocationWithChildren'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,18 +29,14 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const dayEntries = Object.entries(operating_hours || {})
-    if (dayEntries.length === 0) {
-      return NextResponse.json({ error: 'operating_hours is required' }, { status: 400 })
-    }
-
-    // 1. Organizations
+    // 1. Create the Organization
     const { data: org, error: orgErr } = await supabase
       .from(DB_TABLES.organizations)
       .insert({
         organization_name,
         owner_user_id: userId,
         industry,
+        currency: currency || null,
       })
       .select('organization_id')
       .single()
@@ -59,100 +55,19 @@ export async function POST(request) {
 
     if (memberErr) throw memberErr
 
-    // 3. Locations
-    const { data: loc, error: locErr } = await supabase
-      .from(DB_TABLES.locations)
-      .insert({
-        name: location_nickname || address,
-        address,
-        organization_id,
-        min_wage: min_wage || null,
-        currency: currency || 'GBP',
-        shift_lengths: DEFAULT_SHIFT_LENGTHS,
-        max_consecutive_hours: DEFAULT_MAX_CONSECUTIVE_HOURS,
-      })
-      .select('location_id')
-      .single()
+    // 3. Create the first location with all its children, via shared helper
+    await createLocationWithChildren(supabase, organization_id, {
+      name: location_nickname || address,
+      address,
+      // First location during onboarding inherits currency from org (null = inherit)
+      currency: null,
+      min_wage: min_wage ?? null,
+      operating_hours,
+      teams,
+      staff_by_team,
+    })
 
-    if (locErr) throw locErr
-    const location_id = loc.location_id
-
-    // 4. Location Day Hours (one row per open day)
-    const openDays = dayEntries.filter(([, d]) => d?.open)
-    if (openDays.length > 0) {
-      const dayRows = openDays.map(([day, d]) => ({
-        location_id,
-        day,
-        opening_time: convertTimeToTimetz(d.opening),
-        closing_time: convertTimeToTimetz(d.closing),
-        start_time: convertTimeToTimetz(d.first_shift),
-        end_time: convertTimeToTimetz(d.last_shift),
-      }))
-
-      const { error: dayErr } = await supabase
-        .from(DB_TABLES.locationDayHours)
-        .insert(dayRows)
-
-      if (dayErr) throw dayErr
-    }
-
-    // 5. Location Rules (defaults)
-    const { error: rulesErr } = await supabase
-      .from(DB_TABLES.locationRules)
-      .insert({
-        location_id,
-        ...DEFAULT_LOCATION_RULES,
-      })
-
-    if (rulesErr) throw rulesErr
-
-    // 6. Teams_new (one row per selected team)
-    const teamRows = teams.map(t => ({
-      name: t.label,
-      location_id,
-    }))
-
-    const { data: insertedTeams, error: teamsErr } = await supabase
-      .from(DB_TABLES.teamsNew)
-      .insert(teamRows)
-      .select('team_id, name')
-
-    if (teamsErr) throw teamsErr
-
-    // 7. Staff_new (quick-added names; all other fields from DEFAULT_STAFF)
-    if (staff_by_team && Object.keys(staff_by_team).length > 0) {
-      // Build a map from team label → inserted team_id
-      const teamLabelToId = {}
-      teams.forEach((t, i) => {
-        if (insertedTeams[i]) {
-          teamLabelToId[t.id] = insertedTeams[i].team_id
-        }
-      })
-
-      const staffRows = []
-      for (const [teamKey, names] of Object.entries(staff_by_team)) {
-        const teamId = teamLabelToId[teamKey]
-        if (!teamId || !Array.isArray(names)) continue
-        for (const name of names) {
-          if (!name.trim()) continue
-          staffRows.push({
-            name: name.trim(),
-            team_id: teamId,
-            ...DEFAULT_STAFF,
-          })
-        }
-      }
-
-      if (staffRows.length > 0) {
-        const { error: staffErr } = await supabase
-          .from(DB_TABLES.staffNew)
-          .insert(staffRows)
-
-        if (staffErr) throw staffErr
-      }
-    }
-
-    // 8. Mark onboarding complete
+    // 4. Mark onboarding complete
     const { error: completeErr } = await supabase
       .from(DB_TABLES.organizations)
       .update({ onboarding_completed: true })

@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { useParams } from 'next/navigation'
 import PageHeader from '@/app/wrappers/PageHeader'
-import { PageContainer, Tabs, Spinner } from '@/app/components/ui'
+import { useRouter } from 'next/navigation'
+import { PageContainer, Tabs, Spinner, Button } from '@/app/components/ui'
 import useLocationSettings from './hooks/useLocationSettings'
 import DetailsSection from './sections/DetailsSection'
 import HoursSection from './sections/HoursSection'
@@ -18,6 +19,7 @@ const TABS = [
 ]
 
 export default function LocationSettingsPage() {
+  const router = useRouter()
   const params = useParams()
   const locationId = params.locationId
   const [activeTab, setActiveTab] = useState('details')
@@ -57,10 +59,21 @@ export default function LocationSettingsPage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title={location.name}
-        subtitle="Manage this location's details, hours, rules, and teams"
-      />
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+        <PageHeader
+          title={location.name}
+          subtitle="Manage this location's details, hours, rules, and teams"
+        />
+        {data.isOwner && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => router.push('/dashboard/organization')}
+          >
+            Organization settings →
+          </Button>
+        )}
+      </div>
 
       <div style={{ marginTop: 24 }}>
         <Tabs tabs={TABS} active={activeTab} onChange={setActiveTab} />

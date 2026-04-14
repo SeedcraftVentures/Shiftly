@@ -18,10 +18,10 @@ export default function Step2LocationBasics({ state }) {
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
       <StepChip icon={<LocationIcon size={13} />} label="Location" active />
 
-      <h1 className="heading-page">Add your first location</h1>
-      <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)', margin: '0 0 24px' }}>
-        Add your first location. You&#39;ll be able to add more later. For now, give this one a name you&#39;ll recognise.
-      </p>
+      <h1 className="heading-page">Location basics</h1>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--gray-500)', margin: '0 0 24px' }}>
+          Where is it and what should we call it?
+        </p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div>

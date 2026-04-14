@@ -1,30 +1,29 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Section, Button } from '@/app/components/ui'
-import { useLocationContext } from '@/app/lib/contexts/LocationContext'
+import { Section } from '@/app/components/ui'
 import LocationCard from '../components/LocationCard'
-import AddLocationModal from '../components/AddLocationModal'
+import { useLocationContext } from '@/app/lib/contexts/LocationContext'
 
 export default function LocationsTab({ organization, locations, isOwner, onReload, autoOpenAdd }) {
   const router = useRouter()
-  const { switchLocation, refresh } = useLocationContext()
-  const [showAdd, setShowAdd] = useState(false)
+  const { switchLocation } = useLocationContext()
 
+  // If someone arrived with ?action=add-location, redirect them straight to the wizard
   useEffect(() => {
-    if (autoOpenAdd) setShowAdd(true)
-  }, [autoOpenAdd])
+    if (autoOpenAdd) {
+      router.push('/dashboard/organization/add-location')
+    }
+  }, [autoOpenAdd, router])
 
   const handleLocationClick = async (locationId) => {
     await switchLocation(locationId)
     router.push(`/dashboard/${locationId}/location-settings`)
   }
 
-  const handleAdded = async () => {
-    setShowAdd(false)
-    await refresh()        // updates the shared provider state
-    await onReload()       // refreshes the org page's own data
+  const handleAddLocation = () => {
+    router.push('/dashboard/organization/add-location')
   }
 
   return (
@@ -50,7 +49,7 @@ export default function LocationsTab({ organization, locations, isOwner, onReloa
 
         {isOwner && (
           <button
-            onClick={() => setShowAdd(true)}
+            onClick={handleAddLocation}
             style={{
               minHeight: 140,
               border: '2px dashed var(--gray-200)',
@@ -81,14 +80,6 @@ export default function LocationsTab({ organization, locations, isOwner, onReloa
           </button>
         )}
       </div>
-
-      {showAdd && (
-        <AddLocationModal
-          organization={organization}
-          onClose={() => setShowAdd(false)}
-          onAdded={handleAdded}
-        />
-      )}
     </Section>
   )
 }
