@@ -5,35 +5,50 @@ import { DB_TABLES } from '@/app/lib/constants'
 
 export const dynamic = 'force-dynamic'
 
-// ── GET ───────────────────────────────────────────────────────────────────────
-// Returns { shifts, teams, locationHours, teamHourOverrides } for the current
-// user's location. RLS handles org-scoping automatically.
-
-export async function GET() {
+// ── GET ──────────────────────────────────────────────────────────────────────
+// Returns { shifts, teams, locationHours, teamHourOverrides, shiftLengths }
+// for the active org's first location. RLS handles org-scoping.
+//
+// TODO: Refactor to take ?location_id= once the shifts page moves under
+// /dashboard/[locationId]/shifts.
+export async function GET(request) {
   try {
-    const { userId } = await auth()
+    const { userId, orgId } = await auth()
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!orgId) return NextResponse.json({ error: 'No active organization' }, { status: 404 })
 
     const supabase = await createSupabaseServerClient()
 
-    // Find the user's organization → location
-    const { data: member, error: memErr } = await supabase
-      .from(DB_TABLES.organizationMembers)
-      .select('organization_id')
-      .eq('member_user_id', userId)
-      .single()
+    const url = new URL(request.url)
+    const locationIdParam = url.searchParams.get('location_id')
 
-    if (memErr) throw memErr
+    let locationId = locationIdParam
 
-    const { data: location, error: locErr } = await supabase
+    // Fall back to "first location in active org" if no id passed
+    if (!locationId) {
+      const { data: location, error: locErr } = await supabase
+        .from(DB_TABLES.locations)
+        .select('location_id')
+        .eq('organization_id', orgId)
+        .order('name', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+
+      if (locErr) throw locErr
+      if (!location) return NextResponse.json({ error: 'No locations' }, { status: 404 })
+      locationId = location.location_id
+    }
+
+    // Fetch shift_lengths from the location
+    const { data: locData, error: locDataErr } = await supabase
       .from(DB_TABLES.locations)
-      .select('location_id, shift_lengths')
-      .eq('organization_id', member.organization_id)
-      .limit(1)
-      .single()
+      .select('shift_lengths')
+      .eq('location_id', locationId)
+      .eq('organization_id', orgId)
+      .maybeSingle()
 
-    if (locErr) throw locErr
-    const locationId = location.location_id
+    if (locDataErr) throw locDataErr
+    if (!locData) return NextResponse.json({ error: 'Location not found' }, { status: 404 })
 
     // Parallel fetch: teams, shifts, location hours, team hour overrides
     const [teamsRes, shiftsRes, hoursRes, overridesRes] = await Promise.all([
@@ -65,20 +80,25 @@ export async function GET() {
       teams: teamsRes.data || [],
       locationHours: hoursRes.data || [],
       teamHourOverrides: overridesRes.data || [],
-      shiftLengths: location.shift_lengths || [4, 6, 8],
+      shiftLengths: locData.shift_lengths || [4, 6, 8],
     })
-  } catch (error) {
-    console.error('Error fetching shifts:', error)
+  } catch (err) {
+    console.error('Error fetching shifts:', err)
     return NextResponse.json({ error: 'Failed to fetch shifts' }, { status: 500 })
   }
 }
 
-// ── POST ──────────────────────────────────────────────────────────────────────
+// ── POST ─────────────────────────────────────────────────────────────────────
 
 export async function POST(request) {
   try {
-    const { userId } = await auth()
+    const { userId, orgId, has } = await auth()
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!orgId) return NextResponse.json({ error: 'No active organization' }, { status: 404 })
+
+    if (!has({ permission: 'org:shifts:manage' })) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     const supabase = await createSupabaseServerClient()
     const body = await request.json()
@@ -102,14 +122,14 @@ export async function POST(request) {
 
     const { data, error } = await supabase
       .from(DB_TABLES.shiftPatterns)
-      .insert([row])
+      .insert(row)
       .select()
+      .single()
 
     if (error) throw error
-
-    return NextResponse.json(data[0])
-  } catch (error) {
-    console.error('Error creating shift:', error)
+    return NextResponse.json(data)
+  } catch (err) {
+    console.error('Error creating shift:', err)
     return NextResponse.json({ error: 'Failed to create shift' }, { status: 500 })
   }
 }

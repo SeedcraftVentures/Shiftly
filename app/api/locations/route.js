@@ -5,38 +5,25 @@ import { DB_TABLES } from '@/app/lib/constants'
 
 export const dynamic = 'force-dynamic'
 
-// GET — list all locations the current user can access
+// GET — list all locations the current user can access in their active org
 export async function GET() {
   try {
-    const { userId } = await auth()
+    const { userId, orgId } = await auth()
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!orgId) return NextResponse.json({ locations: [] })
 
     const supabase = await createSupabaseServerClient()
 
-    const { data: memberships, error: memErr } = await supabase
-      .from(DB_TABLES.organizationMembers)
-      .select('organization_id')
-      .eq('member_user_id', userId)
-
-    if (memErr) throw memErr
-    if (!memberships || memberships.length === 0) {
-      return NextResponse.json({ locations: [] })
-    }
-
-    const orgIds = memberships.map(m => m.organization_id)
-
-    const { data: locations, error: locErr } = await supabase
+    const { data, error } = await supabase
       .from(DB_TABLES.locations)
       .select('location_id, name, organization_id')
-      .in('organization_id', orgIds)
+      .eq('organization_id', orgId)
       .order('name', { ascending: true })
 
-    if (locErr) throw locErr
-
-    return NextResponse.json({ locations: locations || [] })
+    if (error) throw error
+    return NextResponse.json({ locations: data || [] })
   } catch (err) {
     console.error('Error fetching locations:', err)
     return NextResponse.json({ error: 'Failed to fetch locations' }, { status: 500 })
   }
 }
-

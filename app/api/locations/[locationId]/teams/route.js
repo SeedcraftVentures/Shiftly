@@ -8,31 +8,26 @@ export const dynamic = 'force-dynamic'
 // POST — create a new team in this location
 export async function POST(request, { params }) {
   try {
-    const { userId } = await auth()
+    const { userId, orgId, has } = await auth()
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!orgId) return NextResponse.json({ error: 'No active organization' }, { status: 404 })
+
+    if (!has({ permission: 'org:staff:manage' })) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     const { locationId } = await params
     const supabase = await createSupabaseServerClient()
 
-    // Owner check via the location's org
+    // Verify location belongs to active org
     const { data: location, error: locErr } = await supabase
       .from(DB_TABLES.locations)
-      .select('location_id, organization_id')
+      .select('location_id')
       .eq('location_id', locationId)
-      .single()
-
+      .eq('organization_id', orgId)
+      .maybeSingle()
     if (locErr) throw locErr
-
-    const { data: org, error: orgErr } = await supabase
-      .from(DB_TABLES.organizations)
-      .select('owner_user_id')
-      .eq('organization_id', location.organization_id)
-      .single()
-
-    if (orgErr) throw orgErr
-    if (org.owner_user_id !== userId) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
+    if (!location) return NextResponse.json({ error: 'Location not found' }, { status: 404 })
 
     const body = await request.json()
     if (!body.name?.trim()) {
