@@ -1,5 +1,5 @@
 import { DB_TABLES, DEFAULT_SHIFT_LENGTHS, DEFAULT_MAX_CONSECUTIVE_HOURS, DEFAULT_LOCATION_RULES, DEFAULT_STAFF } from '@/app/lib/constants'
-import { convertTimeToTimetz } from '@/app/lib/timeUtils'
+import { convertTimeToTimetz } from '@/app/lib/utils/timeUtils'
 
 /**
  * Creates a fully-configured location with all its children:

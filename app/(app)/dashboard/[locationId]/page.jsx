@@ -25,15 +25,7 @@ export default function DashboardPage() {
   const { user, isLoaded } = useUser()
   const router = useRouter()
   const queryClient = useQueryClient()
-  const [isCheckingSubscription, setIsCheckingSubscription] = useState(true)
-
-  // STRIPE DISABLED — skip subscription check during development
-  // commenting this out cause not checking user type here anymore
-  // useEffect(() => {
-  //   if (isCheckingUserType) return
-  //   setIsCheckingSubscription(false)
-  // }, [isCheckingUserType])
-
+  
   // Fetch rotas with React Query - cached for 5 mins, instant on return
   const { data: rotas = [], isLoading } = useQuery({
     queryKey: QUERY_KEYS.rotas,
@@ -42,7 +34,6 @@ export default function DashboardPage() {
       if (!response.ok) throw new Error('Failed to fetch rotas')
       return response.json()
     },
-    enabled: !isCheckingSubscription
   })
 
   // Fetch pending requests count
@@ -53,7 +44,6 @@ export default function DashboardPage() {
       if (!response.ok) throw new Error('Failed to fetch requests')
       return response.json()
     },
-    enabled: !isCheckingSubscription
   })
 
   const pendingRequestsCount = useMemo(() => {
@@ -110,18 +100,6 @@ export default function DashboardPage() {
 
   const handleRotaClick = (rotaId) => {
     router.push(`/dashboard/generate?rota=${rotaId}`)
-  }
-
-  // Show loading while checking user type
-  if (isCheckingSubscription) {
-    return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-gray-200 border-t-shiftly-pink rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="body-text">Loading your dashboard...</p>
-        </div>
-      </main>
-    )
   }
 
   const firstName = user?.firstName || 'there'
