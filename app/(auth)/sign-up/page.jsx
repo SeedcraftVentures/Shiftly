@@ -69,29 +69,10 @@ export default function SignUpPage() {
 
       if (completeSignUp.status === 'complete') {
         await setActive({ session: completeSignUp.createdSessionId })
-
-        const payload = {
-          user_id: completeSignUp.createdUserId,
-          name: `${firstName} ${lastName}`.trim(),
-          email,
-        }
-
-        const updateResponse = await fetch('/api/auth/update-user', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        })
-
-        console.log(updateResponse);
-
-        if (!updateResponse.ok) {
-          const syncError = await updateResponse.json().catch(() => ({}))
-          throw new Error(syncError.error || 'Failed to sync user profile')
-        }
-
-        // TODO:
-        // router.push('/checkout')
-        router.push('/dashboard')
+        // User sync to Supabase Users table happens via Clerk webhook (user.created)
+        // TODO Stripe
+        //router.push('/checkout') // could delete, clerk will do automatically
+        router.push('/onboarding') // could delete, clerk will do automatically
       }
     } catch (err) {
       console.error('Verification error:', err)

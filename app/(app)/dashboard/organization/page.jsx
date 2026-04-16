@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
-import PageHeader from '@/app/wrappers/PageHeader'
+import PageHeader from '@/app/components/layout/PageHeader'
 import { PageContainer, Tabs, Spinner } from '@/app/components/ui'
 import OrganizationDetailsTab from './tabs/OrganizationDetailsTab'
 import LocationsTab from './tabs/LocationsTab'

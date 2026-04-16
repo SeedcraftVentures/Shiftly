@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 async function checkOwnerForTeam(supabase, userId, teamId) {
   const { data: team, error: teamErr } = await supabase
-    .from(DB_TABLES.teamsNew)
+    .from(DB_TABLES.teams)
     .select('team_id, location_id')
     .eq('team_id', teamId)
     .single()

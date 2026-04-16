@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react'
 import { useShifts } from './hooks/useShifts'
 import { getCoverageGaps } from '@/app/lib/utils/shiftUtils'
-import PageHeader from '@/app/wrappers/PageHeader'
+import PageHeader from '@/app/components/layout/PageHeader'
 import { PageContainer, FilterBar, WarningBar, Spinner } from '@/app/components/ui'
 import { PlusIcon } from '@/app/lib/icons'
 import Button from '@/app/components/ui/Button'

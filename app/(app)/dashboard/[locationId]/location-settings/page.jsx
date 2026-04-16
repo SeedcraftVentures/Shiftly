@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useParams } from 'next/navigation'
-import PageHeader from '@/app/wrappers/PageHeader'
+import PageHeader from '@/app/components/layout/PageHeader'
 import { useRouter } from 'next/navigation'
 import { PageContainer, Tabs, Spinner, Button } from '@/app/components/ui'
 import useLocationSettings from './hooks/useLocationSettings'

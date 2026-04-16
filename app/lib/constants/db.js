@@ -4,20 +4,19 @@ export const DB_TABLES = {
     organizations: 'Organizations',
     organizationMembers: 'Organization Members',
     locations: 'Locations',
-    teamsNew: 'Teams_new',
+    teams: 'Teams_new',
     locationDayHours: 'Location Day Hours',
     teamDayHours: 'Team Day Hours',
-
-
-    teams: 'Teams',
-    staff: 'Staff',
-    staffNew: 'Staff_new',
-    rotas: 'Rotas',
-    requests: 'requests',
-    notifications: 'notifications',
-    shifts: 'Shifts',
+    staff: 'Staff_new',
+    rotas: 'Rotas_new',
     shiftPatterns: 'Shift Patterns',
     locationRules: 'Location Rules',
+    requests: 'requests',
+    notifications: 'notifications',
+
+    shiftsOld: 'Shifts',
+    teamsOld: 'Teams',
+    staffOld: 'Staff',
 }
 
 // localStorage Keys and Values
@@ -25,17 +24,8 @@ export const DB_TABLES = {
 // Functions where the key includes a dynamic ID, plain strings otherwise.
 
 export const STORAGE_KEYS = {
-    userType: (userId) => `shiftly_user_type_${userId}`,
     tourComplete: 'shiftly_tour_complete',
     teamSetupSuccess: (teamId) => `team_setup_success_${teamId}`,
-}
-
-export const STORAGE_VALUES = {
-    userType: {
-        manager: 'manager',
-        employee: 'employee',
-        unknown: 'unknown'
-    }
 }
 
 // React Query Keys ────────────────────────────────────────────────────────

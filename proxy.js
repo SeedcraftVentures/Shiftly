@@ -1,6 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
-// import { auth } from '@/app/lib/authless'
 
 const isPublicRoute = createRouteMatcher([
   '/',
@@ -12,7 +11,6 @@ const isPublicRoute = createRouteMatcher([
   '/api/clerk/webhook',
   '/api/subscription',
   '/api/staff/invite',
-  '/employee(.*)',
 ])
 
 const isCheckoutRoute = createRouteMatcher(['/checkout(.*)'])

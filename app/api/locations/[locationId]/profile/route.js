@@ -55,7 +55,7 @@ export async function GET(request, { params }) {
         .eq('location_id', locationId)
         .maybeSingle(),
       supabase
-        .from(DB_TABLES.teamsNew)
+        .from(DB_TABLES.teams)
         .select('*')
         .eq('location_id', locationId)
         .order('created_at', { ascending: true }),

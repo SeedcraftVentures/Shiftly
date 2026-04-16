@@ -38,7 +38,7 @@ export async function GET() {
     // Parallel fetch: teams, shifts, location hours, team hour overrides
     const [teamsRes, shiftsRes, hoursRes, overridesRes] = await Promise.all([
       supabase
-        .from(DB_TABLES.teamsNew)
+        .from(DB_TABLES.teams)
         .select('team_id, name')
         .eq('location_id', locationId)
         .order('created_at', { ascending: true }),

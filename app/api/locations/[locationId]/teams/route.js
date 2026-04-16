@@ -40,7 +40,7 @@ export async function POST(request, { params }) {
     }
 
     const { data, error } = await supabase
-      .from(DB_TABLES.teamsNew)
+      .from(DB_TABLES.teams)
       .insert({ name: body.name.trim(), location_id: locationId })
       .select()
       .single()

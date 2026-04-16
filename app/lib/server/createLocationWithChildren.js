@@ -96,7 +96,7 @@ export async function createLocationWithChildren(supabase, organizationId, paylo
   }))
 
   const { data: insertedTeams, error: teamsErr } = await supabase
-    .from(DB_TABLES.teamsNew)
+    .from(DB_TABLES.teams)
     .insert(teamRows)
     .select('team_id, name')
 
@@ -128,7 +128,7 @@ export async function createLocationWithChildren(supabase, organizationId, paylo
 
     if (staffRows.length > 0) {
       const { error: staffErr } = await supabase
-        .from(DB_TABLES.staffNew)
+        .from(DB_TABLES.staff)
         .insert(staffRows)
 
       if (staffErr) throw staffErr

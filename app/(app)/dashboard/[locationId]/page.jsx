@@ -2,12 +2,10 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useUser } from '@clerk/nextjs'
-// import { useUser } from '@/app/lib/authless'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-
-import { QUERY_KEYS, STORAGE_KEYS, STORAGE_VALUES } from '@/app/lib/constants'
+import { QUERY_KEYS } from '@/app/lib/constants'
 import {
   CalendarIcon,
   CheckCircleIcon,
@@ -19,7 +17,7 @@ import {
   PlusIcon,
   TrashIcon,
 } from '@/app/lib/icons'
-import PageHeader from '@/app/wrappers/PageHeader'
+import PageHeader from '@/app/components/layout/PageHeader'
 import Button from '@/app/components/ui/Button'
 import Badge from '@/app/components/ui/Badge'
 
@@ -27,52 +25,14 @@ export default function DashboardPage() {
   const { user, isLoaded } = useUser()
   const router = useRouter()
   const queryClient = useQueryClient()
-  const [isCheckingUserType, setIsCheckingUserType] = useState(true)
   const [isCheckingSubscription, setIsCheckingSubscription] = useState(true)
 
-  // Check if user is employee and redirect
-  useEffect(() => {
-    if (!isLoaded || !user) return
-
-    const checkUserType = async () => {
-      const cacheKey = STORAGE_KEYS.userType(user.id)
-      const cachedType = localStorage.getItem(cacheKey)
-      
-      if (cachedType === STORAGE_VALUES.userType.manager) {
-        setIsCheckingUserType(false)
-        return
-      }
-
-      if (cachedType === STORAGE_VALUES.userType.employee) {
-        router.replace('/employee')
-        return
-      }
-
-      try {
-        const response = await fetch('/api/auth/user-type')
-        const data = await response.json()
-        
-        if (data.type === STORAGE_VALUES.userType.employee) {
-          localStorage.setItem(cacheKey, STORAGE_VALUES.userType.employee)
-          router.replace('/employee')
-          return
-        }
-        
-        localStorage.setItem(cacheKey, STORAGE_VALUES.userType.manager)
-      } catch (error) {
-        console.error('Error checking user type:', error)
-      }
-      setIsCheckingUserType(false)
-    }
-
-    checkUserType()
-  }, [isLoaded, user, router])
-
   // STRIPE DISABLED — skip subscription check during development
-  useEffect(() => {
-    if (isCheckingUserType) return
-    setIsCheckingSubscription(false)
-  }, [isCheckingUserType])
+  // commenting this out cause not checking user type here anymore
+  // useEffect(() => {
+  //   if (isCheckingUserType) return
+  //   setIsCheckingSubscription(false)
+  // }, [isCheckingUserType])
 
   // Fetch rotas with React Query - cached for 5 mins, instant on return
   const { data: rotas = [], isLoading } = useQuery({
@@ -82,7 +42,7 @@ export default function DashboardPage() {
       if (!response.ok) throw new Error('Failed to fetch rotas')
       return response.json()
     },
-    enabled: !isCheckingUserType && !isCheckingSubscription
+    enabled: !isCheckingSubscription
   })
 
   // Fetch pending requests count
@@ -93,7 +53,7 @@ export default function DashboardPage() {
       if (!response.ok) throw new Error('Failed to fetch requests')
       return response.json()
     },
-    enabled: !isCheckingUserType && !isCheckingSubscription
+    enabled: !isCheckingSubscription
   })
 
   const pendingRequestsCount = useMemo(() => {
@@ -153,7 +113,7 @@ export default function DashboardPage() {
   }
 
   // Show loading while checking user type
-  if (isCheckingUserType || isCheckingSubscription) {
+  if (isCheckingSubscription) {
     return (
       <main className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">

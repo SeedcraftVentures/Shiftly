@@ -1,4 +1,4 @@
-export { DB_TABLES, STORAGE_KEYS, STORAGE_VALUES, QUERY_KEYS } from './db'
+export { DB_TABLES, STORAGE_KEYS, QUERY_KEYS } from './db'
 export { INDUSTRIES } from './industries'
 export { INDUSTRY_TEAMS } from './teamPresets'
 export { PALETTE, PALETTE_LIGHT, assignTeamColor } from './palette'

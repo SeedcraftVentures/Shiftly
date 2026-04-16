@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 // Helper: verify the current user owns the org this team belongs to
 async function checkOwnerForTeam(supabase, userId, teamId) {
   const { data: team, error: teamErr } = await supabase
-    .from(DB_TABLES.teamsNew)
+    .from(DB_TABLES.teams)
     .select('team_id, location_id')
     .eq('team_id', teamId)
     .single()
@@ -53,7 +53,7 @@ export async function PATCH(request, { params }) {
     }
 
     const { data, error } = await supabase
-      .from(DB_TABLES.teamsNew)
+      .from(DB_TABLES.teams)
       .update(update)
       .eq('team_id', teamId)
       .select()
@@ -81,7 +81,7 @@ export async function DELETE(request, { params }) {
     if (check.forbidden) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
     const { error } = await supabase
-      .from(DB_TABLES.teamsNew)
+      .from(DB_TABLES.teams)
       .delete()
       .eq('team_id', teamId)
 
