@@ -1,6 +1,6 @@
 import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
-import NavigationSideBar from '@/app/components/navigation'
+import NavigationSideBar from '@/app/components/navigation/NavigationSideBar'
 import DesktopTopBar from '@/app/components/layout/DesktopTopBar'
 import { LocationProvider } from '@/app/lib/contexts/LocationContext'
 import { getUserRoles } from '@/app/lib/server/getUserRoles'

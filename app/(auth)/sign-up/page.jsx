@@ -70,8 +70,7 @@ export default function SignUpPage() {
       if (completeSignUp.status === 'complete') {
         await setActive({ session: completeSignUp.createdSessionId })
         // User sync to Supabase Users table happens via Clerk webhook (user.created)
-        // TODO Stripe
-        //router.push('/checkout') // could delete, clerk will do automatically
+        // Billing will be handled after onboarding completes (via subscription webhook).
         router.push('/onboarding') // could delete, clerk will do automatically
       }
     } catch (err) {

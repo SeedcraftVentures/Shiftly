@@ -1,22 +1,17 @@
 // Database Table Names ────────────────────────────────────────────────────
 export const DB_TABLES = {
-    users: 'Users',
-    organizations: 'Organizations',
-    organizationMembers: 'Organization Members',
-    locations: 'Locations',
-    teams: 'Teams_new',
-    locationDayHours: 'Location Day Hours',
-    teamDayHours: 'Team Day Hours',
-    staff: 'Staff_new',
-    rotas: 'Rotas_new',
-    shiftPatterns: 'Shift Patterns',
-    locationRules: 'Location Rules',
-    requests: 'requests',
-    notifications: 'notifications',
-
-    shiftsOld: 'Shifts',
-    teamsOld: 'Teams',
-    staffOld: 'Staff',
+  organizations: 'Organizations',
+  locations: 'Locations',
+  teams: 'Teams',
+  locationDayHours: 'Location Day Hours',
+  teamDayHours: 'Team Day Hours',
+  staff: 'Staff',
+  rotas: 'Rotas',
+  shiftPatterns: 'Shift Patterns',
+  locationRules: 'Location Rules',
+  requests: 'Requests',
+  notifications: 'Notifications',
+  pendingOnboardings: 'Pending Onboardings',
 }
 
 // localStorage Keys and Values

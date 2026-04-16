@@ -33,12 +33,15 @@ export default function OnboardingWizard() {
   const handleSubmit = async () => {
     setSaving(true)
     try {
+      // Bake team colors now so they're stable in the payload
       const teamsPayload = state.selectedTeams.map((t, i) => {
         const { color, colorLight } = assignTeamColor(i)
         return { ...t, color, colorLight }
       })
 
-      const res = await fetch('/api/onboarding', {
+      // Stash wizard state. Org + location get provisioned after payment
+      // completes (via subscription webhook in Phase 6).
+      const res = await fetch('/api/pending-onboarding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -54,15 +57,16 @@ export default function OnboardingWizard() {
         }),
       })
 
-      if (res.ok) {
-        router.push('/dashboard?tour=start')
-      } else {
+      if (!res.ok) {
         const d = await res.json()
-        alert(d.error || 'Failed to save — please try again')
+        throw new Error(d.error || 'Failed to save onboarding')
       }
+
+      // Next step: payment (placeholder until Clerk billing wires up)
+      router.push('/onboarding/payment')
     } catch (err) {
       console.error(err)
-      alert('Failed to save — please try again')
+      alert('Failed to save onboarding — please try again')
     } finally {
       setSaving(false)
     }
@@ -85,7 +89,7 @@ export default function OnboardingWizard() {
       onBack={() => setStep(s => s - 1)}
       onContinue={() => setStep(s => s + 1)}
       onSubmit={handleSubmit}
-      submitLabel="Get Started"
+      submitLabel="Continue to payment"
     >
       {stepContent[step]}
     </WizardShell>
