@@ -12,6 +12,8 @@
 7. visual fixes on settings pages (buttons, shift length options, inline team editing, etc)
 8. scrollbox window is slightly too big but should fit exactly to screen (i think its from pink border)
 9. notification bell hover and colors
+10. hours for public must be equal to or less than staff (in add location), and make sure they work for like 1 am close etc
+11. automatically add the staff if they typed but didnt hit enter or add
 
 # older TODOs
 1. In Shifts tab, when defining shifts, use the location's day's open and close times to align shifts/detect gaps.

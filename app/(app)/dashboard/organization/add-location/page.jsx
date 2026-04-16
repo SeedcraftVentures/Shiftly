@@ -7,28 +7,24 @@ import AddLocationWizard from '../components/AddLocationWizard'
 export const dynamic = 'force-dynamic'
 
 export default async function AddLocationPage() {
-  const { userId } = await auth()
+  const { userId, orgId, has } = await auth()
   if (!userId) redirect('/sign-in')
+  if (!orgId) redirect('/onboarding')
+
+  // Only users who can manage locations should see this wizard
+  if (!has({ permission: 'org:locations:manage' })) {
+    redirect('/dashboard')
+  }
 
   const supabase = await createSupabaseServerClient()
-
-  // Fetch the user's org (for industry presets + currency inheritance)
-  const { data: member } = await supabase
-    .from(DB_TABLES.organizationMembers)
-    .select('organization_id')
-    .eq('member_user_id', userId)
-    .single()
-
-  if (!member) redirect('/onboarding')
 
   const { data: organization } = await supabase
     .from(DB_TABLES.organizations)
     .select('*')
-    .eq('organization_id', member.organization_id)
+    .eq('organization_id', orgId)
     .single()
 
   if (!organization) redirect('/onboarding')
-  if (organization.owner_user_id !== userId) redirect('/dashboard')
 
   return <AddLocationWizard organization={organization} />
 }

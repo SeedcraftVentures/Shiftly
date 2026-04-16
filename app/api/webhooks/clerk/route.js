@@ -13,7 +13,6 @@ export async function POST(req) {
     return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
   }
 
-  // Verify svix signature
   const headerPayload = await headers()
   const svixId = headerPayload.get('svix-id')
   const svixTimestamp = headerPayload.get('svix-timestamp')
@@ -41,41 +40,62 @@ export async function POST(req) {
 
   try {
     switch (evt.type) {
-      case 'user.created':
-      case 'user.updated': {
-        const { id, email_addresses, first_name, last_name } = evt.data
-        const primaryEmail =
-          email_addresses?.find(e => e.id === evt.data.primary_email_address_id)
-            ?.email_address ?? email_addresses?.[0]?.email_address ?? ''
+      // ── Organization lifecycle ─────────────────────────────────────────────
 
+      case 'organization.updated': {
+        // Sync Clerk org name changes to Supabase
+        const { id, name } = evt.data
         const { error } = await admin
-          .from(DB_TABLES.users)
-          .upsert(
-            {
-              user_id: id,
-              email: primaryEmail,
-              first_name,
-              last_name,
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: 'user_id' }
-          )
+          .from(DB_TABLES.organizations)
+          .update({ organization_name: name })
+          .eq('organization_id', id)
         if (error) throw error
         break
       }
 
-      case 'user.deleted': {
+      case 'organization.deleted': {
+        // Cascade via FK handles children; just drop the Supabase row
         const { id } = evt.data
         const { error } = await admin
-          .from(DB_TABLES.users)
+          .from(DB_TABLES.organizations)
           .delete()
-          .eq('user_id', id)
+          .eq('organization_id', id)
         if (error) throw error
         break
       }
 
+      // ── Membership lifecycle ───────────────────────────────────────────────
+      // Memberships live in Clerk; we don't mirror them to Supabase.
+      // These events are logged for observability but no DB changes.
+
+      case 'organizationMembership.created':
+      case 'organizationMembership.deleted':
+      case 'organizationInvitation.created':
+      case 'organizationInvitation.accepted':
+        // No-op — Clerk owns this state
+        break
+
+      // ── User lifecycle ─────────────────────────────────────────────────────
+      // Users live in Clerk; we don't mirror them to Supabase.
+
+      case 'user.created':
+      case 'user.updated':
+      case 'user.deleted':
+        // No-op — Clerk owns user identity
+        break
+
+      // ── Subscription lifecycle (Phase 6 will add provisioning here) ────────
+
+      case 'subscription.created':
+      case 'subscription.updated':
+      case 'subscription.deleted':
+      case 'subscriptionItem.created':
+      case 'subscriptionItem.updated':
+      case 'subscriptionItem.deleted':
+        // Phase 6 will wire billing-driven provisioning here
+        break
+
       default:
-        // Ignore other event types
         break
     }
 
