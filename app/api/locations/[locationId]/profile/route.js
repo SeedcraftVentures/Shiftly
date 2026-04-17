@@ -8,40 +8,34 @@ export const dynamic = 'force-dynamic'
 // GET — full profile for a single location (details, hours, rules, teams, team hours)
 export async function GET(request, { params }) {
   try {
-    const { userId } = await auth()
+    const { userId, orgId, has } = await auth()
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!orgId) return NextResponse.json({ error: 'No active organization' }, { status: 404 })
 
     const { locationId } = await params
     const supabase = await createSupabaseServerClient()
 
-    // Fetch location + verify it belongs to an org the user is a member of
+    // Verify the location belongs to the user's active org.
+    // RLS already filters, but we want an explicit 403/404 rather than an empty result.
     const { data: location, error: locErr } = await supabase
       .from(DB_TABLES.locations)
       .select('*')
       .eq('location_id', locationId)
-      .single()
+      .eq('organization_id', orgId)
+      .maybeSingle()
 
     if (locErr) throw locErr
+    if (!location) {
+      return NextResponse.json({ error: 'Location not found' }, { status: 404 })
+    }
 
     const { data: org, error: orgErr } = await supabase
       .from(DB_TABLES.organizations)
       .select('*')
-      .eq('organization_id', location.organization_id)
+      .eq('organization_id', orgId)
       .single()
 
     if (orgErr) throw orgErr
-
-    const { data: membership, error: memErr } = await supabase
-      .from(DB_TABLES.organizationMembers)
-      .select('member_user_id')
-      .eq('organization_id', org.organization_id)
-      .eq('member_user_id', userId)
-      .maybeSingle()
-
-    if (memErr) throw memErr
-    if (!membership) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
 
     // Parallel fetch everything scoped to this location
     const [hoursRes, rulesRes, teamsRes, teamHoursRes] = await Promise.all([
@@ -80,7 +74,10 @@ export async function GET(request, { params }) {
       locationRules: rulesRes.data || null,
       teams: teamsRes.data || [],
       teamHours: filteredTeamHours,
-      isOwner: org.owner_user_id === userId,
+      // UI permission gates
+      canManageLocations: has({ permission: 'org:locations:manage' }),
+      canManageStaff: has({ permission: 'org:staff:manage' }),
+      canManageSettings: has({ permission: 'org:settings:manage' }),
     })
   } catch (err) {
     console.error('Error fetching location profile:', err)

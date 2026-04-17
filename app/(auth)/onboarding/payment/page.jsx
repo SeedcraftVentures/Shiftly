@@ -2,21 +2,23 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useOrganizationList } from '@clerk/nextjs'
 import { Button } from '@/app/components/ui'
 
 export default function PaymentPlaceholderPage() {
   const router = useRouter()
+  const { setActive, isLoaded: orgsLoaded } = useOrganizationList()
   const [pending, setPending] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(null)
 
-  // Confirm the user has a pending onboarding before showing the payment step
   useEffect(() => {
     const load = async () => {
       try {
         const res = await fetch('/api/pending-onboarding')
         const json = await res.json()
         if (!json.payload) {
-          // Nothing pending — they shouldn't be here
           router.replace('/onboarding')
           return
         }
@@ -32,18 +34,35 @@ export default function PaymentPlaceholderPage() {
   }, [router])
 
   const handleDevSkip = async () => {
-    // Dev-only: bypass payment and call the real provisioning endpoint.
-    // In Phase 6 this goes away — the subscription webhook handles provisioning.
-    const res = await fetch('/api/onboarding', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(pending),
-    })
-    if (res.ok) {
-      router.push('/dashboard')
-    } else {
-      const err = await res.json()
-      alert(err.error || 'Failed to complete onboarding')
+    setSaving(true)
+    setError(null)
+    try {
+      // 1. Create the Clerk org + Supabase rows
+      const res = await fetch('/api/onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pending),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'Failed to complete onboarding')
+      }
+
+      const { organization_id } = await res.json()
+
+      // 2. Activate the new org in the user's Clerk session
+      if (setActive) {
+        await setActive({ organization: organization_id })
+      }
+
+      // Full page navigation (not SPA push) ensures Clerk's session cookie
+      // is sent with the fresh org_id claim on the very first request.
+      window.location.href = '/dashboard'
+    } catch (err) {
+      console.error(err)
+      setError(err.message)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -104,8 +123,20 @@ export default function PaymentPlaceholderPage() {
           Staff: {Object.values(pending?.staff_by_team || {}).flat().length}
         </div>
 
-        <Button variant="primary" size="md" onClick={handleDevSkip} style={{ width: '100%' }}>
-          Skip payment (dev)
+        {error && (
+          <p style={{ fontSize: 'var(--text-xs)', color: 'var(--red-500)', margin: '0 0 12px' }}>
+            {error}
+          </p>
+        )}
+
+        <Button
+          variant="primary"
+          size="md"
+          onClick={handleDevSkip}
+          disabled={saving || !orgsLoaded}
+          style={{ width: '100%' }}
+        >
+          {saving ? 'Finishing setup…' : 'Skip payment (dev)'}
         </Button>
       </div>
     </div>

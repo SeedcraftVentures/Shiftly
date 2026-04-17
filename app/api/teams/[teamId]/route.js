@@ -5,45 +5,38 @@ import { DB_TABLES } from '@/app/lib/constants'
 
 export const dynamic = 'force-dynamic'
 
-// Helper: verify the current user owns the org this team belongs to
-async function checkOwnerForTeam(supabase, userId, teamId) {
-  const { data: team, error: teamErr } = await supabase
+/**
+ * Verify the team belongs to a location in the user's active org.
+ * Returns the team + its location_id, or null if not found / not accessible.
+ */
+async function getTeamInOrg(supabase, teamId, orgId) {
+  const { data: team, error } = await supabase
     .from(DB_TABLES.teams)
-    .select('team_id, location_id')
+    .select('team_id, location_id, Locations!inner(organization_id)')
     .eq('team_id', teamId)
-    .single()
-  if (teamErr) return { error: teamErr }
-
-  const { data: location, error: locErr } = await supabase
-    .from(DB_TABLES.locations)
-    .select('organization_id')
-    .eq('location_id', team.location_id)
-    .single()
-  if (locErr) return { error: locErr }
-
-  const { data: org, error: orgErr } = await supabase
-    .from(DB_TABLES.organizations)
-    .select('owner_user_id')
-    .eq('organization_id', location.organization_id)
-    .single()
-  if (orgErr) return { error: orgErr }
-
-  if (org.owner_user_id !== userId) return { forbidden: true }
+    .eq('Locations.organization_id', orgId)
+    .maybeSingle()
+  if (error) return { error }
   return { team }
 }
 
 // PATCH — rename a team
 export async function PATCH(request, { params }) {
   try {
-    const { userId } = await auth()
+    const { userId, orgId, has } = await auth()
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!orgId) return NextResponse.json({ error: 'No active organization' }, { status: 404 })
+
+    if (!has({ permission: 'org:staff:manage' })) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     const { teamId } = await params
     const supabase = await createSupabaseServerClient()
 
-    const check = await checkOwnerForTeam(supabase, userId, teamId)
+    const check = await getTeamInOrg(supabase, teamId, orgId)
     if (check.error) throw check.error
-    if (check.forbidden) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    if (!check.team) return NextResponse.json({ error: 'Team not found' }, { status: 404 })
 
     const body = await request.json()
     const allowed = ['name']
@@ -67,18 +60,23 @@ export async function PATCH(request, { params }) {
   }
 }
 
-// DELETE — delete a team (cascades to team_day_hours, staff, shift_patterns via FK)
+// DELETE — delete a team (cascade cleans up Team Day Hours, Staff, Shift Patterns)
 export async function DELETE(request, { params }) {
   try {
-    const { userId } = await auth()
+    const { userId, orgId, has } = await auth()
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!orgId) return NextResponse.json({ error: 'No active organization' }, { status: 404 })
+
+    if (!has({ permission: 'org:staff:manage' })) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     const { teamId } = await params
     const supabase = await createSupabaseServerClient()
 
-    const check = await checkOwnerForTeam(supabase, userId, teamId)
+    const check = await getTeamInOrg(supabase, teamId, orgId)
     if (check.error) throw check.error
-    if (check.forbidden) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    if (!check.team) return NextResponse.json({ error: 'Team not found' }, { status: 404 })
 
     const { error } = await supabase
       .from(DB_TABLES.teams)

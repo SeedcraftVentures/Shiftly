@@ -13,7 +13,7 @@ export function LocationProvider({ children }) {
     try {
       const [locsRes, lastRes] = await Promise.all([
         fetch('/api/locations'),
-        fetch('/api/users/last-location'),
+        fetch('/api/me/last-location'),
       ])
       const locsJson = locsRes.ok ? await locsRes.json() : { locations: [] }
       const lastJson = lastRes.ok ? await lastRes.json() : { last_location_id: null }
@@ -36,7 +36,7 @@ export function LocationProvider({ children }) {
   const switchLocation = useCallback(async (locationId) => {
     setCurrentLocationId(locationId)
     try {
-      await fetch('/api/users/last-location', {
+      await fetch('/api/me/last-location', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ location_id: locationId }),
@@ -46,7 +46,6 @@ export function LocationProvider({ children }) {
     }
   }, [])
 
-  // Called after creating/deleting a location — refetches the list
   const refresh = useCallback(() => load(), [load])
 
   const currentLocation = locations.find(l => l.location_id === currentLocationId) || null

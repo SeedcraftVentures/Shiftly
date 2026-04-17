@@ -5,23 +5,14 @@ import { DB_TABLES } from '@/app/lib/constants'
 
 export const dynamic = 'force-dynamic'
 
-// GET — current user's organization with locations list
+// GET — current user's active organization with locations list
 export async function GET() {
   try {
-    const { userId } = await auth()
+    const { userId, orgId, has } = await auth()
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!orgId) return NextResponse.json({ error: 'No active organization' }, { status: 404 })
 
     const supabase = await createSupabaseServerClient()
-
-    const { data: member, error: memErr } = await supabase
-      .from(DB_TABLES.organizationMembers)
-      .select('organization_id')
-      .eq('member_user_id', userId)
-      .single()
-
-    if (memErr) throw memErr
-
-    const orgId = member.organization_id
 
     const [orgRes, locsRes] = await Promise.all([
       supabase
@@ -42,7 +33,8 @@ export async function GET() {
     return NextResponse.json({
       organization: orgRes.data,
       locations: locsRes.data || [],
-      isOwner: orgRes.data.owner_user_id === userId,
+      // Caller uses this for UI gating of org-level edits
+      canManageSettings: has({ permission: 'org:settings:manage' }),
     })
   } catch (err) {
     console.error('Error fetching organization:', err)
@@ -53,26 +45,11 @@ export async function GET() {
 // PATCH — update organization fields
 export async function PATCH(request) {
   try {
-    const { userId } = await auth()
+    const { userId, orgId, has } = await auth()
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!orgId) return NextResponse.json({ error: 'No active organization' }, { status: 404 })
 
-    const supabase = await createSupabaseServerClient()
-
-    const { data: member, error: memErr } = await supabase
-      .from(DB_TABLES.organizationMembers)
-      .select('organization_id')
-      .eq('member_user_id', userId)
-      .single()
-    if (memErr) throw memErr
-
-    const { data: org, error: orgErr } = await supabase
-      .from(DB_TABLES.organizations)
-      .select('organization_id, owner_user_id')
-      .eq('organization_id', member.organization_id)
-      .single()
-    if (orgErr) throw orgErr
-
-    if (org.owner_user_id !== userId) {
+    if (!has({ permission: 'org:settings:manage' })) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -83,10 +60,12 @@ export async function PATCH(request) {
       if (key in body) update[key] = body[key]
     }
 
+    const supabase = await createSupabaseServerClient()
+
     const { data, error } = await supabase
       .from(DB_TABLES.organizations)
       .update(update)
-      .eq('organization_id', org.organization_id)
+      .eq('organization_id', orgId)
       .select()
       .single()
 

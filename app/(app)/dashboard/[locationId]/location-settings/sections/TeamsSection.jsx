@@ -5,15 +5,11 @@ import { Section, Button } from '@/app/components/ui'
 import { assignTeamColor } from '@/app/lib/constants'
 import TeamRow from './components/TeamRow'
 
-function assignTeamColors(teams) {
-  return teams.map((t, i) => ({ ...t, ...assignTeamColor(i) }))
-}
-
 export default function TeamsSection({ locationId, teams, teamHours, locationHours, onReload }) {
   const [newTeamName, setNewTeamName] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState(null)
   const [expandedTeam, setExpandedTeam] = useState(null)
-  const teamsWithColor = assignTeamColors(teams)
+  const teamsWithColor = teams.map((t, i) => ({ ...t, ...assignTeamColor(i) }))
 
   const addTeam = async () => {
     if (!newTeamName.trim()) return

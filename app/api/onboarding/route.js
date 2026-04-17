@@ -1,65 +1,77 @@
-import { auth } from '@clerk/nextjs/server'
+import { auth, clerkClient } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/app/lib/supabase/server'
+import { createSupabaseAdminClient } from '@/app/lib/supabase/server'
 import { DB_TABLES } from '@/app/lib/constants'
 import { createLocationWithChildren } from '@/app/lib/server/createLocationWithChildren'
 
 export const dynamic = 'force-dynamic'
 
+/**
+ * POST /api/onboarding
+ *
+ * Called when the user completes the onboarding wizard (or the dev-skip
+ * button on /onboarding/payment). Creates:
+ *   1. A Clerk organization owned by the current user (admin role)
+ *   2. A Supabase Organizations row keyed by the new Clerk org id
+ *   3. A Location with all its children (hours, rules, teams, staff)
+ *
+ * If any step fails after the Clerk org is created, we delete the org
+ * to prevent orphans.
+ *
+ * Uses the admin Supabase client because this route runs before the user
+ * has an `org_id` claim in their session (Clerk session activation for the
+ * new org happens client-side after this call succeeds).
+ */
 export async function POST(request) {
+  const { userId } = await auth()
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const {
+    organization_name,
+    industry,
+    address,
+    location_nickname,
+    currency,
+    min_wage,
+    teams,
+    operating_hours,
+    staff_by_team,
+  } = await request.json()
+
+  if (!organization_name || !industry || !address || !teams?.length) {
+    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+  }
+
+  const clerk = await clerkClient()
+  const admin = createSupabaseAdminClient()
+
+  let clerkOrgId = null
+
   try {
-    const { userId } = await auth()
-    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // 1. Create Clerk organization with the current user as creator (admin by default)
+    const clerkOrg = await clerk.organizations.createOrganization({
+      name: organization_name,
+      createdBy: userId,
+    })
+    clerkOrgId = clerkOrg.id
 
-    const supabase = await createSupabaseServerClient()
-
-    const {
-      organization_name,
-      industry,
-      address,
-      location_nickname,
-      currency,
-      min_wage,
-      teams,
-      operating_hours,
-      staff_by_team,
-    } = await request.json()
-
-    if (!organization_name || !industry || !address || !teams?.length) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
-    }
-
-    // 1. Create the Organization
-    const { data: org, error: orgErr } = await supabase
+    // 2. Insert into Supabase Organizations using the Clerk org id as PK
+    const { error: orgErr } = await admin
       .from(DB_TABLES.organizations)
       .insert({
+        organization_id: clerkOrgId,
         organization_name,
-        owner_user_id: userId,
         industry,
         currency: currency || null,
+        onboarding_completed: true,
       })
-      .select('organization_id')
-      .single()
-
     if (orgErr) throw orgErr
-    const organization_id = org.organization_id
 
-    // 2. Organization Members (owner as highest-permission role)
-    const { error: memberErr } = await supabase
-      .from(DB_TABLES.organizationMembers)
-      .insert({
-        member_user_id: userId,
-        access: 'Manager',
-        organization_id,
-      })
-
-    if (memberErr) throw memberErr
-
-    // 3. Create the first location with all its children, via shared helper
-    await createLocationWithChildren(supabase, organization_id, {
+    // 3. Create the first location + all children via shared helper
+    await createLocationWithChildren(admin, clerkOrgId, {
       name: location_nickname || address,
       address,
-      // First location during onboarding inherits currency from org (null = inherit)
+      // First location inherits currency from org
       currency: null,
       min_wage: min_wage ?? null,
       operating_hours,
@@ -67,17 +79,28 @@ export async function POST(request) {
       staff_by_team,
     })
 
-    // 4. Mark onboarding complete
-    const { error: completeErr } = await supabase
-      .from(DB_TABLES.organizations)
-      .update({ onboarding_completed: true })
-      .eq('organization_id', organization_id)
+    // 4. Clear any pending onboarding row
+    await admin
+      .from(DB_TABLES.pendingOnboardings)
+      .delete()
+      .eq('clerk_user_id', userId)
 
-    if (completeErr) throw completeErr
+    return NextResponse.json({ success: true, organization_id: clerkOrgId })
+  } catch (err) {
+    console.error('Onboarding error:', err)
 
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error('Onboarding error:', error)
-    return NextResponse.json({ error: 'Failed to save onboarding data' }, { status: 500 })
+    // Rollback: delete the Clerk org if we got that far
+    if (clerkOrgId) {
+      try {
+        await clerk.organizations.deleteOrganization(clerkOrgId)
+      } catch (rollbackErr) {
+        console.error('Failed to rollback Clerk org:', rollbackErr)
+      }
+    }
+
+    return NextResponse.json(
+      { error: err.message || 'Failed to save onboarding data' },
+      { status: 500 }
+    )
   }
 }

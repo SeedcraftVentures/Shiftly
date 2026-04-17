@@ -38,7 +38,10 @@ export function useShifts() {
 
   // ── Derived ─────────────────────────────────────────────────────────────────
 
-  const teamsWithColor = useMemo(() => assignTeamColor(teams), [teams])
+  const teamsWithColor = useMemo(
+    () => teams.map((t, i) => ({ ...t, ...assignTeamColor(i) })),
+    [teams]
+  )
 
   const resolvedHours = useMemo(
     () => buildResolvedHours(locationHours, teamHourOverrides),
