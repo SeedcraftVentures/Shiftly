@@ -3,8 +3,9 @@
 import { OrganizationSwitcher, UserButton } from '@clerk/nextjs'
 import LocationSwitcher from './LocationSwitcher'
 import NavItemList from './NavItemList'
+import { TeamIcon } from '@/app/lib/icons'
 
-export default function MobileMenu({ open, onClose }) {
+export default function MobileMenu({ open, onClose, isStaff }) {
   return (
     <>
       {open && (
@@ -38,7 +39,17 @@ export default function MobileMenu({ open, onClose }) {
             <UserButton
               afterSignOutUrl="/"
               appearance={{ elements: { avatarBox: 'w-9 h-9' } }}
-            />
+            >
+              {isStaff && (
+                <UserButton.MenuItems>
+                  <UserButton.Link
+                    label="Switch to staff view"
+                    labelIcon={<TeamIcon />}
+                    href="/my"
+                  />
+                </UserButton.MenuItems>
+              )}
+            </UserButton>
             <div className="flex-1 min-w-0">
               <p className="text-white font-medium text-sm truncate">Account</p>
               <p className="text-white/60 text-xs truncate">Manage profile</p>

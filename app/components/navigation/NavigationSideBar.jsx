@@ -6,16 +6,14 @@ import DesktopSidebar from './components/DesktopSidebar'
 import MobileTopBar from './components/MobileTopBar'
 import MobileMenu from './components/MobileMenu'
 
-export default function NavigationSideBar() {
+export default function NavigationSideBar({ isStaff }) {
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
-  // Close mobile menu on route change
   useEffect(() => {
     setMobileMenuOpen(false)
   }, [pathname])
 
-  // Lock body scroll when mobile menu is open
   useEffect(() => {
     document.body.style.overflow = mobileMenuOpen ? 'hidden' : 'unset'
     return () => { document.body.style.overflow = 'unset' }
@@ -24,7 +22,7 @@ export default function NavigationSideBar() {
   return (
     <>
       <MobileTopBar open={mobileMenuOpen} onToggle={() => setMobileMenuOpen(v => !v)} />
-      <MobileMenu open={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
+      <MobileMenu open={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} isStaff={isStaff} />
       <DesktopSidebar />
     </>
   )

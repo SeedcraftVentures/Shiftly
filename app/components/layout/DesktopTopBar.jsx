@@ -2,8 +2,9 @@
 
 import { OrganizationSwitcher, UserButton } from '@clerk/nextjs'
 import NotificationBell from '@/app/components/ui/NotificationBell'
+import { TeamIcon } from '@/app/lib/icons'
 
-export default function DashboardTopBar() {
+export default function DashboardTopBar({ isStaff }) {
   return (
     <div className="flex items-center justify-end px-6 py-3 gap-3">
       <OrganizationSwitcher
@@ -27,7 +28,17 @@ export default function DashboardTopBar() {
               avatarBox: 'w-8 h-8',
             },
           }}
-        />
+        >
+          {isStaff && (
+            <UserButton.MenuItems>
+              <UserButton.Link
+                label="Switch to staff view"
+                labelIcon={<TeamIcon />}
+                href="/my"
+              />
+            </UserButton.MenuItems>
+          )}
+        </UserButton>
       </div>
     </div>
   )

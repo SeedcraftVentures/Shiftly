@@ -13,22 +13,20 @@ export default async function DashboardLayout({ children }) {
 
   const { isManager, isStaff, hasOnboarded } = await getUserRoles(userId)
 
-  // Not a manager → not allowed in /dashboard
   if (!isManager) {
     if (isStaff) redirect('/my')
     redirect('/onboarding')
   }
 
-  // Manager but hasn't completed onboarding → send them back
   if (!hasOnboarded) redirect('/onboarding')
 
   return (
     <LocationProvider>
       <div className="min-h-screen accent-bg-color p-3 lg:pl-52">
-        <NavigationSideBar />
+        <NavigationSideBar isStaff={isStaff} />
         <div className="min-h-[calc(100vh-1.5rem)] bg-gray-50 rounded-[1.25rem] lg:ml-1 mt-14 lg:mt-0 flex flex-col">
           <div className="hidden lg:block">
-            <DesktopTopBar />
+            <DesktopTopBar isStaff={isStaff} />
           </div>
           <div className="flex-1">
             {children}
