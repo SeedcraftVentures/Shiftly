@@ -33,7 +33,7 @@ export default function AddLocationWizard({ organization }) {
   }
 
   const handleCancel = () => {
-    router.push('/dashboard/organization')
+    router.push('/dashboard/locations')
   }
 
   const handleSubmit = async () => {

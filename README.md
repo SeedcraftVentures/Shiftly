@@ -339,10 +339,29 @@ Overrides location hours for a specific team. No row = inherit.
 | staff_id | uuid PK | |
 | team_id | uuid FK | |
 | name | text | |
-| role | text | e.g. "Barista" |
+| role | text NULL | e.g. "Barista" |
 | user_id | text NULL | Clerk id (set on invite accept) |
-| contracted_hours / max_hours | numeric NULL | |
-| availability | jsonb | |
+| invite_email | text NULL | Email used for invite |
+| invite_status | enum | `Not Invited` / `Pending` / `Accepted` |
+| contracted_hours | integer | |
+| max_hours | integer | Must be ≥ contracted_hours |
+| wage | numeric(10,2) | |
+| preferred_shift_lengths | float[] | |
+| is_keyholder | boolean | Default false |
+
+### Staff Availability
+Overrides per shift pattern per day. No row = available (default).
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid PK | |
+| staff_id | uuid FK → Staff | CASCADE |
+| shift_id | uuid FK → Shift Patterns | CASCADE |
+| day | integer | 0=Mon … 6=Sun |
+| status | text | `unavailable` / `preferred` |
+| created_at | timestamptz | |
+
+`UNIQUE(staff_id, shift_id, day)`
 
 **Staff are NOT Clerk org members** — protects against the 20-member free tier limit.
 

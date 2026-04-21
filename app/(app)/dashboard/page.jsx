@@ -42,5 +42,5 @@ export default async function DashboardRootPage() {
   }
 
   // 3. No locations at all
-  redirect('/dashboard/organization/add-location')
+  redirect('/dashboard/locations/add-location')
 }

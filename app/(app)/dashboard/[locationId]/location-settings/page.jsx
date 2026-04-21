@@ -68,9 +68,9 @@ export default function LocationSettingsPage() {
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => router.push('/dashboard/organization')}
+            onClick={() => router.push('/dashboard/locations')}
           >
-            Organization settings →
+            All locations →
           </Button>
         )}
       </div>

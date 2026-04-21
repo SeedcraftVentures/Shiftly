@@ -79,9 +79,34 @@ export async function POST(req) {
       // Users live in Clerk; we don't mirror them to Supabase.
 
       case 'user.created':
-      case 'user.updated':
+      case 'user.updated': {
+        // Match email to any Staff rows with a pending invite
+        const emails = evt.data.email_addresses?.map(e => e.email_address) || []
+        if (emails.length > 0) {
+          const { error } = await admin
+            .from(DB_TABLES.staff)
+            .update({
+              user_id: evt.data.id,
+              invite_status: 'Accepted',
+            })
+            .in('invite_email', emails)
+            .eq('invite_status', 'Pending')
+
+          if (error) console.error('Error matching staff by email:', error)
+        }
+        break
+      }
+
       case 'user.deleted':
-        // No-op — Clerk owns user identity
+        // Clear user_id from any Staff rows
+        if (evt.data.id) {
+          const { error } = await admin
+            .from(DB_TABLES.staff)
+            .update({ user_id: null, invite_status: 'Not Invited' })
+            .eq('user_id', evt.data.id)
+
+          if (error) console.error('Error clearing staff user_id:', error)
+        }
         break
 
       // ── Subscription lifecycle (Phase 6 will add provisioning here) ────────

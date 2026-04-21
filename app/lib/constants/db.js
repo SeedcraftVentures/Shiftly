@@ -6,6 +6,7 @@ export const DB_TABLES = {
   locationDayHours: 'Location Day Hours',
   teamDayHours: 'Team Day Hours',
   staff: 'Staff',
+  staffAvailability: 'Staff Availability',
   rotas: 'Rotas',
   shiftPatterns: 'Shift Patterns',
   locationRules: 'Location Rules',

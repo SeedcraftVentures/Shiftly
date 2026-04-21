@@ -88,17 +88,17 @@ export default function LocationSwitcher() {
         <button
             onClick={() => {
             close()
-            router.push('/dashboard/organization')
+            router.push('/dashboard/locations')
             }}
             className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors text-gray-700"
         >
             <BuildingIcon className="w-4 h-4 flex-shrink-0" />
-            <span className="flex-1">Organization settings</span>
+            <span className="flex-1">Manage locations</span>
         </button>
         <button
             onClick={() => {
             close()
-            router.push('/dashboard/organization/add-location')
+            router.push('/dashboard/locations/add-location')
             }}
             className="w-full text-left px-4 py-2 text-sm flex items-center gap-2 hover:bg-gray-50 transition-colors text-shiftly-pink font-medium"
         >

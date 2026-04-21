@@ -1,37 +1,63 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Section } from '@/app/components/ui'
-import LocationCard from '../components/LocationCard'
+import PageHeader from '@/app/components/layout/PageHeader'
+import { PageContainer, Spinner } from '@/app/components/ui'
+import LocationCard from './components/LocationCard'
 import { useLocationContext } from '@/app/lib/contexts/LocationContext'
 
-export default function LocationsTab({ organization, locations, isOwner, onReload }) {
+export default function LocationsPage() {
   const router = useRouter()
   const { switchLocation } = useLocationContext()
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch('/api/organization')
+      if (!res.ok) throw new Error('Failed to load')
+      setData(await res.json())
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { load() }, [load])
 
   const handleLocationClick = async (locationId) => {
     await switchLocation(locationId)
     router.push(`/dashboard/${locationId}/location-settings`)
   }
 
-  const handleAddLocation = () => {
-    router.push('/dashboard/organization/add-location')
+  if (loading) {
+    return (
+      <PageContainer>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}>
+          <Spinner />
+        </div>
+      </PageContainer>
+    )
   }
 
+  const { organization, locations, canManageSettings } = data || {}
+
   return (
-    <Section
-      title="Locations"
-      description={`${locations.length} ${locations.length === 1 ? 'location' : 'locations'} in this organization`}
-    >
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-          gap: 16,
-        }}
-      >
-        {locations.map(location => (
+    <PageContainer>
+      <PageHeader
+        title="Manage Locations"
+        subtitle={`${locations?.length || 0} ${locations?.length === 1 ? 'location' : 'locations'}`}
+      />
+
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+        gap: 16,
+        marginTop: 24,
+      }}>
+        {locations?.map(location => (
           <LocationCard
             key={location.location_id}
             location={location}
@@ -40,9 +66,9 @@ export default function LocationsTab({ organization, locations, isOwner, onReloa
           />
         ))}
 
-        {isOwner && (
+        {canManageSettings && (
           <button
-            onClick={handleAddLocation}
+            onClick={() => router.push('/dashboard/locations/add-location')}
             style={{
               minHeight: 140,
               border: '2px dashed var(--gray-200)',
@@ -73,6 +99,6 @@ export default function LocationsTab({ organization, locations, isOwner, onReloa
           </button>
         )}
       </div>
-    </Section>
+    </PageContainer>
   )
 }

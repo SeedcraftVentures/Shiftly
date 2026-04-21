@@ -1,6 +1,8 @@
 'use client'
 
 import { OrganizationSwitcher, UserButton } from '@clerk/nextjs'
+import BusinessDetailsPage from '@/app/components/layout/BusinessDetailsPage'
+import { BuildingIcon } from '@/app/lib/icons'
 import LocationSwitcher from './LocationSwitcher'
 import NavItemList from './NavItemList'
 import { TeamIcon } from '@/app/lib/icons'
@@ -28,12 +30,20 @@ export default function MobileMenu({ open, onClose, isStaff }) {
             afterSelectOrganizationUrl="/dashboard"
             appearance={{
               elements: {
-                rootBox: 'w-full',
+                rootBox: 'flex items-center',
                 organizationSwitcherTrigger:
-                  'w-full px-3 py-2 rounded-lg bg-white/10 text-white text-sm font-medium hover:bg-white/20 transition-colors',
+                  'px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700',
               },
             }}
-          />
+          >
+            <OrganizationSwitcher.OrganizationProfilePage
+              label="Business Details"
+              url="business"
+              labelIcon={<BuildingIcon className="w-4 h-4" />}
+            >
+              <BusinessDetailsPage />
+            </OrganizationSwitcher.OrganizationProfilePage>
+          </OrganizationSwitcher>
 
           <div className="flex items-center space-x-3 px-2">
             <UserButton

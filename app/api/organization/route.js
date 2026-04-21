@@ -49,7 +49,7 @@ export async function PATCH(request) {
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     if (!orgId) return NextResponse.json({ error: 'No active organization' }, { status: 404 })
 
-    if (!has({ permission: 'org:settings:manage' })) {
+    if (!(await has({ permission: 'org:settings:manage' }))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 

@@ -1,6 +1,8 @@
 'use client'
 
 import { OrganizationSwitcher, UserButton } from '@clerk/nextjs'
+import BusinessDetailsPage from '@/app/components/layout/BusinessDetailsPage'
+import { ClipboardIcon } from '@/app/lib/icons'
 import NotificationBell from '@/app/components/ui/NotificationBell'
 import { TeamIcon } from '@/app/lib/icons'
 
@@ -17,7 +19,15 @@ export default function DashboardTopBar({ isStaff }) {
               'px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700',
           },
         }}
-      />
+      >
+        <OrganizationSwitcher.OrganizationProfilePage
+          label="Business Details"
+          url="business"
+          labelIcon={<ClipboardIcon className="w-4 h-4" />}
+        >
+          <BusinessDetailsPage />
+        </OrganizationSwitcher.OrganizationProfilePage>
+      </OrganizationSwitcher>
 
       <div className="flex items-center gap-1.5 bg-shiftly-pink-light border border-shiftly-pink-light rounded-full pl-2 pr-1 py-1">
         <NotificationBell variant="topbar" />
