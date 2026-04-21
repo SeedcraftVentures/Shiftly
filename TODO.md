@@ -13,10 +13,8 @@
 8. scrollbox window is slightly too big but should fit exactly to screen (i think its from pink border)
 9. notification bell hover and colors
 10. hours for public must be equal to or less than staff (in add location), and make sure they work for like 1 am close etc
-11. automatically add the staff if they typed but didnt hit enter or add
+11. automatically add the staff in onboarding if they typed but didnt hit enter or add
 
 # older TODOs
 1. In Shifts tab, when defining shifts, use the location's day's open and close times to align shifts/detect gaps.
-2. Use new DB tables in place of the old ones, and highlight missing columns/information.
 3. Write test suites to test features
-4. In Settings tab, add options to change open and close times for a day

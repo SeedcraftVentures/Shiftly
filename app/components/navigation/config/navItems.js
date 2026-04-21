@@ -8,14 +8,13 @@ import {
   CoinIcon,
   BarChartIcon,
   GearIcon,
-  HelpIcon,
-  BuildingIcon
+  HelpIcon
 } from '@/app/lib/icons'
 
 export const NAV_ITEMS = [
   { id: 'nav-dashboard', name: 'Home', path: '/dashboard', icon: HomeIcon },
-  { id: 'nav-shifts', name: 'Shifts', path: '/dashboard/shifts', icon: ClockIcon },
-  { id: 'nav-staff', name: 'Staff', path: '/dashboard/staff', icon: PeopleIcon },
+  { id: 'nav-shifts', name: 'Shifts', path: '/shifts', icon: ClockIcon, locationScoped: true },
+  { id: 'nav-staff', name: 'Staff', path: '/staff', icon: PeopleIcon, locationScoped: true },
   { id: 'nav-rules', name: 'Rules', path: '/dashboard/rules', icon: GearFilledIcon },
   { id: 'nav-generate', name: 'Rota Builder', path: '/dashboard/generate', icon: CalendarIcon, dividerAfter: true },
   { id: 'nav-requests', name: 'Inbox', path: '/dashboard/requests', icon: InboxIcon },
