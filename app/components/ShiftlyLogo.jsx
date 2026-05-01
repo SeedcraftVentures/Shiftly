@@ -3,10 +3,11 @@ import Image from 'next/image'
 /**
  * Shiftly Logo Component - Standardized lockup with color variants
  *
- * @param {string} variant - 'default' (gray on white), 'pink' (pink on white), 'white' (white on dark), 'onboarding' (large gray)
- * @param {string} size - 'sm', 'md', 'lg', 'xl'
- * @param {boolean} showPillbox - Whether to show the white pillbox container
- * @param {string} businessName - Optional business name to show below (mobile only)
+ * @param {Object} props
+ * @param {'default'|'pink'|'white'|'onboarding'} [props.variant] - 'default' (gray on white), 'pink' (pink on white), 'white' (white on dark), 'onboarding' (large gray)
+ * @param {'sm'|'md'|'lg'|'xl'} [props.size]
+ * @param {boolean} [props.showPillbox] - Whether to show the white pillbox container
+ * @param {string|null} [props.businessName] - Optional business name to show below (mobile only)
  * @returns {JSX.Element}
  */
 export default function ShiftlyLogo({ 

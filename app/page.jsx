@@ -4,6 +4,9 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import ShiftlyLogo from '@/app/components/ShiftlyLogo'
+import Footer from '@/app/components/Footer'
+
+
 
 // ── Scroll fade-in hook ──
 function useScrollReveal() {
@@ -68,11 +71,6 @@ const featureGroups = [
 ]
 
 export default function LandingPage() {
-  const [email, setEmail] = useState('')
-  const [name, setName] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
-  const [error, setError] = useState('')
   const [featuresOpen, setFeaturesOpen] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const featuresRef = useRef(null)
@@ -87,28 +85,6 @@ export default function LandingPage() {
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    try {
-      const res = await fetch('/api/waitlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, name })
-      })
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Failed to join waitlist')
-      }
-      setSubmitted(true)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to join waitlist')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const scrollTo = (id) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
@@ -174,16 +150,13 @@ export default function LandingPage() {
 
               <div className="w-px h-6 bg-gray-200 mx-2" />
 
-              <Link href="/sign-in" className="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium transition-colors text-sm border border-dashed border-gray-300 rounded-lg">
-                User Test
-              </Link>
-              <button
-                onClick={() => scrollTo('waitlist')}
+              <Link
+                href="/waitlist"
                 className="px-5 py-2.5 text-white rounded-lg font-medium hover:shadow-lg hover:shadow-pink-500/20 transition-all text-sm ml-1"
                 style={{ background: '#FF1F7D' }}
               >
                 Join Waitlist
-              </button>
+              </Link>
             </div>
 
             {/* Mobile menu button */}
@@ -203,7 +176,7 @@ export default function LandingPage() {
               <button onClick={() => scrollTo('features')} className="block w-full text-left px-4 py-2.5 text-gray-700 font-medium rounded-lg hover:bg-gray-50">Features</button>
               <button onClick={() => scrollTo('pricing')} className="block w-full text-left px-4 py-2.5 text-gray-700 font-medium rounded-lg hover:bg-gray-50">Pricing</button>
               <button onClick={() => scrollTo('how-it-works')} className="block w-full text-left px-4 py-2.5 text-gray-700 font-medium rounded-lg hover:bg-gray-50">How It Works</button>
-              <button onClick={() => scrollTo('waitlist')} className="block w-full text-left px-4 py-2.5 font-medium rounded-lg text-white" style={{ background: '#FF1F7D' }}>Join Waitlist</button>
+              <Link href="/waitlist" className="block w-full text-left px-4 py-2.5 font-medium rounded-lg text-white" style={{ background: '#FF1F7D' }}>Join Waitlist</Link>
             </div>
           )}
         </div>
@@ -219,7 +192,7 @@ export default function LandingPage() {
           <RevealSection>
             <div className="inline-flex items-center gap-2 mb-6 px-4 py-2 bg-pink-50 border border-pink-200 rounded-full">
               <span className="w-2 h-2 bg-pink-500 rounded-full animate-pulse" />
-              <span className="text-sm font-medium text-pink-700">Launching February 2026. 200 Lifetime Deals available.</span>
+              <span className="text-sm font-medium text-pink-700">Launching Summer 2026 · Waitlist Live</span>
             </div>
           </RevealSection>
 
@@ -240,13 +213,13 @@ export default function LandingPage() {
 
           <RevealSection delay={0.15}>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16">
-              <button
-                onClick={() => scrollTo('waitlist')}
+              <Link
+                href="/waitlist"
                 className="px-8 py-4 text-white text-base font-semibold rounded-xl hover:shadow-xl hover:shadow-pink-500/20 transition-all"
                 style={{ background: '#FF1F7D' }}
               >
                 Join the Waitlist
-              </button>
+              </Link>
               <button
                 onClick={() => scrollTo('how-it-works')}
                 className="px-8 py-4 text-gray-700 text-base font-semibold rounded-xl border border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all"
@@ -644,13 +617,13 @@ export default function LandingPage() {
                       </div>
                     ))}
                   </div>
-                  <button
-                    onClick={() => scrollTo('waitlist')}
-                    className="w-full py-3.5 rounded-xl font-semibold text-white transition-all hover:shadow-lg hover:shadow-pink-500/30"
+                  <Link
+                    href="/waitlist"
+                    className="block w-full py-3.5 rounded-xl font-semibold text-white text-center transition-all hover:shadow-lg hover:shadow-pink-500/30"
                     style={{ background: '#FF1F7D' }}
                   >
                     Join Waitlist for LTD Access
-                  </button>
+                  </Link>
                 </div>
               </div>
             </RevealSection>
@@ -676,12 +649,12 @@ export default function LandingPage() {
                     </div>
                   ))}
                 </div>
-                <button
-                  onClick={() => scrollTo('waitlist')}
-                  className="w-full py-3.5 rounded-xl font-semibold text-gray-700 border border-gray-300 hover:bg-white hover:border-gray-400 transition-all"
+                <Link
+                  href="/waitlist"
+                  className="block w-full py-3.5 rounded-xl font-semibold text-gray-700 text-center border border-gray-300 hover:bg-white hover:border-gray-400 transition-all"
                 >
                   Join Waitlist
-                </button>
+                </Link>
               </div>
             </RevealSection>
           </div>
@@ -732,99 +705,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ═══════════════════════ WAITLIST CTA ═══════════════════════ */}
-      <section id="waitlist" className="px-6 lg:px-8 py-20 lg:py-28 bg-white">
-        <div className="max-w-lg mx-auto">
-          <RevealSection>
-            <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-8 lg:p-10">
-              {!submitted ? (
-                <>
-                  <div className="text-center mb-8">
-                    <h2 className="text-3xl font-bold text-gray-900 font-cal">Join the Waitlist</h2>
-                    <p className="text-gray-500 mt-2">Be first to access Lifetime Deal pricing when we launch</p>
-                  </div>
-
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                      <input
-                        type="text"
-                        placeholder="Your name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        required
-                        className="w-full px-4 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent text-gray-900 placeholder-gray-400 text-sm"
-                      />
-                    </div>
-                    <div>
-                      <input
-                        type="email"
-                        placeholder="Work email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        className="w-full px-4 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:border-transparent text-gray-900 placeholder-gray-400 text-sm"
-                      />
-                    </div>
-
-                    {error && (
-                      <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
-                        <p className="text-sm text-red-600">{error}</p>
-                      </div>
-                    )}
-
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="w-full px-8 py-4 text-white text-base font-semibold rounded-xl hover:shadow-lg hover:shadow-pink-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{ background: '#FF1F7D' }}
-                    >
-                      {loading ? 'Joining...' : 'Join Waitlist'}
-                    </button>
-                  </form>
-
-                  <p className="text-xs text-gray-400 mt-4 text-center">
-                    Only 200 Lifetime Deal spots available at launch. No spam, ever.
-                  </p>
-                </>
-              ) : (
-                <div className="text-center py-6">
-                  <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-100">
-                    <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2 font-cal">You're on the list!</h3>
-                  <p className="text-gray-500">
-                    We'll email you when Lifetime Deal spots open. Check your inbox for confirmation.
-                  </p>
-                </div>
-              )}
-            </div>
-          </RevealSection>
-        </div>
-      </section>
-
       {/* ═══════════════════════ FOOTER ═══════════════════════ */}
-      <footer className="bg-gray-900 text-gray-400 py-12 px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <ShiftlyLogo variant="white" size="md" showPillbox={false} />
-            <div className="flex gap-6 text-sm">
-              <button onClick={() => scrollTo('features')} className="hover:text-white transition-colors">Features</button>
-              <button onClick={() => scrollTo('pricing')} className="hover:text-white transition-colors">Pricing</button>
-              <button onClick={() => scrollTo('how-it-works')} className="hover:text-white transition-colors">How It Works</button>
-              <button onClick={() => scrollTo('waitlist')} className="hover:text-white transition-colors">Join Waitlist</button>
-            </div>
-          </div>
-          <div className="mt-8 pt-8 border-t border-gray-800 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm">
-            <p>&copy; 2026 Shiftly. A Seedcraft Ventures product.</p>
-            <div className="flex gap-6">
-              <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
-              <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }

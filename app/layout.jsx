@@ -25,7 +25,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <ClerkProvider>
+    <ClerkProvider signInUrl="/sign-in" waitlistUrl="/waitlist">
       <html lang="en" className={inter.variable}>
         <body className="font-sans antialiased">
           {children}
