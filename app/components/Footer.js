@@ -61,10 +61,9 @@ export default function Footer() {
           <div>
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Product</p>
             <ul className="space-y-3">
-              <li><Link href="/#features" className="text-sm text-gray-400 hover:text-white transition-colors">Features</Link></li>
+              <li><Link href="/features" className="text-sm text-gray-400 hover:text-white transition-colors">Features</Link></li>
               <li><Link href="/#pricing" className="text-sm text-gray-400 hover:text-white transition-colors">Pricing</Link></li>
-              <li><Link href="/#how-it-works" className="text-sm text-gray-400 hover:text-white transition-colors">How It Works</Link></li>
-              <li><Link href="/#employee-app" className="text-sm text-gray-400 hover:text-white transition-colors">Employee App</Link></li>
+              <li><Link href="/features#employee-app" className="text-sm text-gray-400 hover:text-white transition-colors">Employee App</Link></li>
               <li>
                 <span className="text-sm text-gray-500 inline-flex items-center gap-2">
                   Changelog

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cmd /c \"tasklist /FI \\\\\"IMAGENAME eq node.exe\\\\\" /FO CSV\")",
+      "Bash(tasklist /FI \"IMAGENAME eq node.exe\" /FO CSV /NH)",
+      "Bash(tasklist //FI \"IMAGENAME eq node.exe\" //FO CSV //NH)",
+      "Bash(ls -la \"c:\\\\\\\\Users\\\\\\\\acele\\\\\\\\Shiftly\\\\\\\\.next\\\\\\\\dev\\\\\\\\lock\")"
+    ]
+  }
+}

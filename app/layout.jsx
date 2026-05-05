@@ -1,10 +1,16 @@
 import { ClerkProvider } from '@clerk/nextjs'
 import './globals.css'
-import { Inter } from 'next/font/google'
+import { Inter, Plus_Jakarta_Sans } from 'next/font/google'
 
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
+})
+
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-jakarta',
 })
 
 export const metadata = {
@@ -26,7 +32,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <ClerkProvider signInUrl="/sign-in" waitlistUrl="/waitlist">
-      <html lang="en" className={inter.variable}>
+      <html lang="en" className={`${inter.variable} ${jakarta.variable}`}>
         <body className="font-sans antialiased">
           {children}
         </body>

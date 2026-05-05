@@ -33,6 +33,36 @@ body {
 }
 
 /* ============================================
+   MARKETING PAGES · SMOOTH SCROLL + TOC
+   ============================================ */
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px;
+}
+
+.toc-link::before {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 1.5px;
+  background: #D1D5DB;
+  margin-right: 12px;
+  vertical-align: middle;
+  transition: width 0.2s ease, background 0.2s ease;
+}
+
+.toc-link.active {
+  color: #FF1F7D;
+  font-weight: 600;
+}
+
+.toc-link.active::before {
+  background: #FF1F7D;
+  width: 24px;
+}
+
+/* ============================================
    SHIFTLY TYPOGRAPHY SYSTEM WITH CAL SANS
    ============================================ */
 
