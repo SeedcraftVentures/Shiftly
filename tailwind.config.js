@@ -8,7 +8,7 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
+        sans: ['var(--font-figtree)', 'system-ui', '-apple-system', 'sans-serif'],
         cal: ["'Cal Sans'", 'system-ui', 'sans-serif'],
       },
       colors: {

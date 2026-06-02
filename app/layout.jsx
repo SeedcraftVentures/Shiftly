@@ -1,16 +1,26 @@
 import { ClerkProvider } from '@clerk/nextjs'
 import './globals.css'
-import { Inter, Plus_Jakarta_Sans } from 'next/font/google'
+import { Inter, Plus_Jakarta_Sans, Figtree } from 'next/font/google'
 
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
 })
 
+// Plus Jakarta Sans is retained for the in-app dashboard (out of scope for the
+// calling-card restyle). The marketing surfaces now use Figtree as the body font.
 const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
   variable: '--font-jakarta',
+})
+
+// Figtree: shared Seedcraft calling-card body font.
+const figtree = Figtree({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-figtree',
+  display: 'swap',
 })
 
 export const metadata = {
@@ -32,7 +42,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <ClerkProvider signInUrl="/sign-in" waitlistUrl="/waitlist">
-      <html lang="en" className={`${inter.variable} ${jakarta.variable}`}>
+      <html lang="en" className={`${inter.variable} ${jakarta.variable} ${figtree.variable}`}>
         <body className="font-sans antialiased">
           {children}
         </body>

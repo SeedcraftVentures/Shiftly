@@ -70,7 +70,7 @@ const faqs = [
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-white" style={{ fontFamily: 'var(--font-jakarta), system-ui, sans-serif' }}>
+    <div className="min-h-screen bg-white" style={{ fontFamily: 'var(--font-figtree), system-ui, sans-serif' }}>
       <style jsx global>{`
         @keyframes shiftly-hero-rise {
           from { opacity: 0; transform: translateY(24px); }
