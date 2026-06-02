@@ -60,7 +60,7 @@ const faqs = [
   },
   {
     q: 'What happens after the 200 LTD spots sell out?',
-    a: "Standard pricing kicks in at £49/month or £499/year. The £249 one-time deal locks in every feature forever, including future updates. Once 200 spots are gone, they're gone."
+    a: "Standard is £49/month for your first location, and £20/month for each location after that. The £249 one-time deal locks in every feature forever, including future updates. Once the 200 spots are gone, they're gone."
   },
   {
     q: 'Can I run multiple teams or locations?',
@@ -376,7 +376,7 @@ export default function LandingPage() {
                     <span className="font-cal text-5xl font-bold text-gray-900">£49</span>
                     <span className="text-gray-500">/month</span>
                   </div>
-                  <p className="text-gray-400 mt-1">or £499/year (save 15%)</p>
+                  <p className="text-gray-500 mt-2 text-sm leading-relaxed">First location included. Each extra location is £20/month.</p>
                 </div>
                 <div className="space-y-3 mb-8 flex-1">
                   {standardBullets.map((item) => (
