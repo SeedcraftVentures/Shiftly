@@ -19,11 +19,10 @@ const pillarOneRules = [
 ]
 
 const pillarTwoLines = [
-  'You unlock the door.',
-  'The rota is right.',
-  "Everyone who's meant to be there, is.",
-  'Nothing breaks.',
-  'You close on time. You go home.',
+  'You open up, and the right people are already on.',
+  "Nobody's texting to swap. Nobody's left short.",
+  "It's busy, it's grand, and it all just works.",
+  'You lock up on time and head home.',
 ]
 
 const ltdBullets = [
@@ -45,7 +44,7 @@ const standardBullets = [
 const faqs = [
   {
     q: 'How does Shiftly actually make rotas fair?',
-    a: 'We use constraint satisfaction, the same maths used to schedule airline crews, exam timetables, and hospital theatres. Every rule you set, contracted hours, weekend rotation, rest periods, is mathematically guaranteed to hold. Not best-effort. Guaranteed.'
+    a: 'We use constraint satisfaction, the same maths used to schedule airline crews, exam timetables, and hospital theatres. Every rule you set, contracted hours, weekend rotation, rest periods, is built right into the maths, so it actually holds, week after week.'
   },
   {
     q: 'Who is Shiftly built for?',
@@ -106,15 +105,14 @@ export default function LandingPage() {
             </div>
           </RevealSection>
 
-          <h1 className="font-cal text-5xl sm:text-6xl lg:text-7xl text-white mb-8 leading-[1.0] tracking-tight">
-            <span className="shiftly-hero-line shiftly-hero-line-1 block">Fairness, built in<span className="text-white/50">.</span></span>
-            <span className="shiftly-hero-line shiftly-hero-line-2 block">Good shifts, on repeat<span className="text-white/50">.</span></span>
-            <span className="shiftly-hero-line shiftly-hero-line-3 block">A team that wants to stay<span className="text-white/50">.</span></span>
+          <h1 className="font-cal text-6xl sm:text-7xl lg:text-8xl text-white mb-8 leading-[1.0] tracking-tight">
+            <span className="shiftly-hero-line shiftly-hero-line-1 block">Fairness, built in.</span>
+            <span className="shiftly-hero-line shiftly-hero-line-2 block">Good shifts, on repeat.</span>
           </h1>
 
           <RevealSection delay={0.7}>
             <p className="text-lg lg:text-xl text-white/90 mb-10 max-w-2xl mx-auto leading-relaxed">
-              The rota tool for UK hospitality and retail. Built on the same maths that schedules airline crews. Set your rules once. Run the day, not the spreadsheet.
+              Shiftly is the rota tool for pubs, restaurants and shops. Tell it how your week runs, and it&apos;ll put together a fair rota in seconds, the kind your team can actually plan their life around.
             </p>
           </RevealSection>
 
@@ -122,7 +120,7 @@ export default function LandingPage() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link
                 href="/waitlist"
-                className="px-8 py-4 bg-white text-pink-600 text-base font-semibold rounded-xl shadow-lg hover:-translate-y-0.5 transition-transform"
+                className="px-8 py-4 bg-white text-pink-600 text-base font-semibold rounded-xl shadow-lg hover:bg-pink-50 hover:shadow-xl hover:-translate-y-0.5 transition-all"
               >
                 Join the Waitlist
               </Link>
@@ -180,29 +178,25 @@ export default function LandingPage() {
       </HeatGlow>
 
       {/* ═══════════ PAIN SECTION ═══════════ */}
-      <section className="px-6 lg:px-8 py-20 lg:py-28 bg-gray-900 text-white relative overflow-hidden">
-        <div
-          className="absolute inset-0"
-          style={{ background: 'radial-gradient(circle at 80% 20%, rgba(255, 31, 125, 0.12) 0%, transparent 50%)' }}
-        />
-        <div className="max-w-6xl mx-auto relative z-10">
+      <section className="px-6 lg:px-8 py-20 lg:py-28 bg-stone-50">
+        <div className="max-w-6xl mx-auto">
           <RevealSection>
-            <div className="text-center mb-16">
-              <p className="inline-block text-xs font-bold uppercase tracking-widest text-pink-400 mb-4">The Sunday night truth</p>
-              <h2 className="font-cal text-4xl lg:text-6xl leading-[1.05] max-w-4xl mx-auto">
-                It&apos;s Sunday at <span className="text-pink-500">10:47pm</span>. You&apos;ve rebuilt the rota three times. You still don&apos;t know if it&apos;s fair.
+            <div className="text-center max-w-3xl mx-auto mb-16">
+              <p className="inline-block text-xs font-bold uppercase tracking-widest text-pink-600 mb-4">Sound familiar?</p>
+              <h2 className="font-cal text-4xl lg:text-6xl text-gray-900 leading-[1.05] max-w-3xl mx-auto tracking-tight">
+                You finish the rota. Then the messages start.
               </h2>
             </div>
           </RevealSection>
 
           <div className="grid md:grid-cols-3 gap-5 max-w-5xl mx-auto mb-12">
             {[
-              'Why do I always close?',
-              'How come they never work weekends?',
-              'I asked for Saturday off three weeks ago.',
+              'Why am I always on the close?',
+              'I booked that Saturday off ages ago.',
+              'Can I not get a bit of variety?',
             ].map((quote, i) => (
               <RevealSection key={quote} delay={i * 0.1}>
-                <div className="p-7 bg-white/5 border border-white/10 rounded-2xl text-xl font-medium italic">
+                <div className="p-7 bg-white border border-gray-200 shadow-sm rounded-2xl text-xl font-medium italic text-gray-800">
                   <span className="text-pink-500 text-3xl leading-none mr-1 not-italic">&ldquo;</span>{quote}
                 </div>
               </RevealSection>
@@ -211,8 +205,8 @@ export default function LandingPage() {
 
           <RevealSection>
             <div className="text-center max-w-3xl mx-auto">
-              <p className="text-lg text-white/70 leading-relaxed">
-                Every Sunday, you&apos;re trying to solve all of it with a spreadsheet that can&apos;t see the rules in your head.
+              <p className="text-lg text-gray-500 leading-relaxed">
+                A spreadsheet can&apos;t hold everyone&apos;s hours, days off and little asks in its head all at once. So things slip, and it&apos;s your team that feels it, even when you&apos;ve done your best by them.
               </p>
             </div>
           </RevealSection>
@@ -252,7 +246,7 @@ export default function LandingPage() {
           <RevealSection>
             <div className="max-w-3xl mx-auto">
               <div className="px-7 py-6 bg-pink-50 border-l-4 border-pink-500 rounded-2xl text-lg text-gray-900 leading-relaxed">
-                <strong className="font-bold">You decide what fair means.</strong> Shiftly enforces it. Mathematically. Not best-effort. Guaranteed.
+                <strong className="font-bold">You decide what fair looks like for your place.</strong> Shiftly just makes sure the rota actually sticks to it, every week, without you having to sit and check.
               </div>
             </div>
           </RevealSection>
@@ -278,7 +272,7 @@ export default function LandingPage() {
           </RevealSection>
 
           <RevealSection delay={0.4}>
-            <p className="text-xl text-gray-500 italic">That&apos;s the whole product.</p>
+            <p className="text-xl text-gray-500 italic">Honestly, that&apos;s the whole point.</p>
           </RevealSection>
         </div>
       </section>
@@ -288,36 +282,36 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-[1.2fr_1fr] gap-12 lg:gap-20 items-center">
             <RevealSection>
-              <p className="inline-block text-xs font-bold uppercase tracking-widest text-pink-600 mb-3">The boss worth working for</p>
+              <p className="inline-block text-xs font-bold uppercase tracking-widest text-pink-600 mb-3">Looking after your people</p>
               <h2 className="font-cal text-4xl lg:text-5xl text-gray-900 leading-[1.05] mb-6 tracking-tight">
                 The team that stays.
               </h2>
               <p className="text-lg text-gray-500 leading-relaxed mb-4">
-                Research from The Shift Project at Harvard found that frontline workers with cancelled shifts left their jobs at almost double the rate of those with stable schedules.
+                There&apos;s good research behind this. Harvard&apos;s Shift Project found that people whose shifts kept getting cancelled or chopped about were nearly twice as likely to leave.
               </p>
               <p className="text-lg text-gray-500 leading-relaxed mb-4">
-                Run six months of fair shifts and you become the place people don&apos;t leave. The kitchen the good chef applies to. The bar where staff stay long enough to learn the regulars&apos; names.
+                Give folks a rota they can plan a life around and they tend to stick with you. They learn the regulars, they cover for each other, and your good people stop drifting off to the place down the road.
               </p>
               <p className="text-lg text-gray-900 font-medium leading-relaxed">
-                Fair scheduling isn&apos;t a feature. It&apos;s a recruitment strategy.
+                Look after the rota, and it quietly looks after your team for you.
               </p>
             </RevealSection>
 
             <RevealSection delay={0.15}>
-              <div className="relative bg-gray-900 rounded-3xl p-10 text-white overflow-hidden">
-                <div className="absolute top-0 right-0 w-60 h-60 bg-pink-500/20 rounded-full blur-3xl" />
+              <div className="relative bg-white border border-gray-200 rounded-3xl p-10 shadow-sm overflow-hidden">
+                <div className="absolute top-0 right-0 w-60 h-60 bg-pink-100/70 rounded-full blur-3xl" />
                 <div className="relative z-10 space-y-6">
-                  <div className="pb-6 border-b border-white/10">
-                    <div className="font-cal text-5xl font-bold text-white/40 mb-1">42%</div>
-                    <p className="text-sm text-white/60">Turnover for staff with cancelled shifts</p>
+                  <div className="pb-6 border-b border-gray-100">
+                    <div className="font-cal text-5xl font-bold text-gray-300 mb-1">42%</div>
+                    <p className="text-sm text-gray-500">Left, when shifts kept getting cancelled</p>
                   </div>
-                  <div className="pb-6 border-b border-white/10">
+                  <div className="pb-6 border-b border-gray-100">
                     <div className="font-cal text-5xl font-bold text-pink-500 mb-1">24%</div>
-                    <p className="text-sm text-white/60">Turnover with stable, fair rotas</p>
+                    <p className="text-sm text-gray-500">Left, with steady, fair rotas</p>
                   </div>
                   <div>
-                    <p className="text-xs text-white/40 leading-relaxed">
-                      Source: The Shift Project, Schneider &amp; Harknett, Harvard Kennedy School / UCSF. Six-month turnover rates among US retail and food-service workers (2018).
+                    <p className="text-xs text-gray-400 leading-relaxed">
+                      Source: The Shift Project, Schneider &amp; Harknett, Harvard Kennedy School / UCSF. Six-month turnover among US retail and food-service workers (2018).
                     </p>
                   </div>
                 </div>
@@ -337,37 +331,36 @@ export default function LandingPage() {
                 One price. Every feature. However big you grow.
               </h2>
               <p className="text-lg text-gray-500 mt-5 max-w-xl mx-auto">
-                We don&apos;t tax you for hiring. No per-seat charges. No gated features. No surprises.
+                You won&apos;t pay more for taking on more people, and nothing good is hidden behind a pricier tier. One price, the lot.
               </p>
             </div>
           </RevealSection>
 
           <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             <RevealSection>
-              <div className="relative bg-gray-900 rounded-2xl p-8 text-white overflow-hidden h-full">
-                <div className="absolute top-0 right-0 w-40 h-40 bg-pink-500/20 rounded-full blur-3xl" />
-                <div className="absolute bottom-0 left-0 w-32 h-32 bg-pink-500/10 rounded-full blur-2xl" />
+              <div className="relative bg-white border-2 border-pink-500 rounded-2xl p-8 overflow-hidden h-full shadow-lg shadow-pink-100">
+                <div className="absolute top-0 right-0 w-40 h-40 bg-pink-100/70 rounded-full blur-3xl" />
                 <div className="relative z-10">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-pink-500 rounded-full text-xs font-bold mb-6">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-pink-500 text-white rounded-full text-xs font-bold mb-6">
                     LAUNCH SPECIAL · 200 SPOTS
                   </div>
                   <div className="mb-6">
-                    <div className="font-cal text-5xl font-bold">£249</div>
-                    <p className="text-gray-400 mt-1">One-time payment. Lifetime access.</p>
+                    <div className="font-cal text-5xl font-bold text-gray-900">£249</div>
+                    <p className="text-gray-500 mt-1">One-time payment. Lifetime access.</p>
                   </div>
                   <div className="space-y-3 mb-8">
                     {ltdBullets.map((item) => (
                       <div key={item} className="flex items-center gap-2.5">
-                        <svg className="w-4 h-4 text-pink-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="w-4 h-4 text-pink-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                         </svg>
-                        <span className="text-sm text-gray-300">{item}</span>
+                        <span className="text-sm text-gray-700">{item}</span>
                       </div>
                     ))}
                   </div>
                   <Link
                     href="/waitlist"
-                    className="block w-full py-3.5 rounded-xl font-semibold text-white text-center transition-all hover:shadow-lg hover:shadow-pink-500/30 bg-pink-500"
+                    className="block w-full py-3.5 rounded-xl font-semibold text-white text-center transition-all bg-pink-500 hover:bg-pink-600 hover:shadow-lg"
                   >
                     Join Waitlist for LTD Access
                   </Link>
@@ -397,7 +390,7 @@ export default function LandingPage() {
                 </div>
                 <Link
                   href="/waitlist"
-                  className="block w-full py-3.5 rounded-xl font-semibold text-gray-700 text-center border border-gray-300 hover:bg-white hover:border-gray-400 transition-all"
+                  className="block w-full py-3.5 rounded-xl font-semibold text-gray-700 text-center border border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all"
                 >
                   Join Waitlist
                 </Link>

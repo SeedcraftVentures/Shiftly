@@ -267,13 +267,9 @@ textarea:disabled {
    LINK HOVER STATES
    ============================================ */
 
-/* Exclude buttons and navigation links from global hover styles */
-a:not(.btn-primary):not(.btn-secondary):not([id^='nav-']):hover {
-  color: #FF1F7D;
-  text-decoration: underline;
-  text-decoration-color: #FF1F7D;
-  text-underline-offset: 2px;
-}
+/* Links carry their own hover styles at the component level (Tailwind utilities).
+   No global hover underline / colour shift — it bled onto every button and nav
+   link and read badly, especially on coloured backgrounds. */
 
 /* ============================================
    TABLE STYLING
