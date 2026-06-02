@@ -111,26 +111,9 @@ export default function LandingPage() {
           </h1>
 
           <RevealSection delay={0.7}>
-            <p className="text-lg lg:text-xl text-white/90 mb-10 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-lg lg:text-xl text-white/90 max-w-2xl mx-auto leading-relaxed">
               Shiftly is the rota tool for pubs, restaurants and shops. Tell it how your week runs, and it&apos;ll put together a fair rota in seconds, the kind your team can actually plan their life around.
             </p>
-          </RevealSection>
-
-          <RevealSection delay={0.85}>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Link
-                href="/waitlist"
-                className="px-8 py-4 bg-white text-pink-600 text-base font-semibold rounded-xl shadow-lg hover:bg-pink-50 hover:shadow-xl hover:-translate-y-0.5 transition-all"
-              >
-                Join the Waitlist
-              </Link>
-              <a
-                href="#pillar-2"
-                className="px-8 py-4 bg-white/12 backdrop-blur-md border border-white/30 text-white text-base font-semibold rounded-xl hover:bg-white/20 transition-colors"
-              >
-                See how it feels
-              </a>
-            </div>
           </RevealSection>
 
           {/* Stat strip — relocated from the standalone metrics bar, on the gradient */}
