@@ -306,11 +306,11 @@ export default function FeaturesPage() {
   )
 
   return (
-    <div className="min-h-screen bg-white" style={{ fontFamily: 'var(--font-jakarta), system-ui, sans-serif' }}>
+    <div className="min-h-screen bg-white" style={{ fontFamily: 'var(--font-figtree), system-ui, sans-serif' }}>
       <Nav currentPage="features" />
 
       {/* ═══════════ HERO ═══════════ */}
-      <section className="relative px-6 lg:px-8 pt-20 lg:pt-28 pb-16 overflow-hidden">
+      <section className="relative px-6 lg:px-8 pt-28 lg:pt-36 pb-16 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-pink-50/60 via-white to-white" />
         <div className="max-w-4xl mx-auto text-center relative z-10">
           <RevealSection>

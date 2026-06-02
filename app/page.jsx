@@ -96,7 +96,7 @@ export default function LandingPage() {
       <Nav currentPage="home" />
 
       {/* ═══════════ HERO ═══════════ */}
-      <section className="relative px-6 lg:px-8 pt-16 lg:pt-24 pb-0 overflow-hidden">
+      <section className="relative px-6 lg:px-8 pt-28 lg:pt-36 pb-0 overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-pink-50/60 via-white to-white" />
 
         <div className="max-w-5xl mx-auto text-center relative z-10">
