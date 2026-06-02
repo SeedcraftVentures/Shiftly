@@ -86,7 +86,7 @@ export default function FloatingNav({ currentPage = null }) {
               aria-expanded={featuresOpen}
               aria-haspopup="true"
               className={`px-4 py-2 font-medium transition-colors text-sm flex items-center gap-1.5 rounded-full ${
-                featuresActive ? 'text-pink-600 font-semibold' : 'text-gray-700 hover:text-gray-900'
+                featuresActive ? 'text-pink-600 font-semibold' : 'text-gray-900 hover:text-pink-600'
               }`}
             >
               Features
@@ -120,16 +120,16 @@ export default function FloatingNav({ currentPage = null }) {
           </div>
 
           {currentPage === 'home' ? (
-            <a href={pricingHref} className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium transition-colors text-sm rounded-full">
+            <a href={pricingHref} className="px-4 py-2 text-gray-900 hover:text-pink-600 font-medium transition-colors text-sm rounded-full">
               Pricing
             </a>
           ) : (
-            <Link href={pricingHref} className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium transition-colors text-sm rounded-full">
+            <Link href={pricingHref} className="px-4 py-2 text-gray-900 hover:text-pink-600 font-medium transition-colors text-sm rounded-full">
               Pricing
             </Link>
           )}
 
-          <Link href="/about" className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium transition-colors text-sm rounded-full">
+          <Link href="/about" className="px-4 py-2 text-gray-900 hover:text-pink-600 font-medium transition-colors text-sm rounded-full">
             About
           </Link>
         </div>
@@ -157,7 +157,7 @@ export default function FloatingNav({ currentPage = null }) {
           <Link
             href="/waitlist"
             onClick={closeMenus}
-            className="px-4 sm:px-5 py-2.5 rounded-full font-semibold transition-all text-sm whitespace-nowrap bg-white/70 backdrop-blur-md border-2 border-pink-500 text-pink-600 shadow-[0_8px_30px_rgba(0,0,0,0.08)] hover:bg-white/90 hover:border-pink-600 hover:-translate-y-0.5"
+            className="px-4 sm:px-5 py-2.5 rounded-full font-semibold transition-all text-sm whitespace-nowrap bg-white/70 backdrop-blur-md border-2 border-pink-500 text-gray-900 shadow-[0_8px_30px_rgba(0,0,0,0.08)] hover:bg-white/90 hover:border-pink-600 hover:text-pink-600 hover:-translate-y-0.5"
           >
             Join Waitlist
           </Link>
@@ -174,7 +174,7 @@ export default function FloatingNav({ currentPage = null }) {
             <a href="/#pricing" onClick={closeMenus} className="block w-full text-left px-4 py-2.5 text-gray-700 font-medium rounded-xl hover:bg-white/60">Pricing</a>
           )}
           <Link href="/about" onClick={closeMenus} className="block w-full text-left px-4 py-2.5 text-gray-700 font-medium rounded-xl hover:bg-white/60">About</Link>
-          <Link href="/waitlist" onClick={closeMenus} className="block w-full px-4 py-2.5 font-semibold rounded-xl text-center bg-white/70 border-2 border-pink-500 text-pink-600">Join Waitlist</Link>
+          <Link href="/waitlist" onClick={closeMenus} className="block w-full px-4 py-2.5 font-semibold rounded-xl text-center bg-white/70 border-2 border-pink-500 text-gray-900 hover:text-pink-600">Join Waitlist</Link>
         </div>
       )}
     </nav>
