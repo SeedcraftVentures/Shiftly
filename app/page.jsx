@@ -7,6 +7,7 @@ import RevealSection from '@/app/components/RevealSection'
 import FaqItem from '@/app/components/FaqItem'
 import FinalCTA from '@/app/components/FinalCTA'
 import Footer from '@/app/components/Footer'
+import { HeatGlow, SHIFTLY_PALETTE } from '@/app/components/HeatGlow'
 
 const pillarOneRules = [
   'Contracted hours, every week',
@@ -96,49 +97,64 @@ export default function LandingPage() {
       <Nav currentPage="home" />
 
       {/* ═══════════ HERO ═══════════ */}
-      <section className="relative px-6 lg:px-8 pt-28 lg:pt-36 pb-0 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-pink-50/60 via-white to-white" />
-
-        <div className="max-w-5xl mx-auto text-center relative z-10">
+      <HeatGlow as="section" palette={SHIFTLY_PALETTE} className="relative px-6 lg:px-8 pt-28 lg:pt-36 pb-0">
+        <div className="max-w-5xl mx-auto text-center">
           <RevealSection>
-            <div className="inline-flex items-center gap-2 mb-6 px-4 py-2 bg-pink-50 border border-pink-200 rounded-full">
-              <span className="w-2 h-2 bg-pink-500 rounded-full shiftly-pulse-soft" />
-              <span className="text-sm font-medium text-pink-700">Launching Summer 2026 · Waitlist Live</span>
+            <div className="inline-flex items-center gap-2 mb-7 px-4 py-2 bg-white/15 backdrop-blur-md border border-white/25 rounded-full">
+              <span className="w-2 h-2 bg-white rounded-full shiftly-pulse-soft" />
+              <span className="text-sm font-medium text-white">Launching Summer 2026 · Waitlist Live</span>
             </div>
           </RevealSection>
 
-          <h1 className="font-cal text-5xl sm:text-6xl lg:text-7xl text-gray-900 mb-8 leading-[1.0] tracking-tight">
-            <span className="shiftly-hero-line shiftly-hero-line-1 block">Fairness, built in<span className="text-pink-500">.</span></span>
-            <span className="shiftly-hero-line shiftly-hero-line-2 block">Good shifts, on repeat<span className="text-pink-500">.</span></span>
-            <span className="shiftly-hero-line shiftly-hero-line-3 block">A team that wants to stay<span className="text-pink-500">.</span></span>
+          <h1 className="font-cal text-5xl sm:text-6xl lg:text-7xl text-white mb-8 leading-[1.0] tracking-tight">
+            <span className="shiftly-hero-line shiftly-hero-line-1 block">Fairness, built in<span className="text-white/50">.</span></span>
+            <span className="shiftly-hero-line shiftly-hero-line-2 block">Good shifts, on repeat<span className="text-white/50">.</span></span>
+            <span className="shiftly-hero-line shiftly-hero-line-3 block">A team that wants to stay<span className="text-white/50">.</span></span>
           </h1>
 
           <RevealSection delay={0.7}>
-            <p className="text-lg lg:text-xl text-gray-500 mb-10 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-lg lg:text-xl text-white/90 mb-10 max-w-2xl mx-auto leading-relaxed">
               The rota tool for UK hospitality and retail. Built on the same maths that schedules airline crews. Set your rules once. Run the day, not the spreadsheet.
             </p>
           </RevealSection>
 
           <RevealSection delay={0.85}>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link
                 href="/waitlist"
-                className="px-8 py-4 text-white text-base font-semibold rounded-xl hover:shadow-xl hover:shadow-pink-500/20 transition-all bg-pink-500"
+                className="px-8 py-4 bg-white text-pink-600 text-base font-semibold rounded-xl shadow-lg hover:-translate-y-0.5 transition-transform"
               >
                 Join the Waitlist
               </Link>
               <a
                 href="#pillar-2"
-                className="px-8 py-4 text-gray-700 text-base font-semibold rounded-xl border border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all"
+                className="px-8 py-4 bg-white/12 backdrop-blur-md border border-white/30 text-white text-base font-semibold rounded-xl hover:bg-white/20 transition-colors"
               >
                 See how it feels
               </a>
             </div>
           </RevealSection>
+
+          {/* Stat strip — relocated from the standalone metrics bar, on the gradient */}
+          <RevealSection delay={0.95}>
+            <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-8 max-w-3xl mx-auto text-white/90">
+              {[
+                { value: 'Seconds', label: 'From hit generate to finished rota' },
+                { value: '100%', label: 'Contracted hours, every week' },
+                { value: '£49', label: 'Flat monthly price, any team size' },
+                { value: 'Zero', label: 'Per-seat charges. Ever.' },
+              ].map((stat) => (
+                <div key={stat.label}>
+                  <div className="font-cal text-3xl lg:text-4xl text-white">{stat.value}</div>
+                  <p className="text-sm text-white/75 mt-1 leading-snug">{stat.label}</p>
+                </div>
+              ))}
+            </div>
+          </RevealSection>
         </div>
 
-        <RevealSection delay={1} className="max-w-6xl mx-auto relative z-10">
-          <div className="rounded-t-2xl shadow-2xl overflow-hidden border border-gray-200 border-b-0 bg-gray-100">
+        <RevealSection delay={1} className="max-w-6xl mx-auto mt-16">
+          <div className="rounded-t-2xl shadow-2xl overflow-hidden border border-white/20 border-b-0 bg-gray-100">
             <div className="bg-gray-100 px-4 py-3 flex items-center gap-2 border-b border-gray-200">
               <div className="flex gap-1.5">
                 <div className="w-3 h-3 rounded-full bg-gray-300" />
@@ -161,26 +177,7 @@ export default function LandingPage() {
             />
           </div>
         </RevealSection>
-      </section>
-
-      {/* ═══════════ METRICS BAR ═══════════ */}
-      <section className="px-6 lg:px-8 py-16 bg-gray-50 border-t border-gray-200">
-        <div className="max-w-5xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            {[
-              { value: 'Seconds', label: 'From hit generate to finished rota' },
-              { value: '100%', label: 'Contracted hours, every week' },
-              { value: '£49', label: 'Flat monthly price, any team size' },
-              { value: 'Zero', label: 'Per-seat charges. Ever.' },
-            ].map((stat, i) => (
-              <RevealSection key={stat.label} delay={i * 0.08}>
-                <div className="text-3xl lg:text-4xl font-bold text-gray-900 font-cal">{stat.value}</div>
-                <p className="text-sm text-gray-500 mt-1">{stat.label}</p>
-              </RevealSection>
-            ))}
-          </div>
-        </div>
-      </section>
+      </HeatGlow>
 
       {/* ═══════════ PAIN SECTION ═══════════ */}
       <section className="px-6 lg:px-8 py-20 lg:py-28 bg-gray-900 text-white relative overflow-hidden">
