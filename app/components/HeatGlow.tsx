@@ -115,11 +115,14 @@ export const ROSE_PALETTE: GlowPalette = {
  * gradient stops and warm highlight, deepening to near-maroon.
  */
 export const SHIFTLY_PALETTE: GlowPalette = {
-  base: ["#FF5BA0", "#FF1F7D", "#4D0026"],
+  // Bottom-right stop stays a vivid deep pink (was a dark maroon #4D0026, which
+  // blended muddily under the warm glow). Brighter warm highlight so the corner
+  // reads slightly lighter than the main pink, like the reference.
+  base: ["#FF5BA0", "#FF1F7D", "#C20D5C"],
   baseAngle: 135,
-  warmHighlight: "#FF8FB8",
+  warmHighlight: "#FFA8C7",
   brightHighlight: "rgba(255, 255, 255, 0.12)",
-  noiseOpacity: 0.7,
+  noiseOpacity: 0.6,
 };
 
 /* ---------- SVG noise ---------- */
