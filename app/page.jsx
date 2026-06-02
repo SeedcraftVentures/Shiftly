@@ -191,7 +191,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto relative z-10">
           <RevealSection>
             <div className="text-center mb-16">
-              <p className="text-sm font-semibold uppercase tracking-wider text-pink-400 mb-4">The Sunday night truth</p>
+              <p className="inline-block text-xs font-bold uppercase tracking-widest text-pink-400 mb-4">The Sunday night truth</p>
               <h2 className="font-cal text-4xl lg:text-6xl leading-[1.05] max-w-4xl mx-auto">
                 It&apos;s Sunday at <span className="text-pink-500">10:47pm</span>. You&apos;ve rebuilt the rota three times. You still don&apos;t know if it&apos;s fair.
               </h2>
@@ -226,8 +226,8 @@ export default function LandingPage() {
       <section className="px-6 lg:px-8 py-20 lg:py-28 bg-white">
         <div className="max-w-6xl mx-auto">
           <RevealSection>
-            <div className="text-center mb-16">
-              <p className="text-sm font-semibold uppercase tracking-wider text-pink-600 mb-3">Fairness, built in</p>
+            <div className="text-center max-w-3xl mx-auto mb-16">
+              <p className="inline-block text-xs font-bold uppercase tracking-widest text-pink-600 mb-3">Fairness, built in</p>
               <h2 className="font-cal text-4xl lg:text-6xl text-gray-900 leading-[1.05] max-w-3xl mx-auto tracking-tight">
                 A rota that can&apos;t be wrong.
               </h2>
@@ -266,7 +266,7 @@ export default function LandingPage() {
       <section id="pillar-2" className="px-6 lg:px-8 py-24 lg:py-32 bg-gray-50">
         <div className="max-w-4xl mx-auto text-center">
           <RevealSection>
-            <p className="text-sm font-semibold uppercase tracking-wider text-pink-600 mb-4">Make every shift a good one</p>
+            <p className="inline-block text-xs font-bold uppercase tracking-widest text-pink-600 mb-4">Make every shift a good one</p>
             <h2 className="font-cal text-4xl lg:text-6xl text-gray-900 leading-[1.05] mb-12 tracking-tight">
               What a good shift <span className="text-pink-500">looks like.</span>
             </h2>
@@ -291,7 +291,7 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-[1.2fr_1fr] gap-12 lg:gap-20 items-center">
             <RevealSection>
-              <p className="text-sm font-semibold uppercase tracking-wider text-pink-600 mb-3">The boss worth working for</p>
+              <p className="inline-block text-xs font-bold uppercase tracking-widest text-pink-600 mb-3">The boss worth working for</p>
               <h2 className="font-cal text-4xl lg:text-5xl text-gray-900 leading-[1.05] mb-6 tracking-tight">
                 The team that stays.
               </h2>
@@ -334,8 +334,8 @@ export default function LandingPage() {
       <section id="pricing" className="px-6 lg:px-8 py-20 lg:py-28 bg-gray-50">
         <div className="max-w-5xl mx-auto">
           <RevealSection>
-            <div className="text-center mb-16">
-              <p className="text-sm font-semibold uppercase tracking-wider text-pink-600 mb-3">Pricing</p>
+            <div className="text-center max-w-3xl mx-auto mb-16">
+              <p className="inline-block text-xs font-bold uppercase tracking-widest text-pink-600 mb-3">Pricing</p>
               <h2 className="font-cal text-4xl lg:text-5xl text-gray-900 leading-[1.05] tracking-tight">
                 One price. Every feature. However big you grow.
               </h2>
