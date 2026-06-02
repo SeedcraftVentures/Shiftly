@@ -151,12 +151,13 @@ export default function FloatingNav({ currentPage = null }) {
             </svg>
           </button>
 
-          {/* CTA — charcoal so it reads on both the pink hero and the light
-              sections you scroll past (a pink fill vanished on the pink hero). */}
+          {/* CTA — same glass pill as the others, set apart with a pink outline
+              so it reads as the action without going dark/heavy. Works on both
+              the pink hero and the light sections you scroll past. */}
           <Link
             href="/waitlist"
             onClick={closeMenus}
-            className="px-4 sm:px-5 py-2.5 text-white rounded-full font-semibold transition-all text-sm bg-gray-900 shadow-lg hover:bg-gray-800 hover:-translate-y-0.5 whitespace-nowrap"
+            className="px-4 sm:px-5 py-2.5 rounded-full font-semibold transition-all text-sm whitespace-nowrap bg-white/70 backdrop-blur-md border-2 border-pink-500 text-pink-600 shadow-[0_8px_30px_rgba(0,0,0,0.08)] hover:bg-white/90 hover:border-pink-600 hover:-translate-y-0.5"
           >
             Join Waitlist
           </Link>
@@ -173,7 +174,7 @@ export default function FloatingNav({ currentPage = null }) {
             <a href="/#pricing" onClick={closeMenus} className="block w-full text-left px-4 py-2.5 text-gray-700 font-medium rounded-xl hover:bg-white/60">Pricing</a>
           )}
           <Link href="/about" onClick={closeMenus} className="block w-full text-left px-4 py-2.5 text-gray-700 font-medium rounded-xl hover:bg-white/60">About</Link>
-          <Link href="/waitlist" onClick={closeMenus} className="block w-full text-left px-4 py-2.5 font-semibold rounded-xl text-white bg-gray-900">Join Waitlist</Link>
+          <Link href="/waitlist" onClick={closeMenus} className="block w-full px-4 py-2.5 font-semibold rounded-xl text-center bg-white/70 border-2 border-pink-500 text-pink-600">Join Waitlist</Link>
         </div>
       )}
     </nav>
