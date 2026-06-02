@@ -14,13 +14,13 @@ export default function Footer() {
           {/* Brand column */}
           <div className="col-span-2 md:col-span-1">
             <ShiftlyLogo variant="white" size="md" showPillbox={false} />
-            <p className="text-gray-500 text-sm mt-4 mb-5 leading-relaxed max-w-[18rem]">
+            <p className="text-gray-500 text-sm mt-3 mb-5 leading-relaxed max-w-[18rem]">
               Fair rotas, generated in seconds.
             </p>
 
             {/* Identity pill */}
             <div className="inline-flex items-center gap-2 mb-6 px-3 py-1.5 border border-pink-500/40 bg-pink-500/5 rounded-full">
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#FF1F7D' }} />
+              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#FF1F7D' }} />
               <span className="text-[11px] font-bold tracking-wider uppercase" style={{ color: '#FF1F7D' }}>
                 AI-Free, Always
               </span>
