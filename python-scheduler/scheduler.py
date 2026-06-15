@@ -187,9 +187,14 @@ class ShiftlyScheduler:
                 if not self._is_staff_available(staff, shift):
                     model.Add(schedule[si][st] == 0)
 
-        # ── Hard constraint: keyholder ────────────────────────────────────────
+        # ── Keyholder ─────────────────────────────────────────────────────────
+        # Keyholder is a LOCATION concern (any team's keyholder can open/close), but the
+        # solver runs per team. So only enforce it when THIS team actually has a keyholder
+        # — otherwise the rota still builds and "no keyholder at open/close" is flagged
+        # afterwards, rather than the whole team failing to schedule.
         enforce_keyholder = self._rule('enforce_keyholder', True)
-        if enforce_keyholder:
+        has_keyholder = any(s.get('keyholder', False) for s in self.staff)
+        if enforce_keyholder and has_keyholder:
             for si, shift in enumerate(self.shifts):
                 if shift.get('keyholder_required', False):
                     for st, staff in enumerate(self.staff):
@@ -255,7 +260,13 @@ class ShiftlyScheduler:
                     if len(day_worked) == max_consec + 1:
                         model.Add(sum(day_worked) <= max_consec)
 
-        # ── Hard constraint: contracted/max hours ────────────────────────────
+        # ── Max hours = HARD cap · contracted hours = SOFT target ─────────────
+        # Contracted is a target, not a wall: penalise any shortfall so the rota
+        # still builds when it can't be met exactly (flagged via contract_issues).
+        # A hard minimum here makes the model infeasible whenever contracted hours
+        # roughly equal total shift hours — even though aggregate capacity is fine.
+        contracted_shortfalls = []
+        contracted_overages = []
         for st, staff in enumerate(self.staff):
             contracted = staff.get('contracted_hours', 0)
             max_h = staff.get('max_hours', contracted) or contracted
@@ -272,10 +283,19 @@ class ShiftlyScheduler:
                 for si in range(n_shifts)
             )
 
-            if contracted > 0:
-                model.Add(total_minutes >= int(contracted * 60) - 60)
-
             model.Add(total_minutes <= int(max_h * 60))
+
+            if contracted > 0:
+                target = int(contracted * 60)
+                # Shortfall (under contracted) and overage (into max) are both penalised
+                # so the solver parks people AT their contracted hours, only spilling into
+                # max when the shifts genuinely can't be covered within everyone's contract.
+                shortfall = model.NewIntVar(0, target, f'short_{st}_w{week_num}')
+                model.Add(shortfall >= target - total_minutes)
+                contracted_shortfalls.append(shortfall)
+                overage = model.NewIntVar(0, int(max_h * 60), f'over_{st}_w{week_num}')
+                model.Add(overage >= total_minutes - target)
+                contracted_overages.append(overage)
 
         # ── Soft: variety between weeks ───────────────────────────────────────
         if previous_solutions:
@@ -362,8 +382,15 @@ class ShiftlyScheduler:
                         minimize_terms.append(isolated_off)
 
         # ── Optimise ──────────────────────────────────────────────────────────
-        if minimize_terms:
-            model.Minimize(sum(minimize_terms))
+        # Keep people AT their contracted hours: a HEAVY penalty for falling short and
+        # a lighter one for spilling into max hours (both in minutes, so they dominate
+        # the small fairness/preference terms, which act only as tie-breakers).
+        objective = []
+        objective += [s * 10 for s in contracted_shortfalls]
+        objective += [o * 3 for o in contracted_overages]
+        objective += minimize_terms
+        if objective:
+            model.Minimize(sum(objective))
 
         solver.parameters.max_time_in_seconds = 25.0
         solver.parameters.num_search_workers = 4

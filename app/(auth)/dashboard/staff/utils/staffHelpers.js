@@ -241,6 +241,99 @@ export function assignTeamColors(teams) {
   }))
 }
 
+// ── Team palette — SINGLE source of truth for team colours. ────────────────────
+// Used by Staff, Shifts, Rota Builder and the Dashboard, keyed by team order in
+// the /api/teams response so every surface shows the same colour for a team.
+export const TEAM_COLORS = ['#FF1F7D', '#6366F1', '#14B8A6', '#F59E0B', '#0EA5E9', '#8B5CF6', '#EC4899', '#10B981']
+export const teamColor = (i) => TEAM_COLORS[i % TEAM_COLORS.length]
+
+// ── Coverage engine — SINGLE source for "can our staff cover the shifts?" ───────
+// The Staff page and the Dashboard MUST answer this identically. Key rule: required
+// hours count OPEN DAYS only (stale closed-day shift entries don't inflate demand),
+// and the headline verdict is `maxCapacity >= required` (coverableAtMax).
+const COV_ALL = [0, 1, 2, 3, 4, 5, 6]
+export function cfgFromLocation(location) {
+  const business = location?.business || { 0: [9, 17], 1: [9, 17], 2: [9, 17], 3: [9, 17], 4: [9, 17], 5: [9, 17], 6: null }
+  const openDays = COV_ALL.filter((d) => business[d])
+  return { business, openDays }
+}
+// Map a raw /api/staff row into the coverage shape (matches the Staff page's fromApi).
+export const mapStaffForCoverage = (r) => ({ id: r.id, team_id: r.team_id, name: r.name, role: r.role, contracted: r.contracted_hours || 0, max: r.max_hours || 0, wage: r.hourly_rate, keyholder: r.keyholder, avail: r.availability || {} })
+export function windowForDay(s, d, cfg) { const a = s.avail?.[d]; if (!a) return null; return a === true ? cfg.business[d] : a }
+export function canWork(s, d, sh, cfg) { const w = windowForDay(s, d, cfg); if (!w) return false; return w[0] <= sh.start + 0.001 && w[1] >= sh.end - 0.001 }
+const openDayCountCov = (days, openDays) => days.filter((d) => openDays.includes(d)).length
+export function requiredHours(shifts, cfg) { return shifts.reduce((a, s) => a + (s.end - s.start) * s.staff * openDayCountCov(s.days, cfg.openDays), 0) }
+export function staffing(staff, shifts, cfg) {
+  let demand = 0, filled = 0
+  const short = []
+  for (const sh of shifts) {
+    for (const d of sh.days) {
+      if (!cfg.openDays.includes(d)) continue
+      demand += sh.staff
+      const q = staff.filter((st) => canWork(st, d, sh, cfg) && (!sh.keyholder || st.keyholder))
+      filled += Math.min(q.length, sh.staff)
+      if (q.length < sh.staff) short.push({ day: d, name: sh.name, need: sh.staff, have: q.length, kh: sh.keyholder, start: sh.start, end: sh.end })
+    }
+  }
+  return { demand, filled, pct: demand ? Math.round((filled / demand) * 100) : 100, short }
+}
+export function readiness(staff, shifts, cfg) {
+  const cov = staffing(staff, shifts, cfg)
+  const req = requiredHours(shifts, cfg)
+  const contracted = staff.reduce((a, s) => a + s.contracted, 0)
+  const maxh = staff.reduce((a, s) => a + s.max, 0)
+  const capacityPct = req ? Math.min(100, Math.round((maxh / req) * 100)) : 100
+  const coverableAtMax = maxh >= req, withinContract = contracted >= req
+  return {
+    overallPct: Math.min(cov.pct, capacityPct), short: cov.short,
+    ready: cov.short.length === 0 && coverableAtMax,
+    contracted, maxh, req, coverableAtMax, withinContract,
+    overContractH: coverableAtMax && !withinContract ? req - contracted : 0,
+    shortAtMaxH: Math.max(0, req - maxh),
+  }
+}
+
+// ── Schedule coverage — the OTHER coverage question: do the SHIFTS span the hours? ──
+// Location-wide (union of every team's shifts) vs the operating window per open day,
+// plus a keyholder-present-at-open/close check pooled across ALL keyholders (any team).
+// This is independent of staffing: it asks whether the rota itself is complete.
+function gapsInWindow(ranges, winStart, winEnd) {
+  const clipped = ranges
+    .filter((r) => r[1] > winStart + 0.001 && r[0] < winEnd - 0.001)
+    .map((r) => [Math.max(r[0], winStart), Math.min(r[1], winEnd)])
+    .sort((a, b) => a[0] - b[0])
+  const gaps = []; let cursor = winStart
+  for (const [a, b] of clipped) { if (a > cursor + 0.001) gaps.push([cursor, a]); cursor = Math.max(cursor, b) }
+  if (cursor < winEnd - 0.001) gaps.push([cursor, winEnd])
+  return gaps
+}
+const keyAvailableAt = (s, d, t, cfg) => { const w = windowForDay(s, d, cfg); return !!w && w[0] <= t + 0.001 && w[1] >= t - 0.001 }
+export function scheduleCoverage(shifts, staff, cfg) {
+  const keyholders = (staff || []).filter((s) => s.keyholder)
+  const days = {}
+  let windowH = 0, gapH = 0
+  const dayGaps = [], keyGaps = []
+  for (const d of cfg.openDays) {
+    const win = cfg.business[d]; if (!win) continue
+    const [ws, we] = win
+    windowH += we - ws
+    const ranges = (shifts || []).filter((s) => s.days.includes(d)).map((s) => [s.start, s.end])
+    const gaps = gapsInWindow(ranges, ws, we)
+    gapH += gaps.reduce((a, [x, y]) => a + (y - x), 0)
+    const openKey = keyholders.some((s) => keyAvailableAt(s, d, ws, cfg))
+    const closeKey = keyholders.some((s) => keyAvailableAt(s, d, we, cfg))
+    days[d] = { window: [ws, we], gaps, openKey, closeKey, covered: gaps.length === 0 }
+    for (const g of gaps) dayGaps.push({ day: d, from: g[0], to: g[1] })
+    if (!openKey) keyGaps.push({ day: d, when: 'open', time: ws })
+    if (!closeKey) keyGaps.push({ day: d, when: 'close', time: we })
+  }
+  return {
+    days, windowH: Math.round(windowH * 10) / 10, gapH: Math.round(gapH * 10) / 10,
+    coveredPct: windowH ? Math.max(0, (windowH - gapH) / windowH) : 1,
+    dayGaps, keyGaps, hasGaps: gapH > 0.01, hasKeyGaps: keyGaps.length > 0,
+  }
+}
+
 // ── Formatting ────────────────────────────────────────────────────────────────
 
 export function formatCurrency(amount, symbol = '£') {

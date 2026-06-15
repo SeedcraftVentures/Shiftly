@@ -1,3 +1,141 @@
+# Shiftly Rebuild — Demo-Readiness Plan (branch: shiftly-rebuild)
+
+> Status: **PLAN — awaiting approval before any code is written.**
+> All work happens on `shiftly-rebuild`. `main` is left untouched for the business partner.
+> Full diagnostic done 2026-06-12 via 7 parallel audits + manual verification of the load-bearing claims.
+
+## Diagnostic summary (verified by reading source, not assumed)
+
+**What works today (leave alone):** onboarding + `OnboardingTour` (9-step), Staff page, Shifts page
+(inline rows, keyholder, anchoring, availability, micro-rules — all persist to Supabase), navigation,
+reports/payroll API wiring (reads real data — but has nothing to read until Generate works).
+
+**What's broken:** the Rota Builder "Generate" button. It is the heart of the app and it cannot
+produce a rota today. Three independent bugs in one chain, each fatal on its own. NOTE: the prior R2
+todo (Prompt 6, "No field name mismatches") was wrong — the pipeline was never tested end-to-end
+against the live Render scheduler.
+
+---
+
+## Environment & Demo DB (decided 2026-06-12)
+
+- **Demo DB:** clone the existing Supabase project (exact schema). Schema-only clone preferred
+  (clean demo data, no prod data leakage). Owner/dev runs the clone — I have no DB access.
+- **Hosting:** Vercel (live preview deploy of `shiftly-rebuild`), NOT local. `netlify.toml` in repo is
+  stale and should be removed in cleanup.
+- **Scheduler:** Python OR-Tools service is stateless/DB-agnostic — reuse the same Render URL, no clone.
+- **Env vars the demo Vercel project needs** (point all Supabase ones at the CLONE):
+  - `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (all 3 used)
+  - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` (reuse existing Clerk app or separate)
+  - `NEXT_PUBLIC_APP_URL` = demo Vercel URL; `PYTHON_SCHEDULER_URL` optional (defaults to Render)
+  - Optional/skippable for core demo: Stripe keys, `RESEND_API_KEY`
+- **LOCAL DEV (decided 2026-06-12):** develop + verify on `npm run dev` FIRST; no deploy until perfect.
+  - `.env.local` restructured: live `pk_live`/`sk_live` Clerk keys commented out (they cannot run on
+    localhost), dev placeholders added. Owner must paste: Clerk **test** keys (Development instance) +
+    Supabase keys pointing at the **demo clone** (the clone is now the dev DB too) + localhost APP_URL.
+  - Dev test path: sign up (fresh dev user) → onboard → add staff → add shifts → Rota Builder → Generate.
+  - Render scheduler is free-tier (cold start 30-60s on first call) — retry once if first Generate stalls.
+- **Verification model:** dev server against the clone first; Vercel deploy only once it works locally.
+- **Latent inconsistency (note, not blocking):** `api/staff/[id]` and `api/payroll/*` use the ANON key
+  server-side instead of the service-role key — subject to RLS. Flag if those routes misbehave on the clone.
+
+---
+
+## Workstream 1 — Fix the Rota Builder chain  [CRITICAL, do first]
+
+File: `app/api/generate-rota/route.js` (+ confirm against `python-scheduler/scheduler.py`)
+
+- [ ] **Bug 1 — shifts never reach the scheduler.** Line 91 reads `shift.day_of_week` (singular);
+      the DB column is `days_of_week` (plural, stores full names e.g. "Monday" — verified
+      `app/api/shifts/route.js:9,64`). Fix: rename `shift.day_of_week` → `shift.days_of_week`.
+      One-word change; the `.includes(dayName)` check then matches the generator's day loop (line 88).
+- [ ] **Bug 2 — rules never applied.** Lines 59-67 read constraints from a separate `Rules` table
+      (almost certainly empty) and reshape to a list. Source of truth is `Teams.solver_rules`
+      (decided). `teamsData` already has it (`select('*')`, line 42) and `teamRecord` is already
+      computed (line 113). Fix: drop the `Rules` Promise from the `Promise.all` (lines 59-67),
+      delete `formattedRules` (lines 202-207), and set `rules: teamRecord.solver_rules || {}` in
+      `schedulerInput` (line 212). Python's `_rule()` reads a plain dict (scheduler.py:61-62) and the
+      keys already match EXACTLY (enforce_keyholder, min_rest_hours, max_consecutive_days,
+      fair_distribution, prefer_consecutive_days_off, balance_keyholder_shifts) — verified. No reshape.
+- [ ] **Bug 3 — response handling crashes (the actual 500).** Python returns a flat
+      `{ assignments: [...] }` (scheduler.py:443-453), but lines 316-317 & 352-354 iterate
+      `teamResult.schedule` → `weekData.shifts`, which don't exist. Fix: rewrite the merge loop to
+      consume the flat `assignments` array. Each item already has `week, shift_name, day, start_time,
+      end_time, staff_name` — map directly into `combinedSchedule` (drop the nested week/shift loop).
+      Apply the same change to the hours-report loop (lines 349-364).
+- [ ] Also surface real scheduler failures: Python can return `{ success:false, error }` (200 OK).
+      The route's failure filter (line 270) checks `!r.success` but the route never early-returns on a
+      false `success` from a single team. Add a guard so a solver "infeasible" shows the diagnostic
+      instead of a blank rota.
+
+### DONE 2026-06-12 (code) — all three fixes applied to `app/api/generate-rota/route.js`
+- [x] Bug 1: `shift.day_of_week` → `shift.days_of_week`
+- [x] Bug 2: dropped empty `Rules` table query; `rules: teamRecord.solver_rules || {}` passed through (keys match Python, no reshape)
+- [x] Bug 3: schedule-merge AND hours-report loops rewritten to consume flat `assignments` array
+- [x] Compile clean (`✓ Compiled successfully`). Full `npm run build` can't finish locally — unrelated
+      stripe/locales/employee routes throw at page-data collection due to no local Supabase/Stripe creds
+      (pre-existing env gap; passes on Vercel). generate-rota is NOT among the failures.
+- NOTE: scheduler returns no `rule_compliance` field, so the RulesCompliance panel stays empty — not a
+  crash, just nothing to show. Revisit only if owner wants compliance reporting.
+
+**Verify (per CLAUDE.md — prove it works) — PENDING Vercel preview + demo clone:**
+- [ ] `npm run build` passes (on Vercel with env vars).
+- [ ] With a real team that has staff + synced shifts, click Generate → confirm a populated rota
+      renders in `RotaScheduleGrid` (no 500, no NaN/undefined).
+- [ ] Toggle a rule (e.g. min_rest_hours) and confirm the generated rota changes accordingly.
+- [ ] Approve the rota → confirm it saves to `Rotas` and appears on the dashboard.
+
+---
+
+## Workstream 2 — Stop demo clicks landing in stale UI  [HIGH]
+
+The sidebar correctly points to the new `/dashboard/{staff,shifts,rules}` pages, but the dashboard
+HOME quick-actions/stat-cards still deep-link to the OLD `/dashboard/workspace?tab=...` surface.
+
+- [ ] `app/(auth)/dashboard/page.js`: repoint "Manage Staff" → `/dashboard/staff`,
+      "Edit Templates" → `/dashboard/shifts` (or templates surface), coverage card → `/dashboard/staff`.
+- [ ] Decide fate of `/dashboard/workspace` (old StaffShiftsSection/TemplatesSection/Rules/Settings):
+      keep as hidden fallback, or remove route. Recommend: remove links now, delete route in WS4.
+
+**Verify:** click every dashboard-home link → all land on the new pages.
+
+---
+
+## Workstream 3 — Confirm reports/payroll light up  [MEDIUM, mostly verification]
+
+Already wired to real data (reads approved `Rotas.schedule_data` + staff rates). Expected to work
+once WS1 produces a saved rota.
+
+- [ ] After approving a generated rota, open Reports + Payroll → confirm hours show.
+- [ ] Set a staff pay rate → confirm labour cost computes (cost is £0 only when no rate set, by design).
+- [ ] Note (not blocking): reports match staff by NAME not ID — fine for demo, flag for later.
+
+---
+
+## Workstream 4 — Delete dead code  [LOW, do last, after green]
+
+Confirmed orphaned (never imported anywhere reachable). Delete only after WS1-3 verified:
+- [ ] `app/api/generate-rota-ortools/route.js` (unused duplicate of the working route)
+- [ ] `app/components/workspace/{StaffSection,StaffTable,StaffModal,ShiftsSection,HoursComparison}.js`
+- [ ] `app/components/template/{ShiftLengthPicker,TemplateTabs}.jsx`
+- [ ] `app/components/employee/{CalendarRangePicker,EmployeeRotaView,RequestsList}.js`
+- [ ] `app/components/{PillTabs,PricingSection,TeamSetupSuccess,logo}.js(x)`
+- [ ] Re-run build after deletion to confirm nothing referenced them.
+
+---
+
+## Descoped (per owner decision, 2026-06-12)
+- **Onboarding seeding** — leaving as-is. Staff/shifts will be added manually during the demo.
+  (Onboarding currently creates only the Team row; no staff/shifts/templates are seeded.)
+
+## Open risks
+- The Render scheduler URL is a hardcoded fallback (`route.js:55`); no `PYTHON_SCHEDULER_URL` in
+  `.env.local`. If that free Render instance is cold/down, Generate fails with no local fallback.
+  Confirm the service is reachable before the demo.
+
+---
+---
+
 # Shiftly V4 R2 — Task Tracker
 
 ## Execution Order: 6 → 3 → 2 → 4 → 5 → 1 → 7 → 8 → 9

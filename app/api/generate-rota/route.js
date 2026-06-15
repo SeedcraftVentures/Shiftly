@@ -1,452 +1,252 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabaseAdmin, getOrgScope } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
-export async function POST(request) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+const DAY_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+const SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const DAY_INDEX = { Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4, Saturday: 5, Sunday: 6 }
+const ANCHOR = { Open: 'open', Close: 'close', Fixed: 'fixed' }
 
-  const supabase = supabaseUrl && supabaseKey 
-    ? createClient(supabaseUrl, supabaseKey)
-    : null
+const hhmm = (t) => (t ? String(t).slice(0, 5) : '00:00')
+function dateFor(weekStart, week, dayName) {
+  const base = new Date(weekStart + 'T00:00:00Z')
+  base.setUTCDate(base.getUTCDate() + (week - 1) * 7 + (DAY_INDEX[dayName] ?? 0))
+  return base.toISOString().slice(0, 10)
+}
 
-  if (!supabase) {
-    const missingVars = []
-    if (!supabaseUrl) missingVars.push('NEXT_PUBLIC_SUPABASE_URL')
-    if (!supabaseKey) missingVars.push('SUPABASE_SERVICE_ROLE_KEY')
-    
-    return NextResponse.json(
-      { 
-        error: 'Server configuration error',
-        details: `Missing environment variables: ${missingVars.join(', ')}.`
-      },
-      { status: 500 }
-    )
+// staff.availability ({dayIndex: true | [start,end]}) → scheduler day-level grid.
+// (Time-window precision lives in the Staff page UI; the scheduler gets day-level availability.)
+function availabilityGrid(avail) {
+  const grid = {}
+  for (let d = 0; d < 7; d++) grid[SHORT[d]] = avail && avail[d] ? 'available' : 'unavailable'
+  return grid
+}
+
+async function callScheduler(pythonUrl, payload) {
+  const resp = await fetch(`${pythonUrl}/schedule`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+  if (!resp.ok) { const txt = await resp.text(); throw new Error(`Scheduler ${resp.status}: ${txt}`) }
+  return resp.json()
+}
+
+const LEGAL_MAX = 48 // hard weekly cap per staff
+function shiftHours(p) {
+  const [sh, sm] = hhmm(p.start_time).split(':').map(Number)
+  const [eh, em] = hhmm(p.end_time).split(':').map(Number)
+  let d = (eh * 60 + em) - (sh * 60 + sm); if (d <= 0) d += 1440
+  return d / 60
+}
+// When a team can't be scheduled even with policy constraints relaxed, work out the
+// real, actionable reason: a day short of available people, or not enough staff-hours.
+function diagnoseTeam(teamStaff, teamPatterns, openDayNames) {
+  let demandH = 0
+  const gaps = []
+  for (const p of teamPatterns) {
+    const need = p.num_staff_needed || 1
+    for (const day of (p.days || [])) {
+      if (openDayNames.size > 0 && !openDayNames.has(day)) continue
+      demandH += shiftHours(p) * need
+      const di = DAY_INDEX[day]
+      const avail = teamStaff.filter((s) => s.availability && s.availability[di]).length
+      if (avail < need) gaps.push(`${p.shift_name} on ${day} needs ${need} but ${avail} available`)
+    }
   }
+  if (gaps.length) return `Not enough available staff — ${gaps.slice(0, 2).join('; ')}${gaps.length > 2 ? `; +${gaps.length - 2} more` : ''}. Widen availability or add staff.`
+  const capacity = teamStaff.reduce((a, s) => a + Math.min(s.max_hours || s.contracted_hours || LEGAL_MAX, LEGAL_MAX), 0)
+  if (demandH > capacity + 0.5) return `Needs more staff — ${Math.round(demandH)}h of shifts but only about ${Math.round(capacity)}h of staff capacity (max ${LEGAL_MAX}h each). Add staff or reduce shift coverage.`
+  return 'Could not find a valid schedule. Try adding staff, widening availability, or reducing shift coverage.'
+}
 
+export async function POST(request) {
   try {
     const { userId } = await auth()
-    
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!supabaseAdmin) return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
 
     const body = await request.json()
-    const { startDate, weekCount, team_id, showAllTeams } = body
+    const weekStart = body.weekStart || body.startDate
+    const weekCount = body.weekCount || 1
+    const onlyTeamId = body.team_id || null
+    if (!weekStart) return NextResponse.json({ error: 'weekStart is required' }, { status: 400 })
 
-    // Fetch all teams first
-    const { data: teamsData, error: teamsError } = await supabase
-      .from('Teams')
-      .select('*')
-      .eq('user_id', userId)
-    
-    if (teamsError) throw teamsError
+    const { locationIds, teamIds } = await getOrgScope(userId)
+    if (teamIds.length === 0) return NextResponse.json({ error: 'No teams found. Complete onboarding and add staff/shifts first.' }, { status: 400 })
 
-    // Build team name lookup map (using team_name column)
-    const teamNameMap = {}
-    teamsData.forEach(team => {
-      teamNameMap[team.id] = team.team_name
-    })
+    const scopeTeams = onlyTeamId ? teamIds.filter((t) => t === onlyTeamId) : teamIds
 
-    const startDateObj = new Date(startDate)
-    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    const [teamsRes, staffRes, shiftsRes, rulesRes, hoursRes] = await Promise.all([
+      supabaseAdmin.from('Teams').select('team_id, name').in('team_id', scopeTeams),
+      supabaseAdmin.from('Staff').select('*').in('team_id', scopeTeams),
+      supabaseAdmin.from('Shift Patterns').select('*').in('shift_team', scopeTeams),
+      supabaseAdmin.from('Location Rules').select('location_id, solver_rules').in('location_id', locationIds),
+      supabaseAdmin.from('Location Day Hours').select('day').in('location_id', locationIds),
+    ])
+    if (teamsRes.error) throw teamsRes.error
+    if (staffRes.error) throw staffRes.error
+    if (shiftsRes.error) throw shiftsRes.error
+
+    // only schedule on days the location is actually open (never closed days)
+    const openDayNames = new Set((hoursRes.data || []).map((r) => r.day))
+    const teamName = Object.fromEntries((teamsRes.data || []).map((t) => [t.team_id, t.name]))
+    const rules = (rulesRes.data || [])[0]?.solver_rules || {}
     const pythonUrl = process.env.PYTHON_SCHEDULER_URL || 'https://shiftly-scheduler-e470.onrender.com'
 
-    // Helper function to generate rota for a single team
-    async function generateForTeam(teamId, teamName) {
-      const [staffResult, shiftsResult, rulesResult] = await Promise.all([
-        supabase.from('Staff').select('*').eq('user_id', userId).eq('team_id', teamId),
-        supabase.from('Shifts').select('*').eq('user_id', userId).eq('team_id', teamId),
-        supabase.from('Rules').select('*').eq('user_id', userId).eq('team_id', teamId)
-      ])
+    const allAssignments = []
+    const contractIssues = []
+    const skipped = []
+    const builtTeamIds = new Set()
+    const relaxedTeams = new Set()
+    let wallTime = 0
 
-      if (staffResult.error) throw staffResult.error
-      if (shiftsResult.error) throw shiftsResult.error
-      if (rulesResult.error) throw rulesResult.error
-
-      const staffData = staffResult.data || []
-      const shiftsData = shiftsResult.data || []
-      const rulesData = rulesResult.data || []
-
-      if (staffData.length === 0 || shiftsData.length === 0) {
-        return {
-          success: true,
-          skipped: true,
-          teamId,
-          teamName,
-          reason: staffData.length === 0 ? 'No staff' : 'No shifts'
-        }
+    for (const teamId of scopeTeams) {
+      const teamStaff = (staffRes.data || []).filter((s) => s.team_id === teamId)
+      const teamPatterns = (shiftsRes.data || []).filter((s) => s.shift_team === teamId)
+      if (teamStaff.length === 0 || teamPatterns.length === 0) {
+        skipped.push({ teamId, teamName: teamName[teamId], reason: teamStaff.length === 0 ? 'No staff' : 'No shifts' })
+        continue
       }
 
-      // Build shift patterns
-      const shiftPatterns = []
-      for (let day = 0; day < 7; day++) {
-        const currentDate = new Date(startDateObj)
-        currentDate.setDate(currentDate.getDate() + day)
-        const dayName = dayNames[currentDate.getDay()]
+      // staff for the scheduler
+      const staff = teamStaff.map((s) => ({
+        id: s.staff_id,
+        name: s.name,
+        contracted_hours: s.contracted_hours || 0,
+        max_hours: s.max_hours || s.contracted_hours || 48,
+        keyholder: !!s.is_keyholder,
+        availability_grid: availabilityGrid(s.availability),
+        team_id: teamId,
+        team_name: teamName[teamId],
+      }))
 
-        const dayShifts = shiftsData.filter(shift => {
-          const shiftDays = shift.day_of_week
-          if (Array.isArray(shiftDays)) {
-            return shiftDays.includes(dayName)
-          } else if (typeof shiftDays === 'string') {
-            return shiftDays === dayName
-          }
-          return false
-        })
-        
-        dayShifts.forEach(shift => {
-          shiftPatterns.push({
-            id: shift.id,
-            name: shift.shift_name,
+      // expand each Shift Pattern into one shift per day it runs
+      const shifts = []
+      for (const p of teamPatterns) {
+        const days = Array.isArray(p.days) ? p.days : []
+        for (const dayName of days) {
+          if (openDayNames.size > 0 && !openDayNames.has(dayName)) continue // skip closed days
+          shifts.push({
+            id: p.shift_id,
+            name: p.shift_name,
             day: dayName,
-            start_time: shift.start_time,
-            end_time: shift.end_time,
-            staff_required: shift.staff_required || 1
-          })
-        })
-      }
-
-      // Look up team's templates for availability_grid conversion
-      const teamRecord = teamsData.find(t => t.id === teamId)
-      const dayTemplatesData = teamRecord?.day_templates || {}
-      const weekTemplateData = teamRecord?.week_template || {}
-      const DAY_ABBRS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-      const FULL_DAY_NAMES = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-
-      const formattedStaff = staffData.map(s => {
-        let availability = {}
-
-        // Prefer availability_grid (shift-based matrix from workspace/employee app)
-        const grid = s.availability_grid
-        if (grid && typeof grid === 'object' && Object.keys(grid).length > 0) {
-          // availability_grid uses keys "dayIndex-slotIndex" (0=Mon..6=Sun)
-          // Convert to { monday: { AM: true, PM: true }, ... }
-          DAY_ABBRS.forEach((abbr, di) => {
-            const dayConfig = weekTemplateData[abbr]
-            if (!dayConfig?.on) return
-            const tmpl = dayTemplatesData[dayConfig.tmpl]
-            if (!tmpl?.shifts?.length) return
-
-            let am = false, pm = false
-            tmpl.shifts.forEach((shift, si) => {
-              const key = `${di}-${si}`
-              const isAvail = grid[key] !== undefined ? grid[key] : true
-              if (isAvail) {
-                if (shift.start < 12) am = true
-                if (shift.start + shift.length > 12) pm = true
-              }
-            })
-            availability[FULL_DAY_NAMES[di]] = { AM: am, PM: pm }
+            start_time: hhmm(p.start_time),
+            end_time: hhmm(p.end_time),
+            staff_required: p.num_staff_needed || 1,
+            keyholder_required: !!p.is_keyholder,
+            anchor_type: ANCHOR[p.shift_type] || 'fixed',
           })
         }
+      }
+      if (shifts.length === 0) { skipped.push({ teamId, teamName: teamName[teamId], reason: 'No shift days' }); continue }
 
-        // Fall back to legacy availability field if grid produced nothing
-        if (Object.keys(availability).length === 0) {
-          let legacy = s.availability || {}
-
-          if (typeof legacy === 'string') {
-            try { legacy = JSON.parse(legacy) } catch { legacy = {} }
-          }
-
-          if (Array.isArray(legacy)) {
-            const obj = {}
-            legacy.forEach(day => {
-              if (typeof day === 'string') obj[day.toLowerCase()] = { AM: true, PM: true }
-            })
-            legacy = obj
-          }
-
-          if (typeof legacy === 'object' && legacy !== null && !Array.isArray(legacy)) {
-            Object.keys(legacy).forEach(key => {
-              const val = legacy[key]
-              if (typeof val === 'boolean') {
-                availability[key.toLowerCase()] = { AM: val, PM: val }
-              } else if (typeof val === 'object' && val !== null) {
-                availability[key.toLowerCase()] = val
-              } else {
-                availability[key.toLowerCase()] = { AM: true, PM: true }
-              }
-            })
-          }
+      // generate each week independently (avoids the scheduler's cross-week diversity constraint)
+      for (let wk = 1; wk <= weekCount; wk++) {
+        let result = await callScheduler(pythonUrl, { staff, shifts, rules, weeks: 1 })
+        if (!result.success) {
+          // Safety net for the deployed solver: drop the contracted-hours minimum so a
+          // rota still builds (shortfalls flagged below). No-op once the solver treats
+          // contracted as a soft target. Force fair distribution so the fallback still
+          // balances hours sensibly rather than dumping them on one person.
+          // Relax every policy ("soft") constraint — contracted hours, keyholder, max
+          // consecutive days, min rest — leaving only the physically-unavoidable ones
+          // (a shift needs N people and only M are available). This honours "the rota
+          // always builds, then we flag what couldn't be met": violations show up in the
+          // rule-compliance + contracted-hours diagnostics. If it STILL can't build, the
+          // failure is real (not enough available staff) and the reason is specific.
+          const relaxed = staff.map((s) => ({ ...s, contracted_hours: 0 }))
+          const relaxedRules = { ...rules, fair_distribution: true, enforce_keyholder: false, max_consecutive_days: 7, min_rest_hours: 0 }
+          result = await callScheduler(pythonUrl, { staff: relaxed, shifts, rules: relaxedRules, weeks: 1 })
+          if (result.success) relaxedTeams.add(teamName[teamId])
         }
-
-        // Default to fully available if no data at all
-        if (Object.keys(availability).length === 0) {
-          availability = {
-            monday: { AM: true, PM: true },
-            tuesday: { AM: true, PM: true },
-            wednesday: { AM: true, PM: true },
-            thursday: { AM: true, PM: true },
-            friday: { AM: true, PM: true },
-            saturday: { AM: true, PM: true },
-            sunday: { AM: true, PM: true }
-          }
+        if (!result.success) {
+          skipped.push({ teamId, teamName: teamName[teamId], reason: diagnoseTeam(teamStaff, teamPatterns, openDayNames) })
+          break // skip this team, keep building the rest
         }
-
-        const contractedHours = s.contracted_hours || 0
-
-        return {
-          id: s.id,
-          name: s.name,
-          contracted_hours: contractedHours,
-          max_hours: s.max_hours || contractedHours || 48,
-          availability: availability,
-          team_name: teamName,
-          team_id: teamId
+        builtTeamIds.add(teamId)
+        wallTime += result.stats?.wall_time || 0
+        for (const a of result.assignments || []) {
+          allAssignments.push({
+            team_id: teamId, team_name: teamName[teamId], week: wk,
+            shift_id: a.shift_id, shift_name: a.shift_name, day: a.day,
+            work_date: dateFor(weekStart, wk, a.day),
+            start_time: a.start_time, end_time: a.end_time,
+            keyholder_required: a.keyholder_required, staff_id: a.staff_id, staff_name: a.staff_name,
+          })
         }
-      })
-
-      const formattedRules = rulesData.map(r => ({
-        type: r.type,
-        name: r.name,
-        enabled: r.enabled,
-        value: r.value
-      }))
-
-      const schedulerInput = {
-        staff: formattedStaff,
-        shifts: shiftPatterns,
-        rules: formattedRules,
-        weeks: weekCount
-      }
-
-      const response = await fetch(`${pythonUrl}/schedule`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(schedulerInput)
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        throw new Error(`Scheduler failed for ${teamName}: ${response.status} ${errorText}`)
-      }
-
-      const result = await response.json()
-      
-      return {
-        ...result,
-        teamId,
-        teamName,
-        formattedStaff
       }
     }
 
-    // Determine which teams to generate for
-    let teamsToGenerate = []
-    
-    if (showAllTeams) {
-      teamsToGenerate = teamsData.map(t => ({ 
-        id: t.id, 
-        name: t.team_name || `Team ${t.id}` 
-      }))
-    } else if (team_id) {
-      const team = teamsData.find(t => t.id === team_id)
-      if (team) {
-        teamsToGenerate = [{ 
-          id: team.id, 
-          name: team.team_name || `Team ${team.id}` 
-        }]
+    // ── rule compliance (post-hoc) — the rota built; flag anything not fully met ──
+    const keyholderSet = new Set((staffRes.data || []).filter((s) => s.is_keyholder).map((s) => s.staff_id))
+    const byStaff = {}
+    for (const a of allAssignments) (byStaff[a.staff_id] ||= []).push(a)
+    const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+    const dms = (d) => new Date(d + 'T00:00:00Z').getTime()
+    const compliance = []
+
+    if (rules.enforce_keyholder !== false) {
+      const bad = allAssignments.filter((a) => a.keyholder_required && !keyholderSet.has(a.staff_id))
+      compliance.push({ key: 'enforce_keyholder', label: 'Keyholder on open & close', ok: bad.length === 0, detail: bad.length ? `${bad.length} open/close shift(s) without a keyholder` : '' })
+    }
+    const minRest = Number(rules.min_rest_hours ?? 11)
+    let restViol = 0
+    for (const list of Object.values(byStaff)) {
+      const sorted = [...list].sort((a, b) => (dms(a.work_date) + toMin(a.start_time) * 6e4) - (dms(b.work_date) + toMin(b.start_time) * 6e4))
+      for (let i = 1; i < sorted.length; i++) {
+        const prevEnd = dms(sorted[i - 1].work_date) + toMin(sorted[i - 1].end_time) * 6e4
+        const nextStart = dms(sorted[i].work_date) + toMin(sorted[i].start_time) * 6e4
+        if ((nextStart - prevEnd) / 36e5 < minRest - 0.01) restViol++
+      }
+    }
+    compliance.push({ key: 'min_rest_hours', label: `Minimum ${minRest}h rest between shifts`, ok: restViol === 0, detail: restViol ? `${restViol} shift pair(s) under ${minRest}h rest` : '' })
+
+    const maxConsec = Number(rules.max_consecutive_days ?? 5)
+    let consecViol = 0
+    for (const list of Object.values(byStaff)) {
+      const dates = [...new Set(list.map((a) => a.work_date))].sort()
+      let run = 1, maxRun = 1
+      for (let i = 1; i < dates.length; i++) { run = (dms(dates[i]) - dms(dates[i - 1])) / 864e5 === 1 ? run + 1 : 1; maxRun = Math.max(maxRun, run) }
+      if (maxRun > maxConsec) consecViol++
+    }
+    compliance.push({ key: 'max_consecutive_days', label: `Max ${maxConsec} consecutive days`, ok: consecViol === 0, detail: consecViol ? `${consecViol} staff over ${maxConsec} days in a row` : '' })
+
+    // ── contracted-hours diagnostics (route-computed from the final assignments) ──
+    const hoursByKey = {}
+    for (const a of allAssignments) {
+      let d = toMin(a.end_time) - toMin(a.start_time); if (d <= 0) d += 1440
+      hoursByKey[`${a.staff_id}__${a.week}`] = (hoursByKey[`${a.staff_id}__${a.week}`] || 0) + d / 60
+    }
+    for (const s of staffRes.data || []) {
+      if (!builtTeamIds.has(s.team_id)) continue
+      const contracted = s.contracted_hours || 0
+      if (!contracted) continue
+      for (let wk = 1; wk <= weekCount; wk++) {
+        const actual = Math.round((hoursByKey[`${s.staff_id}__${wk}`] || 0) * 10) / 10
+        if (actual < contracted - 1) contractIssues.push({ week: wk, staff_id: s.staff_id, staff_name: s.name, team_name: teamName[s.team_id], contracted, actual, reason: actual === 0 ? 'No shifts assigned this week' : 'Fewer hours than contracted' })
       }
     }
 
-    if (teamsToGenerate.length === 0) {
-      return NextResponse.json(
-        { error: 'No teams found', details: 'Please select a team or create one first.' },
-        { status: 400 }
-      )
-    }
-
-    console.log('Generating rotas for teams:', teamsToGenerate.map(t => t.name).join(', '))
-
-    // Generate rota for each team
-    const teamResults = await Promise.all(
-      teamsToGenerate.map(team => generateForTeam(team.id, team.name))
-    )
-
-    // Check for failures
-    const failures = teamResults.filter(r => !r.success && !r.skipped)
-    if (failures.length > 0) {
-      return NextResponse.json(
-        { 
-          error: failures[0].error,
-          diagnostics: failures[0].diagnostics
-        },
-        { status: 400 }
-      )
-    }
-
-    // Merge successful results
-    const successfulResults = teamResults.filter(r => r.success && !r.skipped)
-    const skippedTeams = teamResults.filter(r => r.skipped)
-
-    if (successfulResults.length === 0) {
-      return NextResponse.json(
-        { 
-          error: 'No rotas generated',
-          details: skippedTeams.length > 0 
-            ? `Teams skipped: ${skippedTeams.map(t => `${t.teamName} (${t.reason})`).join(', ')}`
-            : 'No valid team data found'
-        },
-        { status: 400 }
-      )
-    }
-
-    // Combine schedules from all teams
-    const combinedSchedule = []
-    const staffTeamMap = {}
-    const allHoursReport = []
-    const allRuleCompliance = []
-    const allContractIssues = []
-
-    successfulResults.forEach(teamResult => {
-      const teamName = teamResult.teamName
-      const teamId = teamResult.teamId
-
-      // Build staff-team mapping from formatted staff
-      if (teamResult.formattedStaff) {
-        teamResult.formattedStaff.forEach(staff => {
-          staffTeamMap[staff.name] = teamName
-        })
-      }
-
-      // Add team info to each shift in the schedule
-      teamResult.schedule.forEach(weekData => {
-        weekData.shifts.forEach(shift => {
-          const existingShift = combinedSchedule.find(s => 
-            s.week === weekData.week &&
-            s.day === shift.day &&
-            s.shift_name === shift.shift_name &&
-            s.time === `${shift.start_time}-${shift.end_time}` &&
-            s.team_id === teamId
-          )
-
-          if (existingShift) {
-            if (!existingShift.assigned_staff.includes(shift.staff_name)) {
-              existingShift.assigned_staff.push(shift.staff_name)
-            }
-          } else {
-            combinedSchedule.push({
-              week: weekData.week,
-              day: shift.day,
-              shift_name: shift.shift_name,
-              time: `${shift.start_time}-${shift.end_time}`,
-              assigned_staff: [shift.staff_name],
-              team_id: teamId,
-              team_name: teamName
-            })
-          }
-        })
-      })
-
-      // Combine hours reports with team info
-      if (teamResult.formattedStaff) {
-        teamResult.formattedStaff.forEach(staff => {
-          const weeklyHours = []
-          
-          for (let week = 1; week <= weekCount; week++) {
-            let totalHours = 0
-            
-            teamResult.schedule.forEach(weekData => {
-              if (weekData.week === week) {
-                weekData.shifts.forEach(shift => {
-                  if (shift.staff_name === staff.name) {
-                    const [startH, startM] = shift.start_time.split(':').map(Number)
-                    const [endH, endM] = shift.end_time.split(':').map(Number)
-                    let hours = ((endH * 60 + endM) - (startH * 60 + startM)) / 60
-                    if (hours < 0) hours += 24
-                    totalHours += hours
-                  }
-                })
-              }
-            })
-            
-            weeklyHours.push(totalHours)
-          }
-
-          const totalAssigned = weeklyHours.reduce((sum, h) => sum + h, 0)
-          const avgWeekly = totalAssigned / weekCount
-
-          allHoursReport.push({
-            staff_name: staff.name,
-            team_name: teamName,
-            team_id: teamId,
-            contracted: staff.contracted_hours,
-            max_hours: staff.max_hours || staff.contracted_hours || 48,
-            assigned: avgWeekly,
-            weekly_hours: weeklyHours,
-            status: Math.abs(avgWeekly - staff.contracted_hours) <= 0.5 ? 'Met' : 'Unmet'
-          })
-        })
-      }
-
-      // Combine rule compliance with team info
-      if (teamResult.rule_compliance) {
-        teamResult.rule_compliance.forEach(rule => {
-          allRuleCompliance.push({
-            ...rule,
-            team_name: teamName
-          })
-        })
-      }
-
-      // Combine contract issues
-      if (teamResult.contract_issues) {
-        teamResult.contract_issues.forEach(issue => {
-          allContractIssues.push({
-            ...issue,
-            team_name: teamName
-          })
-        })
-      }
-    })
-
-    // Sort schedule by team, then week, then day
-    const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-    combinedSchedule.sort((a, b) => {
-      if (a.team_name !== b.team_name) return a.team_name.localeCompare(b.team_name)
-      if (a.week !== b.week) return a.week - b.week
-      return dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day)
-    })
-
-    // Sort hours report by team
-    allHoursReport.sort((a, b) => {
-      if (a.team_name !== b.team_name) return a.team_name.localeCompare(b.team_name)
-      return a.staff_name.localeCompare(b.staff_name)
-    })
-
-    // Calculate total stats
-    const totalStats = {
-      wall_time: successfulResults.reduce((sum, r) => sum + (r.stats?.wall_time || 0), 0),
-      branches: successfulResults.reduce((sum, r) => sum + (r.stats?.branches || 0), 0),
-      teams_generated: successfulResults.length,
-      teams_skipped: skippedTeams.length
+    if (allAssignments.length === 0) {
+      return NextResponse.json({
+        error: 'No rota generated',
+        details: skipped.length ? `Skipped: ${skipped.map((s) => `${s.teamName} (${s.reason})`).join(', ')}` : 'No staff or shifts to schedule.',
+      }, { status: 400 })
     }
 
     return NextResponse.json({
-      schedule: combinedSchedule,
-      hours_report: allHoursReport,
-      rule_compliance: allRuleCompliance,
-      staff_team_map: staffTeamMap,
-      teams: teamsToGenerate,
-      skipped_teams: skippedTeams,
-      summary: `Rota generated for ${successfulResults.length} team${successfulResults.length > 1 ? 's' : ''}${skippedTeams.length > 0 ? ` (${skippedTeams.length} skipped)` : ''}`,
-      generation_method: 'or_tools',
-      stats: totalStats,
-      contract_issues: allContractIssues
+      success: true,
+      weekStart,
+      weekCount,
+      assignments: allAssignments,
+      contract_issues: contractIssues,
+      rule_compliance: compliance,
+      skipped,
+      relaxed_teams: [...relaxedTeams],
+      teams: scopeTeams.filter((id) => builtTeamIds.has(id)).map((id) => ({ id, name: teamName[id] })),
+      stats: { wall_time: Math.round(wallTime * 100) / 100, assignments: allAssignments.length },
     })
-
   } catch (error) {
-    console.error('[ERROR] Error generating rota:', error)
-    
-    return NextResponse.json(
-      { 
-        error: error.message || 'Failed to generate rota',
-        details: error.toString()
-      },
-      { status: 500 }
-    )
+    console.error('[generate-rota] error:', error)
+    return NextResponse.json({ error: error.message || 'Failed to generate rota', details: error.toString() }, { status: 500 })
   }
 }

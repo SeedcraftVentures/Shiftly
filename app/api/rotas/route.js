@@ -1,129 +1,78 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
-import { notifyTeam } from '@/lib/createNotification'
+import { supabaseAdmin, getOrgScope } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
-// GET - Fetch all rotas for the user
+// GET - list saved rotas for the org's location(s)
 export async function GET() {
-  if (!supabase) {
-    return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
-  }
-
   try {
     const { userId } = await auth()
-    
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { locationIds } = await getOrgScope(userId)
+    if (locationIds.length === 0) return NextResponse.json([])
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('Rotas')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-
+      .select('rota_id, name, location_id, week_start, status, generated_at, published_at, notes')
+      .in('location_id', locationIds)
+      .order('week_start', { ascending: false })
     if (error) throw error
 
-    const rotas = data.map(rota => ({
-      id: rota.id,
-      name: rota.rota_name,
-      rota_name: rota.rota_name,
-      created_at: rota.created_at,
-      start_date: rota.start_date,
-      end_date: rota.end_date,
-      week_count: rota.week_count,
-      team_id: rota.team_id,
-      rota_data: rota.schedule_data,
-      approved: rota.approved || false
-    }))
-
-    return NextResponse.json(rotas)
+    return NextResponse.json((data || []).map((r) => ({
+      id: r.rota_id, name: r.name, week_start: r.week_start, status: r.status,
+      generated_at: r.generated_at, published_at: r.published_at, notes: r.notes,
+    })))
   } catch (error) {
-    console.error('Error fetching rotas:', error)
-    return NextResponse.json({ error: 'Failed to fetch rotas' }, { status: 500 })
+    console.error('Error listing rotas:', error)
+    return NextResponse.json({ error: 'Failed to list rotas' }, { status: 500 })
   }
 }
 
-// POST - Create a new rota
+// POST - save a generated rota: a Rotas row + its Rota Assignments
+// body: { weekStart, assignments:[{shift_id, staff_id, work_date, week}], status:'Draft'|'Published' }
 export async function POST(request) {
-  if (!supabase) {
-    return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
-  }
-
   try {
     const { userId } = await auth()
-    
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { locationIds } = await getOrgScope(userId)
+    const locationId = locationIds[0]
+    if (!locationId) return NextResponse.json({ error: 'No location. Complete onboarding first.' }, { status: 400 })
 
     const body = await request.json()
-    const { name, rota_data, start_date, end_date, week_count, team_id, approved } = body
+    const { weekStart, assignments, name } = body
+    const status = body.status === 'Published' ? 'Published' : 'Draft'
+    if (!weekStart || !Array.isArray(assignments)) return NextResponse.json({ error: 'weekStart and assignments are required' }, { status: 400 })
 
-    if (!name || !rota_data) {
-      return NextResponse.json({ 
-        error: 'Missing required fields: name and rota_data' 
-      }, { status: 400 })
-    }
+    // one rota per location+week — replace any existing (assignments cascade-delete)
+    await supabaseAdmin.from('Rotas').delete().eq('location_id', locationId).eq('week_start', weekStart)
 
-    const { data, error } = await supabase
+    const now = new Date().toISOString()
+    const { data: rota, error } = await supabaseAdmin
       .from('Rotas')
-      .insert([{
-        user_id: userId,
-        team_id: team_id || null,
-        rota_name: name,
-        schedule_data: rota_data,
-        start_date: start_date || null,
-        end_date: end_date || null,
-        week_count: week_count || null,
-        approved: approved || false
-      }])
-      .select()
+      .insert({ location_id: locationId, name: name || null, week_start: weekStart, status, generated_at: now, published_at: status === 'Published' ? now : null, published_by: status === 'Published' ? userId : null })
+      .select('rota_id')
       .single()
+    if (error) throw error
 
-    if (error) {
-      console.error('Supabase error:', error)
-      throw error
+    const tz = (hhmm) => (hhmm ? `${hhmm}:00+00` : null) // 'HH:MM' → timetz
+    const rows = assignments
+      .filter((a) => a.staff_id && a.work_date && (a.shift_id || (a.start_time && a.end_time)))
+      .map((a) => {
+        const custom = !a.shift_id
+        return {
+          rota_id: rota.rota_id, shift_id: a.shift_id || null, staff_id: a.staff_id, work_date: a.work_date, week: a.week || 1,
+          custom_start: custom ? tz(a.start_time) : null, custom_end: custom ? tz(a.end_time) : null, custom_name: custom ? (a.shift_name || 'Custom shift') : null,
+        }
+      })
+    if (rows.length) {
+      const { error: aErr } = await supabaseAdmin.from('Rota Assignments').insert(rows)
+      if (aErr) throw aErr
     }
 
-    // ── MSG-04: Notify team when rota is published (approved) ──
-    if (approved && team_id) {
-      try {
-        const weekStart = start_date 
-          ? new Date(start_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-          : ''
-
-        await notifyTeam({
-          team_id,
-          type: 'rota_published',
-          title: 'New rota published',
-          message: weekStart 
-            ? `Your schedule for w/c ${weekStart} is ready — check your shifts`
-            : `${name} has been published — check your shifts`,
-          sender_user_id: userId,
-          related_id: data.id,
-          related_type: 'rota',
-        })
-      } catch (notifError) {
-        console.error('Failed to send rota notification:', notifError)
-      }
-    }
-
-    return NextResponse.json({
-      id: data.id,
-      name: data.rota_name,
-      created_at: data.created_at,
-      rota_data: data.schedule_data,
-      team_id: data.team_id,
-      approved: data.approved
-    })
+    return NextResponse.json({ id: rota.rota_id, status, saved: rows.length })
   } catch (error) {
     console.error('Error saving rota:', error)
-    return NextResponse.json({ 
-      error: 'Failed to save rota',
-      details: error.message 
-    }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to save rota', details: error.message }, { status: 500 })
   }
 }

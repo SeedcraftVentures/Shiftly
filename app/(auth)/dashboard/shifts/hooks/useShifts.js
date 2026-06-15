@@ -37,13 +37,15 @@ export function useShifts() {
     [teamsWithColor]
   )
 
+  // open_time/close_time now live on the Location (not Team); until /api/teams surfaces
+  // them, fall back to sensible business hours (|| also catches a 0 from an absent value).
   const openTime = useMemo(
-    () => timeStringToDecimal(defaultTeam?.open_time) ?? 7,
+    () => timeStringToDecimal(defaultTeam?.open_time) || 9,
     [defaultTeam]
   )
 
   const closeTime = useMemo(
-    () => timeStringToDecimal(defaultTeam?.close_time) ?? 23,
+    () => timeStringToDecimal(defaultTeam?.close_time) || 17,
     [defaultTeam]
   )
 
@@ -56,8 +58,9 @@ export function useShifts() {
   // ── CRUD ────────────────────────────────────────────────────────────────────
 
   const addShift = useCallback(async (filterTeamId) => {
+    // Team ids are UUIDs in the new schema — do NOT parseInt them.
     const teamId = filterTeamId !== 'all'
-      ? parseInt(filterTeamId)
+      ? filterTeamId
       : teamsWithColor[0]?.id
     if (!teamId) return null
 
