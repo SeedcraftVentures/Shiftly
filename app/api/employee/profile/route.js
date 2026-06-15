@@ -1,34 +1,12 @@
-import { auth } from '@clerk/nextjs/server'
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
-
-// GET - Get current user's staff profile
-export async function GET() {
-  try {
-    const { userId } = await auth()
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Find staff record linked to this Clerk user
-    const { data: staffMember, error } = await supabase
-      .from('Staff')
-      .select('*')
-      .eq('clerk_user_id', userId)
-      .single()
-
-    if (error || !staffMember) {
-      return NextResponse.json({ error: 'Staff profile not found' }, { status: 404 })
-    }
-
-    return NextResponse.json(staffMember)
-  } catch (error) {
-    console.error('Error fetching employee profile:', error)
-    return NextResponse.json({ error: 'Failed to fetch profile' }, { status: 500 })
-  }
-}
+// Gated for the pilot — the employee app / Inbox isn't live yet. GET returns empty so any
+// manager-side polling (notification bell, pending counts) doesn't error; writes are blocked.
+// These will be rebuilt with proper org scoping for a later release.
+export const dynamic = 'force-dynamic'
+export const GET = () => NextResponse.json([])
+const blocked = () => NextResponse.json({ error: 'Not available yet' }, { status: 403 })
+export const POST = blocked
+export const PUT = blocked
+export const PATCH = blocked
+export const DELETE = blocked

@@ -1,411 +1,189 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useUser } from '@clerk/nextjs'
-import Link from 'next/link'
+import { T, Card, Button, Input, Field, Label, Switch, Chip, Segmented, Tag, TimeRange } from '@/app/components/ui/kit'
+
+// ════════════════════════════════════════════════════════════════════════════
+//  SETTINGS (live) — configure the things onboarding set: organisation, the active
+//  location, its opening AND operating hours (two different windows), shift lengths,
+//  plus organisation-wide location management.
+// ════════════════════════════════════════════════════════════════════════════
+
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+const SHIFT_LENGTH_OPTIONS = [3, 4, 5, 6, 8, 10, 12]
+const CURRENCIES = [{ value: 'GBP', label: '£ GBP' }, { value: 'USD', label: '$ USD' }, { value: 'EUR', label: '€ EUR' }]
+const LOCATION_TYPES = ['Restaurant', 'Café', 'Bar', 'Takeaway', 'Hotel', 'Retail', 'Other']
+
+function Section({ title, desc, children, onSave, saving, saved }) {
+  return (
+    <Card pad={24} style={{ marginBottom: 18 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 18 }}>
+        <div>
+          <h2 style={{ fontSize: 16, fontWeight: 800, color: T.ink, margin: 0 }}>{title}</h2>
+          {desc && <p style={{ fontSize: 13, color: T.muted, margin: '4px 0 0', maxWidth: 520 }}>{desc}</p>}
+        </div>
+        {onSave && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+            {saved && <span style={{ fontSize: 12, fontWeight: 600, color: T.green }}>✓ Saved</span>}
+            <Button accent={T.pink} size="sm" onClick={onSave} disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+          </div>
+        )}
+      </div>
+      {children}
+    </Card>
+  )
+}
 
 export default function SettingsPage() {
-  const { user, isLoaded } = useUser()
-  const [subscription, setSubscription] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [portalLoading, setPortalLoading] = useState(false)
-  
-  // Locale state
-  const [locales, setLocales] = useState([])
-  const [currentLocale, setCurrentLocale] = useState(null)
-  const [localeLoading, setLocaleLoading] = useState(false)
-  const [localeSaving, setLocaleSaving] = useState(false)
+  const [s, setS] = useState(null) // { organization, location, hours }
+  const [locations, setLocations] = useState([])
+  const [activeId, setActiveId] = useState(null)
+  const [saving, setSaving] = useState('')
+  const [saved, setSaved] = useState('')
+  const [addOpen, setAddOpen] = useState(false)
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch subscription
-        const subResponse = await fetch('/api/subscription')
-        const subData = await subResponse.json()
-        setSubscription(subData)
-
-        // Fetch available locales
-        const localesResponse = await fetch('/api/locales')
-        if (localesResponse.ok) {
-          const localesData = await localesResponse.json()
-          setLocales(localesData)
-        }
-
-        // Fetch current team's locale
-        const teamResponse = await fetch('/api/teams')
-        if (teamResponse.ok) {
-          const teamData = await teamResponse.json()
-          const defaultTeam = teamData.find(t => t.is_default) || teamData[0]
-          if (defaultTeam?.locale_id) {
-            const localeDetailResponse = await fetch(`/api/locales/${defaultTeam.locale_id}`)
-            if (localeDetailResponse.ok) {
-              const localeDetail = await localeDetailResponse.json()
-              setCurrentLocale(localeDetail)
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    if (isLoaded) {
-      fetchData()
-    }
-  }, [isLoaded])
-
-  const handleLocaleChange = async (localeId) => {
-    setLocaleSaving(true)
-    try {
-      const response = await fetch('/api/teams/locale', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ locale_id: localeId })
-      })
-
-      if (response.ok) {
-        // Refresh current locale
-        const localeDetailResponse = await fetch(`/api/locales/${localeId}`)
-        if (localeDetailResponse.ok) {
-          const localeDetail = await localeDetailResponse.json()
-          setCurrentLocale(localeDetail)
-        }
-      } else {
-        alert('Failed to update locale')
-      }
-    } catch (error) {
-      console.error('Error updating locale:', error)
-      alert('Failed to update locale')
-    } finally {
-      setLocaleSaving(false)
-    }
-  }
-
-  const handleManageBilling = async () => {
-    setPortalLoading(true)
-    try {
-      const response = await fetch('/api/stripe/portal', {
-        method: 'POST',
-      })
-      const data = await response.json()
-
-      if (data.url) {
-        window.location.href = data.url
-      } else {
-        alert(data.error || 'Failed to open billing portal')
-      }
-    } catch (error) {
-      console.error('Portal error:', error)
-      alert('Failed to open billing portal')
-    } finally {
-      setPortalLoading(false)
-    }
-  }
-
-  const formatDate = (dateString) => {
-    if (!dateString) return ''
-    return new Date(dateString).toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
+    Promise.all([
+      fetch('/api/settings').then((r) => (r.ok ? r.json() : null)),
+      fetch('/api/locations').then((r) => (r.ok ? r.json() : null)),
+    ]).then(([settings, locs]) => {
+      if (settings) setS(settings)
+      if (locs) { setLocations(locs.locations || []); setActiveId(locs.active) }
+      setLoading(false)
     })
+  }, [])
+
+  const save = async (section, payload) => {
+    setSaving(section); setSaved('')
+    try {
+      const res = await fetch('/api/settings', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      if (res.ok) { setSaved(section); setTimeout(() => setSaved(''), 2500) }
+    } finally { setSaving('') }
   }
 
-  const getCountryFlag = (countryCode) => {
-    // Flags removed - don't render properly in all environments
-    return ''
+  const setOrg = (patch) => setS((p) => ({ ...p, organization: { ...p.organization, ...patch } }))
+  const setLoc = (patch) => setS((p) => ({ ...p, location: { ...p.location, ...patch } }))
+  const setDay = (i, patch) => setS((p) => ({ ...p, hours: { ...p.hours, [i]: { ...p.hours[i], ...patch } } }))
+
+  if (loading || !s) {
+    return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: T.font }}>
+      <div style={{ width: 38, height: 38, border: '4px solid #EEE', borderTopColor: T.pink, borderRadius: 99, animation: 'spin 1s linear infinite' }} />
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
   }
 
-  if (loading) {
-    return (
-      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
-        <div className="flex items-center justify-center py-12">
-          <div className="w-8 h-8 border-4 border-gray-200 border-t-pink-500 rounded-full animate-spin"></div>
-        </div>
-      </main>
-    )
-  }
-
-  const userName = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : 'User'
-  const userEmail = user?.primaryEmailAddress?.emailAddress || ''
-  const userInitial = user?.firstName?.[0] || userEmail?.[0]?.toUpperCase() || '?'
-
-  const hasAccess = subscription?.hasAccess || false
-  const isTrialing = subscription?.isTrialing || false
-  const status = subscription?.status || 'inactive'
-
-  let trialDays = null
-  if (isTrialing && subscription?.trial_end) {
-    const trialEnd = new Date(subscription.trial_end)
-    const now = new Date()
-    const diffTime = trialEnd - now
-    trialDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-    if (trialDays < 0) trialDays = 0
-  }
-
-  const statusStyles = {
-    active: 'bg-green-100 text-green-800',
-    trialing: 'bg-blue-100 text-blue-800',
-    past_due: 'bg-red-100 text-red-800',
-    cancelled: 'bg-gray-100 text-gray-800',
-    inactive: 'bg-gray-100 text-gray-800',
-  }
-
-  const statusLabels = {
-    active: 'Active',
-    trialing: 'Trial',
-    past_due: 'Past Due',
-    cancelled: 'Cancelled',
-    inactive: 'Inactive',
-  }
-
+  const loc = s.location
   return (
-    <main className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
-      {/* Header */}
-      <div className="mb-8">
-        <Link 
-          href="/dashboard" 
-          className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 mb-4"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-          <span>Back to Dashboard</span>
-        </Link>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 font-cal">Settings</h1>
-      </div>
+    <div style={{ fontFamily: T.font, maxWidth: 760, margin: '0 auto', padding: '28px 28px 56px' }}>
+      <h1 style={{ fontSize: 26, fontWeight: 800, color: T.ink, margin: '0 0 4px', letterSpacing: -0.3 }}>Settings</h1>
+      <p style={{ fontSize: 13.5, color: T.muted, margin: '0 0 24px' }}>Configure your organisation and {loc?.name || 'this location'}.</p>
 
-      {/* Account Section */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden mb-6">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900 font-cal">Account</h2>
+      {/* ── Organisation ── */}
+      <Section title="Organisation" desc="Your business — the umbrella over every location." onSave={() => save('org', { organization: s.organization })} saving={saving === 'org'} saved={saved === 'org'}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+          <Field label="Organisation name"><Input value={s.organization.name} onChange={(e) => setOrg({ name: e.target.value })} /></Field>
+          <Field label="Industry"><Input value={s.organization.industry} onChange={(e) => setOrg({ industry: e.target.value })} placeholder="e.g. Hospitality" /></Field>
         </div>
-        <div className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center">
-              <span className="text-pink-600 font-semibold text-lg">{userInitial}</span>
+        <Field label="Default currency" style={{ marginTop: 16 }}><Segmented options={CURRENCIES} value={s.organization.currency} onChange={(v) => setOrg({ currency: v })} accent={T.pink} /></Field>
+      </Section>
+
+      {/* ── Location details ── */}
+      {loc && (
+        <Section title="This location" desc="Details for the location you're currently working in." onSave={() => save('loc', { location: { name: loc.name, address: loc.address, currency: loc.currency } })} saving={saving === 'loc'} saved={saved === 'loc'}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+            <Field label="Location name"><Input value={loc.name} onChange={(e) => setLoc({ name: e.target.value })} /></Field>
+            <Field label="Currency"><Segmented options={CURRENCIES} value={loc.currency} onChange={(v) => setLoc({ currency: v })} accent={T.pink} /></Field>
+          </div>
+          <Field label="Address" style={{ marginTop: 16 }}><Input value={loc.address} onChange={(e) => setLoc({ address: e.target.value })} placeholder="Street, city, postcode" /></Field>
+        </Section>
+      )}
+
+      {/* ── Hours: opening vs operating ── */}
+      {loc && (
+        <Section title="Opening & operating hours" onSave={() => save('hours', { hours: s.hours })} saving={saving === 'hours'} saved={saved === 'hours'}
+          desc="Two different windows. Opening hours are when customers can visit. Operating hours are when staff are on site — prep, deliveries, close-down — usually a little wider.">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {DAYS.map((dn, i) => {
+              const d = s.hours[i] || { open: false }
+              return (
+                <div key={i} style={{ padding: '14px 0', borderTop: i ? `1px solid ${T.hair}` : 'none' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ width: 96, fontSize: 14, fontWeight: 700, color: d.open ? T.ink : T.faint }}>{dn}</span>
+                    <Switch on={d.open} onChange={(v) => setDay(i, { open: v })} accent={T.pink} />
+                    <span style={{ fontSize: 12.5, color: T.faint }}>{d.open ? 'Open' : 'Closed'}</span>
+                  </div>
+                  {d.open && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20, marginTop: 14, paddingLeft: 4 }}>
+                      <div>
+                        <Label style={{ marginBottom: 10 }}>Open to customers</Label>
+                        <TimeRange start={d.opening[0]} end={d.opening[1]} onChange={(a, b) => setDay(i, { opening: [a, b] })} domain={[4, 24]} accent={T.pink} />
+                      </div>
+                      <div>
+                        <Label style={{ marginBottom: 10 }}>Staff on site</Label>
+                        <TimeRange start={d.operating[0]} end={d.operating[1]} onChange={(a, b) => setDay(i, { operating: [a, b] })} domain={[4, 24]} accent="#6366F1" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </Section>
+      )}
+
+      {/* ── Shift lengths ── */}
+      {loc && (
+        <Section title="Shift lengths" desc="The shift durations you build rotas from." onSave={() => save('lengths', { location: { shift_lengths: loc.shift_lengths } })} saving={saving === 'lengths'} saved={saved === 'lengths'}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {SHIFT_LENGTH_OPTIONS.map((h) => {
+              const on = (loc.shift_lengths || []).includes(h)
+              return <Chip key={h} active={on} accent={T.pink} onClick={() => setLoc({ shift_lengths: on ? loc.shift_lengths.filter((x) => x !== h) : [...loc.shift_lengths, h].sort((a, b) => a - b) })}>{h}h</Chip>
+            })}
+          </div>
+        </Section>
+      )}
+
+      {/* ── Locations (org management) ── */}
+      <Section title="Locations" desc="Every venue under your organisation. Billing is per location.">
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {locations.map((l, i) => (
+            <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderTop: i ? `1px solid ${T.hair}` : 'none' }}>
+              <span style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: T.pink + '14', color: T.pink, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 14, fontWeight: 700, color: T.ink, margin: 0 }}>{l.name}</p>
+                {l.address && <p style={{ fontSize: 12.5, color: T.muted, margin: '2px 0 0' }}>{l.address}</p>}
+              </div>
+              {l.id === activeId && <Tag color={T.green}>Current</Tag>}
             </div>
-            <div>
-              <p className="font-medium text-gray-900">{userName}</p>
-              <p className="text-sm text-gray-500">{userEmail}</p>
+          ))}
+        </div>
+
+        {addOpen ? (
+          <div style={{ marginTop: 16, padding: 16, borderRadius: T.r.md, background: T.surface, border: `1px solid ${T.line}` }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+              <Field label="Location name"><Input placeholder="e.g. Camden branch" /></Field>
+              <Field label="Type">
+                <select style={{ width: '100%', boxSizing: 'border-box', fontFamily: T.font, fontSize: 14, fontWeight: 600, color: T.ink, padding: '11px 13px', borderRadius: T.r.sm, border: '1px solid #E5E7EB', outline: 'none', background: '#fff' }}>
+                  {LOCATION_TYPES.map((t) => <option key={t}>{t}</option>)}
+                </select>
+              </Field>
+            </div>
+            <Field label="Address" style={{ marginTop: 14 }}><Input placeholder="Street, city, postcode" /></Field>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
+              <Button accent={T.pink} disabled>Add location</Button>
+              <Button variant="ghost" size="md" onClick={() => setAddOpen(false)}>Cancel</Button>
+              <span style={{ fontSize: 12, color: T.muted }}>Adding a location starts a new per-location subscription — wired up with billing.</span>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Region & Locale Section */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden mb-6">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900 font-cal">Region & Locale</h2>
-          <p className="text-sm text-gray-500 mt-1">Set your location to apply local compliance rules and formatting</p>
-        </div>
-        <div className="p-6 space-y-6">
-          {/* Country Selector */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Country</label>
-            <select
-              value={currentLocale?.id || ''}
-              onChange={(e) => handleLocaleChange(parseInt(e.target.value))}
-              disabled={localeSaving}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-900 bg-white focus:ring-2 focus:ring-pink-500 focus:border-pink-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {locales.map((locale) => (
-                <option key={locale.id} value={locale.id}>
-                  {locale.country_name}
-                </option>
-              ))}
-            </select>
+        ) : (
+          <div style={{ marginTop: 16 }}>
+            <Button variant="secondary" icon="＋" onClick={() => setAddOpen(true)}>Add location</Button>
           </div>
-
-          {/* Current Locale Details */}
-          {currentLocale && (
-            <div className="bg-gray-50 rounded-xl p-4 space-y-3">
-              <h3 className="font-medium text-gray-900 text-sm">Formatting Preferences</h3>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-gray-500">Currency</p>
-                  <p className="text-sm font-medium text-gray-900">{currentLocale.currency_symbol} {currentLocale.currency_code}</p>
-                </div>
-                
-                <div>
-                  <p className="text-xs text-gray-500">Date Format</p>
-                  <p className="text-sm font-medium text-gray-900">{currentLocale.date_format}</p>
-                </div>
-                
-                <div>
-                  <p className="text-xs text-gray-500">Time Format</p>
-                  <p className="text-sm font-medium text-gray-900">{currentLocale.time_format}</p>
-                </div>
-                
-                <div>
-                  <p className="text-xs text-gray-500">Week Starts</p>
-                  <p className="text-sm font-medium text-gray-900">
-                    {currentLocale.first_day_of_week === 0 ? 'Sunday' : 'Monday'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Compliance Badges */}
-              {(currentLocale.show_wtd_badge || currentLocale.show_flsa_badge) && (
-                <div className="pt-3 border-t border-gray-200">
-                  <p className="text-xs text-gray-500 mb-2">Compliance</p>
-                  <div className="flex gap-2">
-                    {currentLocale.show_wtd_badge && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                        WTD Compliant
-                      </span>
-                    )}
-                    {currentLocale.show_flsa_badge && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                        </svg>
-                        FLSA Compliant
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Working Rules */}
-              <div className="pt-3 border-t border-gray-200">
-                <p className="text-xs text-gray-500 mb-2">Working Time Rules</p>
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  {currentLocale.max_weekly_hours && (
-                    <div>
-                      <span className="text-gray-500">Max Weekly Hours:</span>
-                      <span className="ml-1 font-medium text-gray-900">{currentLocale.max_weekly_hours}h</span>
-                    </div>
-                  )}
-                  <div>
-                    <span className="text-gray-500">Overtime After:</span>
-                    <span className="ml-1 font-medium text-gray-900">{currentLocale.overtime_threshold}h</span>
-                  </div>
-                  {currentLocale.min_rest_hours && (
-                    <div>
-                      <span className="text-gray-500">Min Rest:</span>
-                      <span className="ml-1 font-medium text-gray-900">{currentLocale.min_rest_hours}h</span>
-                    </div>
-                  )}
-                  {currentLocale.min_days_off_per_week && (
-                    <div>
-                      <span className="text-gray-500">Min Days Off:</span>
-                      <span className="ml-1 font-medium text-gray-900">{currentLocale.min_days_off_per_week}/week</span>
-                    </div>
-                  )}
-                  <div>
-                    <span className="text-gray-500">Annual Leave:</span>
-                    <span className="ml-1 font-medium text-gray-900">{currentLocale.annual_leave_days} days</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {localeSaving && (
-            <div className="flex items-center justify-center py-2">
-              <div className="w-5 h-5 border-2 border-gray-200 border-t-pink-500 rounded-full animate-spin mr-2"></div>
-              <span className="text-sm text-gray-600">Updating locale...</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Subscription Section */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden mb-6">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900 font-cal">Subscription</h2>
-        </div>
-        <div className="p-6">
-          {hasAccess ? (
-            <div className="space-y-4">
-              {/* Plan info row */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-900">Shiftly Pro</p>
-                  <p className="text-sm text-gray-500">
-                    {isTrialing 
-                      ? `Trial ends ${formatDate(subscription.trial_end)}`
-                      : `Renews ${formatDate(subscription.current_period_end)}`
-                    }
-                  </p>
-                </div>
-                <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${statusStyles[status] || statusStyles.inactive}`}>
-                  {statusLabels[status] || 'Unknown'}
-                </span>
-              </div>
-
-              {/* Trial warning */}
-              {isTrialing && trialDays !== null && trialDays <= 7 && (
-                <div className={`p-4 rounded-xl ${trialDays <= 3 ? 'bg-amber-50 border border-amber-200' : 'bg-blue-50 border border-blue-200'}`}>
-                  <p className={`font-medium ${trialDays <= 3 ? 'text-amber-900' : 'text-blue-900'}`}>
-                    {trialDays} day{trialDays !== 1 ? 's' : ''} left in your trial
-                  </p>
-                  <p className={`text-sm ${trialDays <= 3 ? 'text-amber-700' : 'text-blue-700'}`}>
-                    Your card will be charged when the trial ends.
-                  </p>
-                </div>
-              )}
-
-              {/* Cancel notice */}
-              {subscription.cancel_at_period_end && (
-                <div className="p-4 rounded-xl bg-gray-50 border border-gray-200">
-                  <p className="font-medium text-gray-900">Subscription ending</p>
-                  <p className="text-sm text-gray-600">
-                    Your subscription will end on {formatDate(subscription.current_period_end)}.
-                  </p>
-                </div>
-              )}
-
-              {/* Manage button */}
-              <button
-                onClick={handleManageBilling}
-                disabled={portalLoading}
-                className="w-full py-3 px-4 bg-gray-900 text-white font-medium rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {portalLoading ? 'Opening...' : 'Manage Billing'}
-              </button>
-
-              <p className="text-xs text-gray-500 text-center">
-                Update payment method, view invoices, or cancel subscription
-              </p>
-            </div>
-          ) : (
-            <div className="text-center py-4">
-              <p className="font-medium text-gray-900 mb-1">No active subscription</p>
-              <p className="text-sm text-gray-500 mb-4">Subscribe to access all features</p>
-              <Link
-                href="/checkout"
-                className="inline-block px-6 py-2.5 bg-pink-500 text-white font-medium rounded-xl hover:bg-pink-600 transition-colors"
-              >
-                Start Free Trial
-              </Link>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Support Section */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900 font-cal">Support</h2>
-        </div>
-        <div className="p-6">
-          <p className="text-sm text-gray-600 mb-4">Need help? We are here for you.</p>
-          <a
-            href="mailto:support@shiftly.so"
-            className="text-pink-600 hover:text-pink-700 font-medium text-sm"
-          >
-            support@shiftly.so
-          </a>
-        </div>
-      </div>
-    </main>
+        )}
+      </Section>
+    </div>
   )
 }

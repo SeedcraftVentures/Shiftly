@@ -9,7 +9,9 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Lazy: constructing Resend at module load throws during `next build` (page-data
+// collection) when RESEND_API_KEY is absent. Build it only when the route runs.
+const getResend = () => new Resend(process.env.RESEND_API_KEY || 're_placeholder')
 
 // POST - Generate invite link for a staff member
 export async function POST(request) {
@@ -75,7 +77,7 @@ export async function POST(request) {
     const teamName = staffMember.team?.team_name || 'your team'
     
     try {
-      await resend.emails.send({
+      await getResend().emails.send({
         from: 'Shiftly <noreply@shiftly.so>',
         to: staffMember.email,
         subject: `You're invited to join ${teamName} on Shiftly`,

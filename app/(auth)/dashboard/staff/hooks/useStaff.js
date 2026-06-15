@@ -60,8 +60,9 @@ export function useStaff() {
   , [shifts, staff])
 
   const addStaff = useCallback(async (filterTeamId) => {
+    // Team ids are UUIDs in the new schema — do NOT parseInt them.
     const teamId = filterTeamId !== 'all'
-      ? parseInt(filterTeamId)
+      ? filterTeamId
       : teamsWithColor[0]?.id
     if (!teamId) return null
 

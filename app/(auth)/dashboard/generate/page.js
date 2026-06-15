@@ -1,925 +1,364 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
-import React from 'react'
-import { useSearchParams } from 'next/navigation'
-import PageHeader from '@/app/components/PageHeader'
-import RotaConfigPanel from '@/app/components/rota/RotaConfigPanel'
-import RotaActions from '@/app/components/rota/RotaActions'
-import SavedRotasList from '@/app/components/rota/SavedRotasList'
-import SaveApproveModal from '@/app/components/rota/SaveApproveModal'
-import ShiftEditModal from '@/app/components/ShiftEditModal'
-import AddShiftModal from '@/app/components/AddShiftModal'
-import UncoveredShiftsPanel from '@/app/components/rota/UncoveredShiftsPanel'
-import RulesComplianceSection from '@/app/components/rota/RulesComplianceSection'
-import RotaAlerts from '@/app/components/rota/RotaAlerts'
-import RotaScheduleGrid from '@/app/components/rota/RotaScheduleGrid'
-import RotaHoursTable from '@/app/components/rota/RotaHoursTable'
-
-function GenerateRotaContent() {
-  const searchParams = useSearchParams()
-  const rotaIdFromUrl = searchParams.get('rota')
-  
-  // State management
-  const [loading, setLoading] = useState(false)
-  const [initialLoading, setInitialLoading] = useState(!!rotaIdFromUrl)
-  const [rota, setRota] = useState(null)
-  const [error, setError] = useState(null)
-  const [savedRotas, setSavedRotas] = useState([])
-  const [showSaveModal, setShowSaveModal] = useState(false)
-  const [showApproveModal, setShowApproveModal] = useState(false)
-  const [showSavedRotas, setShowSavedRotas] = useState(false)
-  const [rotaName, setRotaName] = useState('')
-  const [viewingRotaId, setViewingRotaId] = useState(null)
-  const [activeTab, setActiveTab] = useState('schedule')
-  const [timeSaved, setTimeSaved] = useState(null)
-  
-  const [selectedTeamId, setSelectedTeamId] = useState(null)
-  const [showAllTeams, setShowAllTeams] = useState(false)
-  const [allStaff, setAllStaff] = useState([])
-  const [shiftPatterns, setShiftPatterns] = useState([])
-  
-  const [showEditModal, setShowEditModal] = useState(false)
-  const [editingShift, setEditingShift] = useState(null)
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
-  
-  // Add Shift Modal state
-  const [showAddModal, setShowAddModal] = useState(false)
-  const [addShiftDay, setAddShiftDay] = useState(null)
-  const [addShiftWeek, setAddShiftWeek] = useState(null)
-  
-  const [loadingStep, setLoadingStep] = useState('')
-
-  const [startDate, setStartDate] = useState(() => {
-    const today = new Date()
-    const dayOfWeek = today.getDay()
-    const daysUntilMonday = dayOfWeek === 0 ? 1 : (8 - dayOfWeek) % 7
-    const nextMonday = new Date(today)
-    nextMonday.setDate(today.getDate() + daysUntilMonday)
-    nextMonday.setHours(0, 0, 0, 0)
-    return nextMonday
-  })
-  
-  const [weekCount, setWeekCount] = useState(1)
-
-  // Helper functions
-  const getDateForDay = (weekIndex, dayName) => {
-    const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-    const dayIndex = dayNames.indexOf(dayName)
-    const date = new Date(startDate)
-    date.setDate(date.getDate() + (weekIndex * 7) + dayIndex)
-    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-  }
-
-  const getShortDay = (dayName) => {
-    return dayName.slice(0, 3)
-  }
-
-  const handlePrint = () => {
-    window.print()
-  }
-
-  const formatDate = (date) => {
-    return date.toLocaleDateString('en-GB', { 
-      day: 'numeric', 
-      month: 'short', 
-      year: 'numeric' 
-    })
-  }
-
-  useEffect(() => {
-    loadSavedRotas()
-  }, [])
-
-  useEffect(() => {
-    if (rotaIdFromUrl && !rota) {
-      handleLoadRota(rotaIdFromUrl)
-    }
-  }, [rotaIdFromUrl])
-
-  useEffect(() => {
-    if (selectedTeamId) {
-      loadStaff()
-      loadShiftPatterns()
-    }
-  }, [selectedTeamId, showAllTeams])
-
-  const loadStaff = async () => {
-    try {
-      let url = `/api/staff?team_id=${selectedTeamId}`
-      if (showAllTeams) {
-        url = `/api/staff`
-      }
-      const response = await fetch(url)
-      if (response.ok) {
-        const data = await response.json()
-        setAllStaff(data)
-      }
-    } catch (err) {
-      console.error('Error loading staff:', err)
-    }
-  }
-
-  const loadShiftPatterns = async () => {
-    try {
-      let url = `/api/shifts?team_id=${selectedTeamId}`
-      if (showAllTeams) {
-        url = `/api/shifts`
-      }
-      const response = await fetch(url)
-      if (response.ok) {
-        const data = await response.json()
-        setShiftPatterns(data)
-      }
-    } catch (err) {
-      console.error('Error loading shift patterns:', err)
-    }
-  }
-
-  const loadSavedRotas = async () => {
-    try {
-      const response = await fetch('/api/rotas')
-      if (response.ok) {
-        const data = await response.json()
-        setSavedRotas(data)
-      }
-    } catch (err) {
-      console.error('Error loading rotas:', err)
-    }
-  }
-
-  const handleGenerate = async () => {
-    if (!selectedTeamId && !showAllTeams) {
-      alert('Please select a team first')
-      return
-    }
-
-    setLoading(true)
-    setError(null)
-    setRota(null)
-    setTimeSaved(null)
-    setHasUnsavedChanges(false)
-    setViewingRotaId(null)
-
-    let data = null
-
-    try {
-      // Step 1: Pre-flight validation
-      setLoadingStep('Checking configuration...')
-      let teamIds = []
-      if (showAllTeams) {
-        const teamsRes = await fetch('/api/teams')
-        if (teamsRes.ok) {
-          const teams = await teamsRes.json()
-          teamIds = teams.map(t => t.id)
-        }
-        if (teamIds.length === 0) {
-          throw new Error('NO_TEAMS::No teams found. Create a team first.')
-        }
-      } else {
-        teamIds = [selectedTeamId]
-      }
-
-      // Fetch team data + staff for each team to validate
-      const validationData = await Promise.all(
-        teamIds.map(async (id) => {
-          const [teamRes, staffRes] = await Promise.all([
-            fetch(`/api/teams/${id}/template`).then(r => r.ok ? r.json() : null),
-            fetch(`/api/staff?team_id=${id}`).then(r => r.ok ? r.json() : [])
-          ])
-          return { teamId: id, team: teamRes, staff: staffRes }
-        })
-      )
-
-      // Check templates configured
-      for (const { team } of validationData) {
-        const wt = team?.week_template
-        const dt = team?.day_templates
-        if (!wt || !dt || Object.keys(dt).length === 0) {
-          throw new Error('NO_TEMPLATES::No day templates configured. Set up your templates in the Workspace first.')
-        }
-        const hasActiveDay = Object.values(wt).some(d => d?.on)
-        if (!hasActiveDay) {
-          throw new Error('NO_SCHEDULE::No days are active in the weekly schedule. Turn on at least one day in the Workspace.')
-        }
-      }
-
-      // Check staff exist
-      const totalStaff = validationData.reduce((sum, v) => sum + (v.staff?.length || 0), 0)
-      if (totalStaff === 0) {
-        throw new Error('NO_STAFF::No staff members found. Add staff in the Workspace first.')
-      }
-
-      // Check total availability covers shift hours
-      for (const { team, staff } of validationData) {
-        const wt = team?.week_template || {}
-        const dt = team?.day_templates || {}
-        let weeklyShiftHours = 0
-        Object.entries(wt).forEach(([, cfg]) => {
-          if (!cfg?.on) return
-          const tmpl = dt[cfg.tmpl]
-          if (!tmpl?.shifts) return
-          tmpl.shifts.forEach(s => { weeklyShiftHours += s.length * (s.headcount || 1) })
-        })
-        const totalMaxHours = staff.reduce((s, m) => s + (m.max_hours || m.contracted_hours || 0), 0)
-        if (totalMaxHours > 0 && weeklyShiftHours > 0 && totalMaxHours < weeklyShiftHours * 0.8) {
-          throw new Error(`LOW_COVERAGE::Staff can provide ${Math.round(totalMaxHours)}h but shifts need ${Math.round(weeklyShiftHours)}h per week. Add more staff or reduce shifts.`)
-        }
-      }
-
-      // Check keyholder coverage for open/close shifts
-      const DAYS_ABBR = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-      for (const { team, staff } of validationData) {
-        const wt = team?.week_template || {}
-        const dt = team?.day_templates || {}
-        const missingDays = []
-        DAYS_ABBR.forEach((d, di) => {
-          if (!wt[d]?.on) return
-          const tmpl = dt[wt[d].tmpl]
-          if (!tmpl?.shifts) return
-          tmpl.shifts.forEach((shift, si) => {
-            const isOpen = shift.start <= (tmpl.openTime ?? 9)
-            const isClose = (shift.start + shift.length) >= (tmpl.closeTime ?? 17)
-            if (!isOpen && !isClose) return
-            // Check if any keyholder staff is available for this slot
-            const hasKeyholder = staff.some(m => {
-              if (!m.keyholder) return false
-              const grid = m.availability_grid || {}
-              const key = `${di}-${si}`
-              return grid[key] !== undefined ? grid[key] : true
-            })
-            if (!hasKeyholder) missingDays.push(d)
-          })
-        })
-        if (missingDays.length > 0) {
-          const uniqueDays = [...new Set(missingDays)]
-          throw new Error(`KEYHOLDER::Keyholder coverage missing for ${uniqueDays.join(', ')}. Assign a keyholder in Staff & Shifts who is available for those open/close shifts.`)
-        }
-      }
-
-      // Step 2: Sync shifts from templates
-      setLoadingStep('Syncing shifts from templates...')
-      const syncResults = await Promise.all(
-        teamIds.map(async (id) => {
-          try {
-            const r = await fetch(`/api/teams/${id}/template/sync-shifts`, { method: 'POST' })
-            const body = await r.json()
-            if (!r.ok) return { error: body.error || `Sync failed (${r.status})` }
-            return body
-          } catch {
-            return { error: 'Failed to sync shifts' }
-          }
-        })
-      )
-
-      const syncError = syncResults.find(r => r?.error)
-      if (syncError) {
-        throw new Error('SYNC_FAILED::' + syncError.error)
-      }
-      const totalShifts = syncResults.reduce((sum, r) => sum + (r?.shifts_generated || 0), 0)
-      if (totalShifts === 0) {
-        throw new Error('NO_SHIFTS::No shifts generated from templates. Configure your day templates and weekly schedule in the Workspace first.')
-      }
-
-      // Step 3: Generate rota
-      setLoadingStep('Generating rota...')
-      const response = await fetch('/api/generate-rota', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          startDate: startDate.toISOString(),
-          weekCount,
-          team_id: selectedTeamId,
-          showAllTeams: showAllTeams
-        })
-      })
-
-      data = await response.json()
-
-      if (!response.ok) {
-        const errMsg = data.error || data.details || 'Failed to generate rota'
-        throw new Error('SCHEDULER::' + errMsg)
-      }
-
-      setRota(data)
-    } catch (err) {
-      setError(err.message)
-      if (data && data.diagnostics) {
-        setRota({ diagnostics: data.diagnostics })
-      }
-    } finally {
-      setLoading(false)
-      setLoadingStep('')
-    }
-  }
-
-  const handleSaveRota = async (approved = false) => {
-    if (!rotaName.trim()) {
-      alert('Please enter a name for this rota')
-      return
-    }
-
-    try {
-      let response
-      let savedRotaId = viewingRotaId
-
-      if (viewingRotaId) {
-        response = await fetch(`/api/rotas/${viewingRotaId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: rotaName,
-            rota_data: rota,
-            start_date: startDate.toISOString(),
-            end_date: new Date(startDate.getTime() + (weekCount * 7 - 1) * 24 * 60 * 60 * 1000).toISOString(),
-            week_count: weekCount,
-            team_id: selectedTeamId,
-            approved: approved
-          })
-        })
-      } else {
-        response = await fetch('/api/rotas', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: rotaName,
-            rota_data: rota,
-            start_date: startDate.toISOString(),
-            end_date: new Date(startDate.getTime() + (weekCount * 7 - 1) * 24 * 60 * 60 * 1000).toISOString(),
-            week_count: weekCount,
-            team_id: selectedTeamId,
-            approved: approved
-          })
-        })
-
-        if (response.ok) {
-          const data = await response.json()
-          savedRotaId = data.id
-          setViewingRotaId(data.id)
-        }
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to save rota')
-      }
-
-      if (approved) {
-        try {
-          const settingsResponse = await fetch('/api/user-settings')
-          if (settingsResponse.ok) {
-            const settings = await settingsResponse.json()
-            
-            await fetch('/api/user-settings', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                total_rotas_generated: (settings?.total_rotas_generated || 0) + 1
-              })
-            })
-
-            if (settings?.manual_rota_time) {
-              setTimeSaved(settings.manual_rota_time)
-              setTimeout(() => setTimeSaved(null), 5000)
-            }
-          }
-        } catch (statsErr) {
-          console.error('Non-critical: failed to update stats', statsErr)
-        }
-      }
-
-      setShowSaveModal(false)
-      setShowApproveModal(false)
-      setRotaName('')
-      setHasUnsavedChanges(false)
-      await loadSavedRotas()
-      
-      if (approved) {
-        alert('Rota approved and saved successfully!')
-      } else {
-        alert('Rota saved as draft!')
-      }
-    } catch (err) {
-      console.error('Save error:', err)
-      alert('Error saving rota: ' + err.message)
-    }
-  }
-
-  const handleLoadRota = async (rotaId) => {
-    try {
-      setInitialLoading(true)
-      const response = await fetch(`/api/rotas/${rotaId}`)
-      if (response.ok) {
-        const data = await response.json()
-        setRota(data.rota_data)
-        setViewingRotaId(rotaId)
-        setRotaName(data.name || data.rota_name || '')
-        setShowSavedRotas(false)
-        setHasUnsavedChanges(false)
-        
-        if (data.start_date) {
-          setStartDate(new Date(data.start_date))
-        }
-        if (data.week_count) {
-          setWeekCount(data.week_count)
-        }
-        if (data.team_id) {
-          setSelectedTeamId(data.team_id)
-        }
-      }
-    } catch (err) {
-      alert('Error loading rota: ' + err.message)
-    } finally {
-      setInitialLoading(false)
-    }
-  }
-
-  const handleDeleteRota = async (rotaId) => {
-    if (!confirm('Are you sure you want to delete this rota?')) return
-
-    try {
-      const response = await fetch(`/api/rotas/${rotaId}`, {
-        method: 'DELETE'
-      })
-
-      if (response.ok) {
-        await loadSavedRotas()
-        if (viewingRotaId === rotaId) {
-          setRota(null)
-          setViewingRotaId(null)
-          setRotaName('')
-        }
-      }
-    } catch (err) {
-      alert('Error deleting rota: ' + err.message)
-    }
-  }
-
-  // Generate a default rota name from the date range
-  const generateRotaName = () => {
-    const endDate = new Date(startDate.getTime() + (weekCount * 7 - 1) * 24 * 60 * 60 * 1000)
-    const start = startDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-    const end = endDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-    return `${start} – ${end}`
-  }
-
-  const handleShiftClick = (staffName, day, shiftName, time, week) => {
-    setEditingShift({
-      staffName,
-      day,
-      shiftName,
-      time,
-      week
-    })
-    setShowEditModal(true)
-  }
-
-  const handleEmptyCellClick = (staffName, day, weekNum) => {
-    setAddShiftDay(day)
-    setAddShiftWeek(weekNum)
-    setShowAddModal(true)
-  }
-
-  const handleAddShift = ({ day, week, shiftName, time, staffName }) => {
-    if (!rota || !rota.schedule) return
-
-    // Check if this shift pattern already exists in the schedule for this day/week
-    const existingShiftIndex = rota.schedule.findIndex(s =>
-      s.day === day &&
-      s.shift_name === shiftName &&
-      (s.week || 1) === week
-    )
-
-    let updatedSchedule
-
-    if (existingShiftIndex >= 0) {
-      // Add staff to existing shift entry
-      updatedSchedule = rota.schedule.map((shift, idx) => {
-        if (idx === existingShiftIndex) {
-          const currentStaff = shift.assigned_staff || []
-          if (!currentStaff.includes(staffName)) {
-            return { ...shift, assigned_staff: [...currentStaff, staffName] }
-          }
-        }
-        return shift
-      })
-    } else {
-      // Create new shift entry
-      updatedSchedule = [
-        ...rota.schedule,
-        {
-          day,
-          shift_name: shiftName,
-          time,
-          assigned_staff: [staffName],
-          week
-        }
-      ]
-    }
-
-    setRota({ ...rota, schedule: updatedSchedule })
-    setHasUnsavedChanges(true)
-  }
-
-  const handleReassign = (shiftData, newStaffName) => {
-    if (!rota || !rota.schedule) return
-
-    const updatedSchedule = rota.schedule.map(shift => {
-      if (shift.day === shiftData.day && 
-          shift.shift_name === shiftData.shiftName && 
-          (shift.week || 1) === shiftData.week) {
-        const updatedStaff = shift.assigned_staff.map(name => 
-          name === shiftData.staffName ? newStaffName : name
-        )
-        return { ...shift, assigned_staff: updatedStaff }
-      }
-      return shift
-    })
-
-    setRota({ ...rota, schedule: updatedSchedule })
-    setHasUnsavedChanges(true)
-  }
-
-  const handleRemove = (shiftData) => {
-    if (!rota || !rota.schedule) return
-
-    const updatedSchedule = rota.schedule.map(shift => {
-      if (shift.day === shiftData.day && 
-          shift.shift_name === shiftData.shiftName && 
-          (shift.week || 1) === shiftData.week) {
-        const updatedStaff = shift.assigned_staff.filter(name => 
-          name !== shiftData.staffName
-        )
-        return { ...shift, assigned_staff: updatedStaff }
-      }
-      return shift
-    })
-
-    setRota({ ...rota, schedule: updatedSchedule })
-    setHasUnsavedChanges(true)
-  }
-
-  const handleSwap = (shiftData, targetShift) => {
-    if (!rota || !rota.schedule) return
-
-    const updatedSchedule = rota.schedule.map(shift => {
-      const week = shift.week || 1
-      
-      if (shift.day === shiftData.day && 
-          shift.shift_name === shiftData.shiftName && 
-          week === shiftData.week) {
-        const updatedStaff = shift.assigned_staff.map(name => 
-          name === shiftData.staffName ? targetShift.staffName : name
-        )
-        return { ...shift, assigned_staff: updatedStaff }
-      }
-      
-      if (shift.day === targetShift.day && 
-          shift.shift_name === targetShift.shiftName && 
-          week === targetShift.week) {
-        const updatedStaff = shift.assigned_staff.map(name => 
-          name === targetShift.staffName ? shiftData.staffName : name
-        )
-        return { ...shift, assigned_staff: updatedStaff }
-      }
-      
-      return shift
-    })
-
-    setRota({ ...rota, schedule: updatedSchedule })
-    setHasUnsavedChanges(true)
-  }
-
-  // Uncovered shifts: open add modal pre-filled for that shift
-  const handleAddFromUncovered = (uncoveredShift) => {
-    setAddShiftDay(uncoveredShift.day)
-    setAddShiftWeek(uncoveredShift.weekNum)
-    setShowAddModal(true)
-  }
-
-  const handlePostToPickupBoard = async (uncoveredShift) => {
-    // TODO: Post to employee pickup board via notifications API
-    alert(`Posted ${uncoveredShift.shiftName} on ${uncoveredShift.day} (Week ${uncoveredShift.weekNum}) to the pickup board. Employees will be notified.`)
-  }
-
-  // --- Staff helpers ---
-
-  const getUniqueStaff = () => {
-    if (!rota || !rota.schedule) return []
-    const staffSet = new Set()
-    rota.schedule.forEach(shift => {
-      shift.assigned_staff?.forEach(name => staffSet.add(name))
-    })
-    return Array.from(staffSet).sort()
-  }
-
-  const uniqueStaff = getUniqueStaff()
-
-  const getStaffTeam = (staffName) => {
-    if (rota && rota.staff_team_map) {
-      return rota.staff_team_map[staffName] || null
-    }
-    return null
-  }
-
-  const teamColors = [
-    { bg: 'bg-pink-100', text: 'text-pink-700', line: 'bg-pink-200' },
-    { bg: 'bg-blue-100', text: 'text-blue-700', line: 'bg-blue-200' },
-    { bg: 'bg-green-100', text: 'text-green-700', line: 'bg-green-200' },
-    { bg: 'bg-purple-100', text: 'text-purple-700', line: 'bg-purple-200' },
-    { bg: 'bg-orange-100', text: 'text-orange-700', line: 'bg-orange-200' },
-    { bg: 'bg-teal-100', text: 'text-teal-700', line: 'bg-teal-200' },
-  ]
-
-  const getTeamColor = (teamIndex) => {
-    return teamColors[teamIndex % teamColors.length]
-  }
-
-  const staffColors = [
-    'bg-gradient-to-br from-pink-500 to-pink-600',
-    'bg-gradient-to-br from-purple-500 to-purple-600',
-    'bg-gradient-to-br from-blue-500 to-blue-600',
-    'bg-gradient-to-br from-green-500 to-green-600',
-    'bg-gradient-to-br from-orange-500 to-orange-600',
-    'bg-gradient-to-br from-teal-500 to-teal-600',
-    'bg-gradient-to-br from-red-500 to-red-600',
-    'bg-gradient-to-br from-indigo-500 to-indigo-600',
-    'bg-gradient-to-br from-yellow-500 to-yellow-600',
-    'bg-gradient-to-br from-cyan-500 to-cyan-600',
-  ]
-
-  const getStaffColor = (staffName) => {
-    const index = uniqueStaff.indexOf(staffName)
-    return staffColors[index % staffColors.length]
-  }
-
-  const getStaffShiftsForDay = (staffName, dayName, weekNum) => {
-    if (!rota || !rota.schedule) return []
-    
-    return rota.schedule.filter(shift => 
-      shift.day === dayName && 
-      (shift.week || 1) === weekNum &&
-      shift.assigned_staff?.includes(staffName)
-    )
-  }
-
-  // --- Loading states ---
-
-  if (initialLoading) {
-    return (
-      <div className="flex items-center justify-center py-32">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-gray-200 border-t-pink-500 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="body-text">Loading rota...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (loading && !rota) {
-    return (
-      <div className="flex items-center justify-center py-32">
-        <div className="w-16 h-16 border-4 border-gray-200 border-t-pink-500 rounded-full animate-spin"></div>
-      </div>
-    )
-  }
-
-  return (
-    <>
-      <style jsx global>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          #printable-rota, #printable-rota * {
-            visibility: visible;
-          }
-          #printable-rota {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-          }
-          .no-print {
-            display: none !important;
-          }
-          table {
-            page-break-inside: auto;
-          }
-          tr {
-            page-break-inside: avoid;
-            page-break-after: auto;
-          }
-        }
-      `}</style>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-12">
-        <PageHeader 
-          title="Rota Builder"
-          subtitle="Create schedules that meet contracted hours and respect availability"
-        />
-
-        <RotaAlerts
-          timeSaved={timeSaved}
-          hasUnsavedChanges={hasUnsavedChanges}
-          loading={loading}
-          loadingStep={loadingStep}
-          showAllTeams={showAllTeams}
-          error={error}
-          rota={rota}
-        />
-
-        <RotaConfigPanel
-          selectedTeamId={selectedTeamId}
-          setSelectedTeamId={setSelectedTeamId}
-          showAllTeams={showAllTeams}
-          setShowAllTeams={setShowAllTeams}
-          startDate={startDate}
-          setStartDate={setStartDate}
-          weekCount={weekCount}
-          setWeekCount={setWeekCount}
-        />
-
-        <RotaActions
-          loading={loading}
-          selectedTeamId={selectedTeamId}
-          showAllTeams={showAllTeams}
-          onGenerate={handleGenerate}
-          showSavedRotas={showSavedRotas}
-          setShowSavedRotas={setShowSavedRotas}
-          rota={rota}
-          onSave={() => {
-            if (!rotaName) setRotaName(generateRotaName())
-            setShowSaveModal(true)
-          }}
-          onApprove={() => {
-            if (!rotaName) setRotaName(generateRotaName())
-            setShowApproveModal(true)
-          }}
-          onPrint={handlePrint}
-        />
-
-        {showSavedRotas && (
-          <SavedRotasList 
-            savedRotas={savedRotas}
-            onLoad={handleLoadRota}
-            onDelete={handleDeleteRota}
-          />
-        )}
-
-        {rota && rota.schedule && rota.schedule.length > 0 && (
-          <>
-            <div id="printable-rota" className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <div className="hidden print:block p-6 border-b border-gray-200">
-                <h1 className="heading-page mb-2">Staff Rota</h1>
-                <p className="body-text">{formatDate(startDate)} - {formatDate(new Date(startDate.getTime() + (weekCount * 7 - 1) * 24 * 60 * 60 * 1000))}</p>
-              </div>
-
-              {rota && rota.rule_compliance && rota.rule_compliance.length > 0 && (
-                <RulesComplianceSection rules={rota.rule_compliance} />
-              )}
-
-              <div className="px-4 sm:px-6 pt-4 pb-2 bg-gray-50/50 no-print">
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setActiveTab('schedule')}
-                    className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                      activeTab === 'schedule'
-                        ? 'bg-white text-gray-900 shadow-sm border border-gray-200'
-                        : 'text-gray-500 hover:text-gray-700 hover:bg-white/60'
-                    }`}
-                  >
-                    Schedule
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('hours')}
-                    className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                      activeTab === 'hours'
-                        ? 'bg-white text-gray-900 shadow-sm border border-gray-200'
-                        : 'text-gray-500 hover:text-gray-700 hover:bg-white/60'
-                    }`}
-                  >
-                    Hours
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-4 sm:p-6">
-                {activeTab === 'schedule' && (
-                  <RotaScheduleGrid
-                    rota={rota}
-                    weekCount={weekCount}
-                    startDate={startDate}
-                    uniqueStaff={uniqueStaff}
-                    getStaffTeam={getStaffTeam}
-                    getTeamColor={getTeamColor}
-                    getStaffColor={getStaffColor}
-                    getStaffShiftsForDay={getStaffShiftsForDay}
-                    getDateForDay={getDateForDay}
-                    getShortDay={getShortDay}
-                    handleShiftClick={handleShiftClick}
-                    handleEmptyCellClick={handleEmptyCellClick}
-                  />
-                )}
-
-                {activeTab === 'hours' && rota.hours_report && (
-                  <RotaHoursTable
-                    rota={rota}
-                    weekCount={weekCount}
-                    startDate={startDate}
-                    getTeamColor={getTeamColor}
-                    allStaff={allStaff}
-                  />
-                )}
-              </div>
-            </div>
-
-            {/* Uncovered Shifts Panel - below the rota grid */}
-            <UncoveredShiftsPanel
-              rota={rota}
-              shiftPatterns={shiftPatterns}
-              weekCount={weekCount}
-              onAddShiftToRota={handleAddFromUncovered}
-              onPostToPickupBoard={handlePostToPickupBoard}
-            />
-          </>
-        )}
-
-        {rota && rota.summary && (
-          <div className="mt-4 sm:mt-6 bg-blue-50 border border-blue-200 rounded-xl p-3 sm:p-4 no-print">
-            <p className="body-small text-blue-900">
-              <strong>Summary:</strong> {rota.summary}
-            </p>
-          </div>
-        )}
-      </main>
-
-      {/* Edit existing shift modal */}
-      <ShiftEditModal
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        shiftData={editingShift}
-        allStaff={allStaff}
-        onReassign={handleReassign}
-        onRemove={handleRemove}
-        onSwap={handleSwap}
-        rota={rota}
-      />
-
-      {/* Add new shift modal */}
-      <AddShiftModal
-        isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        day={addShiftDay}
-        weekNum={addShiftWeek}
-        shiftPatterns={shiftPatterns}
-        allStaff={allStaff}
-        rota={rota}
-        onAddShift={handleAddShift}
-      />
-
-      <SaveApproveModal
-        isOpen={showSaveModal}
-        onClose={() => {
-          setShowSaveModal(false)
-          if (!viewingRotaId) setRotaName('')
-        }}
-        mode="save"
-        rotaName={rotaName}
-        setRotaName={setRotaName}
-        onSubmit={() => handleSaveRota(false)}
-        viewingRotaId={viewingRotaId}
-      />
-
-      <SaveApproveModal
-        isOpen={showApproveModal}
-        onClose={() => {
-          setShowApproveModal(false)
-          if (!viewingRotaId) setRotaName('')
-        }}
-        mode="approve"
-        rotaName={rotaName}
-        setRotaName={setRotaName}
-        onSubmit={() => handleSaveRota(true)}
-        viewingRotaId={viewingRotaId}
-      />
-
-      <div id="date-picker-portal"></div>
-    </>
-  )
+import { useState, useEffect, useMemo, useCallback, useRef, Fragment } from 'react'
+import { Field, Input, TimeRange, Switch, Button } from '@/app/components/ui/kit'
+
+// ════════════════════════════════════════════════════════════════════════════
+//  ROTA BUILDER (live) — pick week → Generate (OR-Tools) → grid → save/publish.
+//  No templates. Reads real Shift Patterns + Staff availability + Location Rules.
+// ════════════════════════════════════════════════════════════════════════════
+
+const PINK = '#FF1F7D'
+const AMBER = '#F59E0B'
+const FONT = "'Plus Jakarta Sans', sans-serif"
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const DAY_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+const DAY_INDEX = { Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4, Saturday: 5, Sunday: 6 }
+const TEAM_COLORS = ['#FF1F7D', '#6366F1', '#14B8A6', '#F59E0B', '#0EA5E9', '#8B5CF6', '#EC4899', '#10B981']
+
+const fmt = (hhmm) => {
+  if (!hhmm) return ''
+  const [h, m] = hhmm.split(':').map(Number)
+  const ap = h < 12 ? 'am' : 'pm'; let hh = h % 12; if (hh === 0) hh = 12
+  return m === 0 ? `${hh}${ap}` : `${hh}:${String(m).padStart(2, '0')}${ap}`
+}
+function nextMonday() {
+  const d = new Date(); d.setHours(0, 0, 0, 0)
+  const dow = (d.getDay() + 6) % 7 // 0=Mon
+  d.setDate(d.getDate() + (7 - dow))
+  return d.toISOString().slice(0, 10)
+}
+const prettyDate = (s) => { try { return new Date(s + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) } catch { return s } }
+
+function initials(name) { return (name || '?').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase() }
+
+// ── grid helpers ────────────────────────────────────────────────────────────────
+const toHHMM = (d) => { const h = Math.floor(d), m = Math.round((d - h) * 60); return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}` }
+function lighten(hex, amt) { const n = parseInt(hex.slice(1), 16); let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255; r = Math.round(r + (255 - r) * amt); g = Math.round(g + (255 - g) * amt); b = Math.round(b + (255 - b) * amt); return '#' + [r, g, b].map((x) => x.toString(16).padStart(2, '0')).join('') }
+const staffColor = (teamColor, idx) => lighten(teamColor, (idx % 4) * 0.17)
+function dateForDay(weekStart, weekNum, dayIdx) { const x = new Date(weekStart + 'T00:00:00Z'); x.setUTCDate(x.getUTCDate() + (weekNum - 1) * 7 + dayIdx); return x }
+
+// ── REFINED rota grid — one rota, team sections, per-staff colour, drag/remove/add ──
+const RTH = { fontSize: 11, fontWeight: 700, color: '#6B7280', padding: '6px 6px 10px', textAlign: 'center' }
+const RTH_STAFF = { ...RTH, textAlign: 'left', position: 'sticky', left: 0, background: '#fff', minWidth: 160 }
+const RTD = { padding: '4px 4px', verticalAlign: 'top' }
+const RTD_STAFF = { padding: '4px 4px', verticalAlign: 'top', position: 'sticky', left: 0, background: '#fff' }
+function AddCell({ onAdd }) {
+  const [hover, setHover] = useState(false)
+  return <button onClick={onAdd} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} title="Add a shift" style={{ width: '100%', minHeight: 44, borderRadius: 10, cursor: 'pointer', border: `1.5px dashed ${hover ? '#FBCFE8' : 'transparent'}`, background: hover ? '#FFF5F9' : 'transparent', color: hover ? '#FF1F7D' : '#E2E2E6', fontSize: 18, fontWeight: 700, transition: 'all .12s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
 }
 
-export default function GenerateRotaPage() {
-  return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-gray-200 border-t-pink-500 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="body-text">Loading...</p>
+// Right-hand inspector to create OR edit a one-off shift for one person on one day —
+// same fields as the Shifts tab editor (name · hours · keyholder), minus the day picker.
+function ShiftInspector({ staff, day, existing, accent = PINK, onClose, onSave, onRemove }) {
+  const editing = !!existing
+  const dec = (t) => { const [h, m] = String(t || '9:0').split(':').map(Number); return (h || 0) + (m || 0) / 60 }
+  const [name, setName] = useState(existing && existing.shift_name !== 'Custom shift' ? existing.shift_name : '')
+  const [range, setRange] = useState(existing ? [dec(existing.start_time), dec(existing.end_time)] : [9, 17])
+  const [keyholder, setKeyholder] = useState(existing ? !!existing.keyholder_required : false)
+  const dur = Math.round((range[1] - range[0]) * 100) / 100
+  return <>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(17,24,39,.30)', zIndex: 55 }} />
+    <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 372, maxWidth: '92vw', background: '#fff', zIndex: 56, boxShadow: '-14px 0 44px rgba(0,0,0,.16)', padding: 24, fontFamily: FONT, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: 16, fontWeight: 800, color: '#111827' }}>{editing ? 'Edit shift' : 'Add a shift'}</span>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, lineHeight: 1, color: '#9CA3AF', padding: 0 }}>×</button>
+      </div>
+      <p style={{ fontSize: 12.5, color: '#6B7280', margin: '4px 0 22px' }}>For <b style={{ color: '#111827' }}>{staff.name}</b> · {DAY_FULL[day]}</p>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+        <Field label="Shift name"><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Custom shift" accent={accent} /></Field>
+        <Field label="Hours"><TimeRange start={range[0]} end={range[1]} onChange={(s, e) => setRange([s, e])} domain={[5, 24]} accent={accent} /></Field>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div><div style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>Keyholder shift</div><div style={{ fontSize: 11, color: '#9CA3AF' }}>Needs someone who can open & close</div></div>
+          <Switch on={keyholder} onChange={setKeyholder} accent={accent} />
         </div>
       </div>
-    }>
-      <GenerateRotaContent />
-    </Suspense>
-  )
+
+      <div style={{ flex: 1 }} />
+      {editing && <button onClick={() => { onRemove(existing._id); onClose() }} style={{ fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600, color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', padding: '6px 0', marginTop: 16, textAlign: 'left' }}>Remove this shift</button>}
+      <Button accent={accent} full disabled={dur <= 0} onClick={() => onSave({ custom: true, id: null, name: name.trim() || 'Custom shift', start: range[0], end: range[1], keyholder })} style={{ marginTop: editing ? 6 : 24 }}>
+        {dur <= 0 ? 'End must be after start' : editing ? 'Save changes' : `Add ${dur}h shift`}
+      </Button>
+    </div>
+  </>
+}
+function RefinedRotaGrid({ gridTeams, staff, shifts, assignments, weekStart, weekNum, onReassign, onRemove, onAddRequest, onEditRequest, dragRef }) {
+  const dlabel = (d) => dateForDay(weekStart, weekNum, d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  const di = (a) => (typeof a.day === 'number' ? a.day : (DAY_INDEX[a.day] ?? 0))
+  return <div style={{ background: '#fff', border: '1px solid #ECECEF', borderRadius: 16, padding: '22px 24px', boxShadow: '0 1px 3px rgba(0,0,0,.04)', marginBottom: 18 }}>
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 16 }}>
+      <span style={{ fontSize: 17, fontWeight: 800 }}>Week {weekNum}</span>
+      <span style={{ fontSize: 12.5, color: '#9CA3AF' }}>{dlabel(0)} – {dlabel(6)}</span>
+    </div>
+    <div style={{ overflowX: 'auto' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 800, tableLayout: 'fixed' }}>
+        <colgroup><col style={{ width: 160 }} />{DAYS.map((d) => <col key={d} />)}</colgroup>
+        <thead><tr><th style={RTH_STAFF}></th>{DAYS.map((d, i) => <th key={d} style={RTH}><div style={{ fontWeight: 800, color: '#374151' }}>{d}</div><div style={{ fontSize: 9.5, fontWeight: 500, color: '#C4C4CC', marginTop: 1 }}>{dlabel(i)}</div></th>)}</tr></thead>
+        <tbody>
+          {gridTeams.map((team, ti) => {
+            const rows = staff.filter((s) => s.team_id === team.id)
+            if (rows.length === 0) return null
+            return <Fragment key={team.id}>
+              <tr><td colSpan={8} style={{ padding: ti > 0 ? '22px 0 8px' : '8px 0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 99, background: team.color }} />
+                  <span style={{ fontSize: 12, fontWeight: 800, color: team.color, letterSpacing: 0.4, textTransform: 'uppercase' }}>{team.name}</span>
+                  <div style={{ flex: 1, height: 1, background: '#F0F0F2' }} />
+                </div>
+              </td></tr>
+              {rows.map((s, idx) => {
+                const c = staffColor(team.color, idx)
+                return <tr key={s.id}>
+                  <td style={RTD_STAFF}><span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 600, color: '#111827' }}><span style={{ width: 9, height: 9, borderRadius: 99, background: c, flexShrink: 0 }} />{s.name}</span></td>
+                  {[0, 1, 2, 3, 4, 5, 6].map((d) => {
+                    const blocks = assignments.filter((a) => a.staff_id === s.id && di(a) === d)
+                    return <td key={d} onDragOver={(e) => e.preventDefault()} onDrop={() => { const dr = dragRef.current; if (dr && dr.day === d && dr.staffId !== s.id) onReassign(dr._id, s.id) }} style={RTD}>
+                      {blocks.length > 0
+                        ? <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            {blocks.map((a) => <div key={a._id} draggable onDragStart={() => { dragRef.current = { _id: a._id, day: d, staffId: s.id } }} onDragEnd={() => { dragRef.current = null }} onClick={() => onEditRequest(s, d, a)} title="Click to edit" style={{ position: 'relative', background: c, borderRadius: 10, padding: '7px 18px 7px 10px', cursor: 'pointer', boxShadow: `0 2px 6px ${c}33` }}>
+                              <div style={{ color: '#fff', fontWeight: 700, fontSize: 11, lineHeight: 1.25 }}>{a.shift_name}</div>
+                              <div style={{ color: 'rgba(255,255,255,.85)', fontSize: 9.5 }}>{fmt(a.start_time)}–{fmt(a.end_time)}</div>
+                              <button onClick={(e) => { e.stopPropagation(); onRemove(a._id) }} style={{ position: 'absolute', top: 3, right: 5, color: 'rgba(255,255,255,.9)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, lineHeight: 1, padding: 0 }}>×</button>
+                            </div>)}
+                          </div>
+                        : <AddCell onAdd={() => onAddRequest(s, d)} />}
+                    </td>
+                  })}
+                </tr>
+              })}
+            </Fragment>
+          })}
+        </tbody>
+      </table>
+    </div>
+    <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 10 }}>Drag a shift onto another person to reassign · × to remove · + to add. Edits save when you Save / Publish.</div>
+  </div>
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+export default function RotaBuilder() {
+  const [teams, setTeams] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [teamId, setTeamId] = useState('all')
+  const [weekStart, setWeekStart] = useState(nextMonday())
+  const [weekCount, setWeekCount] = useState(1)
+  const [selectedWeek, setSelectedWeek] = useState(1)
+  const [generating, setGenerating] = useState(false)
+  const [result, setResult] = useState(null)
+  const [error, setError] = useState(null)
+  const [saveMsg, setSaveMsg] = useState(null)
+  const [saved, setSaved] = useState([])
+  const [staff, setStaff] = useState([])
+  const [shifts, setShifts] = useState([])
+  const [rotaName, setRotaName] = useState('')
+  const [editCell, setEditCell] = useState(null) // { staff, day } → opens the add-shift inspector
+  const dragRef = useRef(null)
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [tr, sr, str, shr] = await Promise.all([fetch('/api/teams'), fetch('/api/rotas'), fetch('/api/staff'), fetch('/api/shifts')])
+        const td = await tr.json(), sd = await sr.json(), std = await str.json(), shd = await shr.json()
+        setTeams((Array.isArray(td) ? td : []).map((t, i) => ({ id: t.id, name: t.name, color: TEAM_COLORS[i % TEAM_COLORS.length] })))
+        setSaved(Array.isArray(sd) ? sd : [])
+        setStaff((Array.isArray(std) ? std : []).map((s) => ({ id: s.id, name: s.name, team_id: s.team_id, contracted_hours: s.contracted_hours || 0 })))
+        setShifts(Array.isArray(shd) ? shd : [])
+      } catch (e) { console.error(e) } finally { setLoading(false) }
+    })()
+  }, [])
+
+  const teamColor = useCallback((id) => teams.find((t) => t.id === id)?.color || PINK, [teams])
+  const staffName = useCallback((id) => staff.find((s) => s.id === id)?.name || 'Unknown', [staff])
+
+  const generate = useCallback(async () => {
+    setGenerating(true); setError(null); setResult(null); setSaveMsg(null); setSelectedWeek(1)
+    try {
+      const res = await fetch('/api/generate-rota', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ weekStart, weekCount, team_id: teamId === 'all' ? null : teamId }) })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || 'Failed to generate rota.'); return }
+      setRotaName(`Week of ${prettyDate(weekStart)}`)
+      setResult({ ...data, assignments: (data.assignments || []).map((a, i) => ({ ...a, _id: i })) })
+    } catch (e) { setError('Could not reach the scheduler. It may be waking up — try again in a moment.') } finally { setGenerating(false) }
+  }, [weekStart, weekCount, teamId])
+
+  const loadSaved = useCallback(async (id) => {
+    setError(null); setGenerating(true); setSaveMsg(null)
+    try {
+      const res = await fetch(`/api/rotas/${id}`)
+      const data = await res.json()
+      if (!res.ok) { setError('Could not load that rota.'); return }
+      setWeekStart(data.week_start); setWeekCount(1); setSelectedWeek(1); setRotaName(data.name || `Week of ${prettyDate(data.week_start)}`)
+      setSaveMsg(data.status === 'Published' ? 'published' : null)
+      const teamIds = [...new Set((data.assignments || []).map((a) => a.team_id))]
+      setResult({ weekStart: data.week_start, weekCount: 1, teams: teamIds.map((tid) => ({ id: tid })), assignments: (data.assignments || []).map((a, i) => ({ ...a, _id: i })), rule_compliance: [], contract_issues: [] })
+    } catch { setError('Could not load that rota.') } finally { setGenerating(false) }
+  }, [])
+
+  // Deep-link support: /dashboard/generate?rota=ID opens a saved rota; ?start=YYYY-MM-DD presets the week.
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search)
+    const rid = p.get('rota'); const start = p.get('start')
+    if (rid) loadSaved(rid)
+    else if (start) setWeekStart(start)
+  }, [loadSaved])
+
+  const reassign = useCallback((id, staffId) => setResult((r) => ({ ...r, assignments: r.assignments.map((a) => (a._id === id ? { ...a, staff_id: staffId, staff_name: staffName(staffId) } : a)) })), [staffName])
+  const removeAssignment = useCallback((id) => setResult((r) => ({ ...r, assignments: r.assignments.filter((a) => a._id !== id) })), [])
+  const addAssignment = useCallback((s, day, shift) => setResult((r) => {
+    if (!r) return r
+    const nid = r.assignments.reduce((m, a) => Math.max(m, a._id ?? 0), -1) + 1
+    const work_date = dateForDay(weekStart, selectedWeek, day).toISOString().slice(0, 10)
+    const a = { _id: nid, week: selectedWeek, team_id: s.team_id, team_name: '', staff_id: s.id, staff_name: s.name, shift_id: shift.custom ? null : shift.id, custom: !!shift.custom, shift_name: shift.name, day, work_date, start_time: toHHMM(shift.start), end_time: toHHMM(shift.end), keyholder_required: shift.keyholder }
+    return { ...r, assignments: [...r.assignments, a] }
+  }), [weekStart, selectedWeek])
+  // Editing a block sets its custom times (a preset becomes a one-off override).
+  const updateAssignment = useCallback((id, sh) => setResult((r) => ({ ...r, assignments: r.assignments.map((a) => (a._id === id ? { ...a, shift_id: null, custom: true, shift_name: sh.name, start_time: toHHMM(sh.start), end_time: toHHMM(sh.end), keyholder_required: sh.keyholder } : a)) })), [])
+
+  const saveRota = useCallback(async (status) => {
+    if (!result) return
+    setSaveMsg('saving')
+    try {
+      const res = await fetch('/api/rotas', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ weekStart, name: rotaName, assignments: result.assignments, status }) })
+      if (!res.ok) { setSaveMsg('error'); return }
+      setSaveMsg(status === 'Published' ? 'published' : 'draft')
+      const sd = await (await fetch('/api/rotas')).json(); setSaved(Array.isArray(sd) ? sd : [])
+    } catch { setSaveMsg('error') }
+  }, [result, weekStart, rotaName])
+
+  const weekAssignments = useMemo(() => (result?.assignments || []).filter((a) => a.week === selectedWeek), [result, selectedWeek])
+
+  // Contracted-hours flags recomputed LIVE from the current grid, so adding/removing
+  // shifts (including custom ones via the inspector) clears or raises a flag immediately.
+  const liveContractIssues = useMemo(() => {
+    if (!result) return []
+    const tMin = (t) => { const [h, m] = String(t || '0:0').split(':').map(Number); return (h || 0) * 60 + (m || 0) }
+    const hrs = {}
+    for (const a of result.assignments) {
+      let d = tMin(a.end_time) - tMin(a.start_time); if (d <= 0) d += 1440
+      hrs[`${a.staff_id}__${a.week}`] = (hrs[`${a.staff_id}__${a.week}`] || 0) + d / 60
+    }
+    const rotaTeamIds = new Set((result.teams || []).map((t) => t.id))
+    const out = []
+    for (const s of staff) {
+      if (!rotaTeamIds.has(s.team_id)) continue
+      const contracted = s.contracted_hours || 0
+      if (!contracted) continue
+      for (let wk = 1; wk <= weekCount; wk++) {
+        const actual = Math.round((hrs[`${s.id}__${wk}`] || 0) * 10) / 10
+        if (actual < contracted - 1) out.push({ week: wk, staff_id: s.id, staff_name: s.name, team_name: teams.find((t) => t.id === s.team_id)?.name || '', contracted, actual })
+      }
+    }
+    return out
+  }, [result, staff, teams, weekCount])
+  const teamsInResult = useMemo(() => {
+    const ids = [...new Set(weekAssignments.map((a) => a.team_id))]
+    return ids.map((id) => ({ id, name: teams.find((t) => t.id === id)?.name || weekAssignments.find((a) => a.team_id === id)?.team_name || 'Team', color: teamColor(id) }))
+  }, [weekAssignments, teams, teamColor])
+
+  if (loading) return <div style={{ fontFamily: FONT, padding: 60, textAlign: 'center', color: '#9CA3AF' }}>Loading…</div>
+
+  const inspectorAccent = editCell ? TEAM_COLORS[Math.max(0, teams.findIndex((t) => t.id === editCell.staff.team_id)) % TEAM_COLORS.length] : PINK
+  const card = { background: '#fff', border: '1px solid #ECECEF', borderRadius: 14, padding: 22, marginBottom: 18 }
+  const inner = { maxWidth: 1040, margin: '0 auto', padding: '0 24px' }
+
+  return <div style={{ fontFamily: FONT, background: '#FAFAFB', minHeight: '100vh', color: '#111827', paddingTop: 28, paddingBottom: 50 }}>
+    <div style={inner}>
+      <h1 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 4px' }}>Rota Builder</h1>
+      <p style={{ fontSize: 13, color: '#6B7280', margin: '0 0 22px' }}>Generate a schedule that meets contracted hours and respects availability.</p>
+
+      {/* controls */}
+      <div style={card}>
+        <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <div style={{ flex: 1, minWidth: 180 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 8 }}>Team</div>
+            <select value={teamId} onChange={(e) => setTeamId(e.target.value)} style={{ width: '100%', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, padding: '10px 12px', borderRadius: 9, border: '1px solid #E5E7EB', background: '#fff', cursor: 'pointer' }}>
+              <option value="all">All teams</option>
+              {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          </div>
+          <div style={{ flex: 1, minWidth: 180 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 8 }}>Week starting (Monday)</div>
+            <input type="date" value={weekStart} onChange={(e) => setWeekStart(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, padding: '10px 12px', borderRadius: 9, border: '1px solid #E5E7EB' }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 140 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 8 }}>Weeks</div>
+            <select value={weekCount} onChange={(e) => setWeekCount(Number(e.target.value))} style={{ width: '100%', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, padding: '10px 12px', borderRadius: 9, border: '1px solid #E5E7EB', background: '#fff', cursor: 'pointer' }}>
+              {[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n} week{n > 1 ? 's' : ''}</option>)}
+            </select>
+          </div>
+          <button onClick={generate} disabled={generating} style={{ fontFamily: 'inherit', fontSize: 14, fontWeight: 700, color: '#fff', background: generating ? '#F9A8D0' : PINK, border: 'none', borderRadius: 10, padding: '12px 28px', cursor: generating ? 'default' : 'pointer' }}>{generating ? 'Building…' : 'Build rota'}</button>
+        </div>
+      </div>
+
+      {error && <div style={{ ...card, background: '#FEF2F2', border: '1px solid #FECACA' }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: '#B91C1C', marginBottom: 4 }}>Couldn’t generate the rota</div>
+        <div style={{ fontSize: 13, color: '#991B1B' }}>{error}</div>
+      </div>}
+
+      {result && <>
+        {/* save bar */}
+        <div style={card}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+            <input value={rotaName} onChange={(e) => setRotaName(e.target.value)} placeholder="Name this rota" style={{ flex: 1, minWidth: 200, boxSizing: 'border-box', fontFamily: 'inherit', fontSize: 15, fontWeight: 700, color: '#111827', padding: '9px 12px', borderRadius: 9, border: '1px solid #E5E7EB', outline: 'none' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {saveMsg === 'draft' && <span style={{ fontSize: 12, color: '#16A34A', fontWeight: 600 }}>✓ Saved draft</span>}
+              {saveMsg === 'published' && <span style={{ fontSize: 12, color: '#16A34A', fontWeight: 600 }}>✓ Published</span>}
+              {saveMsg === 'error' && <span style={{ fontSize: 12, color: '#EF4444', fontWeight: 600 }}>Save failed</span>}
+              <button onClick={() => saveRota('Draft')} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: '#374151', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 9, padding: '9px 16px', cursor: 'pointer' }}>Save draft</button>
+              <button onClick={() => saveRota('Published')} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: '#fff', background: PINK, border: 'none', borderRadius: 9, padding: '9px 18px', cursor: 'pointer' }}>Publish</button>
+            </div>
+          </div>
+          <div style={{ fontSize: 12.5, color: '#6B7280', marginTop: 10 }}>
+            <b style={{ color: '#111827' }}>{result.assignments.length}</b> shifts · w/c {prettyDate(weekStart)}{weekCount > 1 ? ` · ${weekCount} weeks` : ''}
+            {liveContractIssues.length > 0 && <span style={{ color: AMBER, fontWeight: 600 }}> · {liveContractIssues.length} contracted-hours flag{liveContractIssues.length > 1 ? 's' : ''}</span>}
+          </div>
+        </div>
+
+        {/* week selector */}
+        {weekCount > 1 && <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+          {Array.from({ length: weekCount }, (_, i) => i + 1).map((w) => <button key={w} onClick={() => setSelectedWeek(w)} style={{ fontFamily: 'inherit', fontSize: 12.5, fontWeight: 700, padding: '6px 14px', borderRadius: 8, cursor: 'pointer', border: `1px solid ${selectedWeek === w ? PINK : '#E5E7EB'}`, background: selectedWeek === w ? PINK + '12' : '#fff', color: selectedWeek === w ? PINK : '#6B7280' }}>Week {w}</button>)}
+        </div>}
+
+        {result.rule_compliance?.length > 0 && <div style={card}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 12 }}>Rule compliance</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+            {result.rule_compliance.map((r, i) => <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 9, fontSize: 13 }}>
+              <span style={{ color: r.ok ? '#16A34A' : AMBER, fontWeight: 800, flexShrink: 0 }}>{r.ok ? '✓' : '⚠'}</span>
+              <span style={{ color: '#374151' }}><b>{r.label}</b>{r.ok ? '' : <span style={{ color: '#92660B' }}> — {r.detail}</span>}</span>
+            </div>)}
+          </div>
+        </div>}
+
+        {result.skipped?.length > 0 && <div style={{ ...card, background: '#FEF2F2', border: '1px solid #FECACA' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#B91C1C', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 8 }}>Couldn’t schedule {result.skipped.length} team{result.skipped.length > 1 ? 's' : ''}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {result.skipped.map((sk, i) => <div key={i} style={{ fontSize: 12.5, color: '#374151' }}><b>{sk.teamName}</b> — {sk.reason}</div>)}
+          </div>
+        </div>}
+
+        <RefinedRotaGrid gridTeams={teams.filter((t) => (result.teams || []).some((rt) => rt.id === t.id))} staff={staff} shifts={shifts} assignments={weekAssignments} weekStart={weekStart} weekNum={selectedWeek} onReassign={reassign} onRemove={removeAssignment} onAddRequest={(s, d) => setEditCell({ staff: s, day: d, existing: null })} onEditRequest={(s, d, a) => setEditCell({ staff: s, day: d, existing: a })} dragRef={dragRef} />
+
+        {editCell && <ShiftInspector staff={editCell.staff} day={editCell.day} existing={editCell.existing} accent={inspectorAccent} onClose={() => setEditCell(null)} onRemove={removeAssignment} onSave={(sh) => { if (editCell.existing) updateAssignment(editCell.existing._id, sh); else addAssignment(editCell.staff, editCell.day, sh); setEditCell(null) }} />}
+
+        {liveContractIssues.length > 0 && <div style={{ ...card, background: '#FFFBEB', border: '1px solid #FDE68A' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#92660B', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 8 }}>Contracted-hours flags</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {liveContractIssues.slice(0, 8).map((c, i) => <div key={i} style={{ fontSize: 12.5, color: '#374151' }}><b>{c.staff_name}</b>{c.team_name ? ` (${c.team_name})` : ''} — {c.actual}h vs {c.contracted}h contracted{weekCount > 1 ? ` · week ${c.week}` : ''}</div>)}
+          </div>
+        </div>}
+      </>}
+
+      {saved.length > 0 && <div style={card}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 6 }}>Saved rotas</div>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {saved.slice(0, 10).map((r) => <button key={r.id} onClick={() => loadSaved(r.id)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 4px', borderBottom: '1px solid #F4F4F6', background: 'none', border: 'none', borderBottomColor: '#F4F4F6', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{r.name || `Week of ${prettyDate(r.week_start)}`} <span style={{ color: '#9CA3AF', fontWeight: 500 }}>· w/c {prettyDate(r.week_start)}</span></span>
+            <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 6, background: r.status === 'Published' ? '#16A34A14' : '#F3F4F6', color: r.status === 'Published' ? '#16A34A' : '#6B7280' }}>{r.status}</span>
+          </button>)}
+        </div>
+        <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 8 }}>Click a rota to open and edit it.</div>
+      </div>}
+    </div>
+  </div>
 }

@@ -1,54 +1,39 @@
 import { auth } from '@clerk/nextjs/server'
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { supabaseAdmin, organizationIdFor } from '@/lib/db'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
+export const dynamic = 'force-dynamic'
 
-// GET /api/auth/user-type
-// Returns the user type: 'employee', 'manager', or 'unknown'
+// GET /api/auth/user-type → 'manager' | 'employee' | 'new' | 'unknown'
 export async function GET() {
   try {
     const { userId } = await auth()
-    
-    if (!userId) {
-      return NextResponse.json({ type: 'unknown' }, { status: 401 })
-    }
+    if (!userId) return NextResponse.json({ type: 'unknown' }, { status: 401 })
 
-    // Check if user is a MANAGER first (owns teams)
-    const { data: teams } = await supabase
-      .from('Teams')
-      .select('id')
+    // Manager: an Organization exists for this user (manager-as-org → they've onboarded).
+    const { data: org } = await supabaseAdmin
+      .from('Organizations')
+      .select('organization_id')
+      .eq('organization_id', organizationIdFor(userId))
+      .maybeSingle()
+    if (org) return NextResponse.json({ type: 'manager' })
+
+    // Employee: this user is linked to a Staff row.
+    const { data: staffRows } = await supabaseAdmin
+      .from('Staff')
+      .select('staff_id, name, role')
       .eq('user_id', userId)
       .limit(1)
-
-    if (teams && teams.length > 0) {
-      return NextResponse.json({ type: 'manager' })
-    }
-
-    // Then check if user is an employee (has clerk_user_id in Staff table)
-    const { data: staffProfile, error: staffError } = await supabase
-      .from('Staff')
-      .select('id, name, role')
-      .eq('clerk_user_id', userId)
-      .single()
-
-    if (staffProfile && !staffError) {
+    const staffProfile = staffRows?.[0]
+    if (staffProfile) {
       return NextResponse.json({
         type: 'employee',
-        profile: {
-          id: staffProfile.id,
-          name: staffProfile.name,
-          role: staffProfile.role
-        }
+        profile: { id: staffProfile.staff_id, name: staffProfile.name, role: staffProfile.role },
       })
     }
 
-    // New user - default to manager (will create a team)
+    // New user — will be sent through onboarding.
     return NextResponse.json({ type: 'new' })
-
   } catch (error) {
     console.error('Error checking user type:', error)
     return NextResponse.json({ type: 'unknown', error: error.message }, { status: 500 })
