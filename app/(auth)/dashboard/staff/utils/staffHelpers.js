@@ -336,6 +336,25 @@ export function coverageBottlenecks(staff, shifts, cfg) {
   return out
 }
 
+// Keyholder over-concentration: more keyholder-required shift hours than the keyholders
+// are contracted for, so keyholders get forced into overtime while non-keyholders fall
+// short of their contracts (the "40/16" symptom). Returns { khHours, khContracted, promote }
+// or null. (The no-keyholder-at-all case is handled by the rota's keyholder compliance flag.)
+export function keyholderBottleneck(staff, shifts, cfg) {
+  let khHours = 0
+  for (const sh of (shifts || [])) {
+    if (!sh.keyholder) continue
+    for (const d of (sh.days || [])) if (cfg.openDays.includes(d)) khHours += (sh.end - sh.start) * (sh.staff || 1)
+  }
+  if (khHours <= 0) return null
+  const keyholders = (staff || []).filter((s) => s.keyholder)
+  if (keyholders.length === 0) return null
+  const khContracted = keyholders.reduce((a, s) => a + (s.contracted || 0), 0)
+  if (khHours <= khContracted + 0.5) return null
+  const promote = (staff || []).filter((s) => !s.keyholder).sort((a, b) => (b.contracted || 0) - (a.contracted || 0))[0]
+  return { khHours: Math.round(khHours), khContracted, promote: promote ? { id: promote.id, name: promote.name } : null }
+}
+
 // ── Schedule coverage — the OTHER coverage question: do the SHIFTS span the hours? ──
 // Location-wide (union of every team's shifts) vs the operating window per open day,
 // plus a keyholder-present-at-open/close check pooled across ALL keyholders (any team).

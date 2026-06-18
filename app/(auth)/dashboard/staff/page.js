@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { TEAM_COLORS, coverageBottlenecks, availableHours } from './utils/staffHelpers'
+import { TEAM_COLORS, coverageBottlenecks, availableHours, keyholderBottleneck } from './utils/staffHelpers'
 
 // ════════════════════════════════════════════════════════════════════════════
 //  STAFF PAGE (live) — locked lab design wired to /api/teams + /api/location + /api/shifts + /api/staff
@@ -329,7 +329,8 @@ function ShortfallList({ staff, shifts, teamId, onFix, cfg }) {
 function TeamGlance({ staff, shifts, teamName, teamId, accent, onFix, cfg }) {
   const r = readiness(staff, shifts, cfg)
   const bottlenecks = coverageBottlenecks(staff, shifts, cfg)
-  const ok = r.ready && bottlenecks.length === 0
+  const khBot = keyholderBottleneck(staff, shifts, cfg)
+  const ok = r.ready && bottlenecks.length === 0 && !khBot
   return <div>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
       <span style={{ fontSize: 13, fontWeight: 800 }}>Can we cover the shifts?</span>
@@ -347,6 +348,10 @@ function TeamGlance({ staff, shifts, teamName, teamId, accent, onFix, cfg }) {
           </div>}
         </div>
       })}
+    </div>}
+    {khBot && <div style={{ marginBottom: 16, padding: '11px 13px', borderRadius: 9, background: AMBER + '14', border: `1px solid ${AMBER}40` }}>
+      <div style={{ fontSize: 12, color: '#92660B', lineHeight: 1.45 }}><b>{khBot.khHours}h</b> of keyholder-only shifts but your keyholder{khBot.khContracted ? `s are contracted just ${khBot.khContracted}h` : ' is unset'} — they'll be pushed into overtime while others fall short of their hours. Add a keyholder or drop the keyholder requirement on some shifts.</div>
+      {onFix && khBot.promote && <div style={{ marginTop: 8 }}><button onClick={() => onFix(teamId, { kind: 'keyholder', id: khBot.promote.id })} style={FIX_BTN}>↳ Make {first(khBot.promote.name)} a keyholder</button></div>}
     </div>}
     <CapacityLine r={r} accent={accent} teamId={teamId} onFix={onFix} />
     <div style={{ borderTop: '1px solid #ECECEF', margin: '16px 0 14px' }} />
