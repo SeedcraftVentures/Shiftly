@@ -21,6 +21,14 @@ function mondayStr(offsetWeeks = 0) {
   d.setDate(d.getDate() - dow + offsetWeeks * 7)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
+// Snap any date to its nearest Monday — tolerant of rotas saved a day off (e.g. a Sunday).
+function nearestMonday(dateStr) {
+  const [y, m, dd] = dateStr.split('-').map(Number)
+  const d = new Date(y, m - 1, dd)
+  const dow = (d.getDay() + 6) % 7
+  d.setDate(d.getDate() + (dow <= 3 ? -dow : 7 - dow))
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 // Verdict mirrors the Staff page's CapacityLine: covered when max capacity ≥ required.
 const COVERED = { label: 'Covered', color: T.green }
 const SHORT = { label: 'Short on cover', color: T.red }
@@ -92,9 +100,9 @@ export default function DashboardPage() {
   // Living Hours: staff deserve 4 weeks' notice. How many of the next 4 weeks are published?
   const horizon = useMemo(() => {
     if (!data) return null
-    const next4 = [0, 1, 2, 3].map((i) => mondayStr(i))
-    const isPub = (wk) => data.rotas.some((r) => r.week_start === wk && r.status === 'Published')
-    return { published: next4.filter(isPub).length, firstGap: next4.find((wk) => !isPub(wk)) }
+    const next4 = [0, 1, 2, 3].map((i) => mondayStr(i)) // this week + next 3
+    const pubMondays = new Set(data.rotas.filter((r) => r.status === 'Published').map((r) => nearestMonday(r.week_start)))
+    return { published: next4.filter((wk) => pubMondays.has(wk)).length, firstGap: next4.find((wk) => !pubMondays.has(wk)) }
   }, [data])
 
   const thisWeek = useMemo(() => {

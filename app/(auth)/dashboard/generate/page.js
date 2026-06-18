@@ -26,7 +26,8 @@ function nextMonday() {
   const d = new Date(); d.setHours(0, 0, 0, 0)
   const dow = (d.getDay() + 6) % 7 // 0=Mon
   d.setDate(d.getDate() + (7 - dow))
-  return d.toISOString().slice(0, 10)
+  // local components (NOT toISOString, which shifts a day back in UTC+ timezones → Sunday)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 const prettyDate = (s) => { try { return new Date(s + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) } catch { return s } }
 
