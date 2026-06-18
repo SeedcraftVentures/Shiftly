@@ -162,12 +162,13 @@ export async function POST(request) {
       for (let wk = 1; wk <= weekCount; wk++) {
         let result = await callScheduler(pythonUrl, { staff, shifts, rules, weeks: 1 }) // stage 1: full constraints
         if (!result.success) {
-          // Relax the policy ("soft") rules that block a build — keyholder (it's a LOCATION
-          // concern, any team's keyholder can open/close), max consecutive days, min rest —
-          // leaving only the physically-unavoidable constraints (a shift needs N people, M
-          // available). Honours "the rota always builds, then we flag what couldn't be met":
-          // breaches show in the rule-compliance diagnostics.
-          const relaxedRules = { ...rules, fair_distribution: true, enforce_keyholder: false, max_consecutive_days: 7, min_rest_hours: 0 }
+          // Relax the policy rules that block a build — max consecutive days, min rest, and
+          // keyholder ONLY if the team has no keyholder (then it's a location-wide concern,
+          // flagged afterwards). If the team HAS keyholders, keep enforcing it so they take
+          // open/close — otherwise the rota could put a non-keyholder there while the Staff
+          // tab (which counts keyholders) says it's covered. Honours "always builds, then flag".
+          const teamHasKeyholder = staff.some((s) => s.keyholder)
+          const relaxedRules = { ...rules, fair_distribution: true, enforce_keyholder: teamHasKeyholder, max_consecutive_days: 7, min_rest_hours: 0 }
           // Stage 2: KEEP contracted hours as a (soft) target so distribution stays good.
           result = await callScheduler(pythonUrl, { staff, shifts, rules: relaxedRules, weeks: 1 })
           if (!result.success) {
