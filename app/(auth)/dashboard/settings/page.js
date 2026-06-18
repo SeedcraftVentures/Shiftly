@@ -1,16 +1,15 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { T, Card, Button, Input, Field, Label, Switch, Chip, Segmented, Tag, TimeRange } from '@/app/components/ui/kit'
+import { T, Card, Button, Input, Field, Label, Switch, Segmented, Tag, TimeRange } from '@/app/components/ui/kit'
 
 // ════════════════════════════════════════════════════════════════════════════
 //  SETTINGS (live) — configure the things onboarding set: organisation, the active
-//  location, its opening AND operating hours (two different windows), shift lengths,
-//  plus organisation-wide location management.
+//  location, and its opening AND operating hours (two different windows), plus
+//  organisation-wide location management.
 // ════════════════════════════════════════════════════════════════════════════
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-const SHIFT_LENGTH_OPTIONS = [3, 4, 5, 6, 8, 10, 12]
 const CURRENCIES = [{ value: 'GBP', label: '£ GBP' }, { value: 'USD', label: '$ USD' }, { value: 'EUR', label: '€ EUR' }]
 const LOCATION_TYPES = ['Restaurant', 'Café', 'Bar', 'Takeaway', 'Hotel', 'Retail', 'Other']
 
@@ -127,18 +126,6 @@ export default function SettingsPage() {
                   )}
                 </div>
               )
-            })}
-          </div>
-        </Section>
-      )}
-
-      {/* ── Shift lengths ── */}
-      {loc && (
-        <Section title="Shift lengths" desc="The shift durations you build rotas from." onSave={() => save('lengths', { location: { shift_lengths: loc.shift_lengths } })} saving={saving === 'lengths'} saved={saved === 'lengths'}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {SHIFT_LENGTH_OPTIONS.map((h) => {
-              const on = (loc.shift_lengths || []).includes(h)
-              return <Chip key={h} active={on} accent={T.pink} onClick={() => setLoc({ shift_lengths: on ? loc.shift_lengths.filter((x) => x !== h) : [...loc.shift_lengths, h].sort((a, b) => a - b) })}>{h}h</Chip>
             })}
           </div>
         </Section>

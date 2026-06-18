@@ -40,22 +40,41 @@ function shiftHours(p) {
 // When a team can't be scheduled even with policy constraints relaxed, work out the
 // real, actionable reason: a day short of available people, or not enough staff-hours.
 function diagnoseTeam(teamStaff, teamPatterns, openDayNames) {
-  let demandH = 0
+  const isOpen = (day) => openDayNames.size === 0 || openDayNames.has(day)
+  let demandH = 0, totalSlots = 0
   const gaps = []
+  const daySlots = {} // day index → staff-slots needed that day
   for (const p of teamPatterns) {
     const need = p.num_staff_needed || 1
     for (const day of (p.days || [])) {
-      if (openDayNames.size > 0 && !openDayNames.has(day)) continue
-      demandH += shiftHours(p) * need
+      if (!isOpen(day)) continue
       const di = DAY_INDEX[day]
+      demandH += shiftHours(p) * need
+      totalSlots += need
+      daySlots[di] = (daySlots[di] || 0) + need
       const avail = teamStaff.filter((s) => s.availability && s.availability[di]).length
       if (avail < need) gaps.push(`${p.shift_name} on ${day} needs ${need} but ${avail} available`)
     }
   }
   if (gaps.length) return `Not enough available staff — ${gaps.slice(0, 2).join('; ')}${gaps.length > 2 ? `; +${gaps.length - 2} more` : ''}. Widen availability or add staff.`
+
+  // Linchpin: someone forced to work more days than their max hours allow, because they're
+  // the only flexible cover (e.g. teammates are weekday-only / weekend-only). The per-day
+  // headcount looks fine, but no single assignment fits within everyone's max hours.
+  const avgLen = totalSlots ? demandH / totalSlots : 8
+  for (const s of teamStaff) {
+    const maxDays = Math.floor(Math.min(s.max_hours || LEGAL_MAX, LEGAL_MAX) / Math.max(avgLen, 1))
+    let essential = 0
+    for (const di of Object.keys(daySlots)) {
+      const avail = teamStaff.filter((x) => x.availability && x.availability[di])
+      if (avail.length <= daySlots[di] && avail.some((x) => x.staff_id === s.staff_id)) essential++
+    }
+    if (essential > maxDays) return `${s.name} would have to work ${essential} days but can only do ${maxDays} within their max hours — they're the only cover available every open day (teammates are limited to certain days). Spread the team's availability across the week, add staff, or raise ${s.name}'s max hours.`
+  }
+
   const capacity = teamStaff.reduce((a, s) => a + Math.min(s.max_hours || s.contracted_hours || LEGAL_MAX, LEGAL_MAX), 0)
   if (demandH > capacity + 0.5) return `Needs more staff — ${Math.round(demandH)}h of shifts but only about ${Math.round(capacity)}h of staff capacity (max ${LEGAL_MAX}h each). Add staff or reduce shift coverage.`
-  return 'Could not find a valid schedule. Try adding staff, widening availability, or reducing shift coverage.'
+  return 'Could not find a valid schedule. Try widening availability, adding staff, or reducing shift coverage.'
 }
 
 export async function POST(request) {
@@ -141,21 +160,22 @@ export async function POST(request) {
 
       // generate each week independently (avoids the scheduler's cross-week diversity constraint)
       for (let wk = 1; wk <= weekCount; wk++) {
-        let result = await callScheduler(pythonUrl, { staff, shifts, rules, weeks: 1 })
+        let result = await callScheduler(pythonUrl, { staff, shifts, rules, weeks: 1 }) // stage 1: full constraints
         if (!result.success) {
-          // Safety net for the deployed solver: drop the contracted-hours minimum so a
-          // rota still builds (shortfalls flagged below). No-op once the solver treats
-          // contracted as a soft target. Force fair distribution so the fallback still
-          // balances hours sensibly rather than dumping them on one person.
-          // Relax every policy ("soft") constraint — contracted hours, keyholder, max
-          // consecutive days, min rest — leaving only the physically-unavoidable ones
-          // (a shift needs N people and only M are available). This honours "the rota
-          // always builds, then we flag what couldn't be met": violations show up in the
-          // rule-compliance + contracted-hours diagnostics. If it STILL can't build, the
-          // failure is real (not enough available staff) and the reason is specific.
-          const relaxed = staff.map((s) => ({ ...s, contracted_hours: 0 }))
+          // Relax the policy ("soft") rules that block a build — keyholder (it's a LOCATION
+          // concern, any team's keyholder can open/close), max consecutive days, min rest —
+          // leaving only the physically-unavoidable constraints (a shift needs N people, M
+          // available). Honours "the rota always builds, then we flag what couldn't be met":
+          // breaches show in the rule-compliance diagnostics.
           const relaxedRules = { ...rules, fair_distribution: true, enforce_keyholder: false, max_consecutive_days: 7, min_rest_hours: 0 }
-          result = await callScheduler(pythonUrl, { staff: relaxed, shifts, rules: relaxedRules, weeks: 1 })
+          // Stage 2: KEEP contracted hours as a (soft) target so distribution stays good.
+          result = await callScheduler(pythonUrl, { staff, shifts, rules: relaxedRules, weeks: 1 })
+          if (!result.success) {
+            // Stage 3 (last resort): drop the contracted target entirely. Only needed for the
+            // legacy solver that treats contracted as a HARD minimum; a no-op once redeployed.
+            const zeroed = staff.map((s) => ({ ...s, contracted_hours: 0 }))
+            result = await callScheduler(pythonUrl, { staff: zeroed, shifts, rules: relaxedRules, weeks: 1 })
+          }
           if (result.success) relaxedTeams.add(teamName[teamId])
         }
         if (!result.success) {

@@ -293,6 +293,38 @@ export function readiness(staff, shifts, cfg) {
   }
 }
 
+// ── Coverage bottlenecks — catch the "looks covered per day, but no valid weekly rota
+// fits inside everyone's max hours" case (e.g. one person available every day while
+// teammates are weekday-/weekend-only, so that person would have to work too many days).
+// Returns [{ name, essential, maxDays }] for staff who'd be over-worked.
+export function coverageBottlenecks(staff, shifts, cfg) {
+  const slotsByDay = {}
+  let totalSlots = 0, totalHours = 0
+  for (const sh of (shifts || [])) {
+    for (const d of (sh.days || [])) {
+      if (!cfg.openDays.includes(d)) continue
+      const need = sh.staff || 1
+      slotsByDay[d] = (slotsByDay[d] || 0) + need
+      totalSlots += need
+      totalHours += (sh.end - sh.start) * need
+    }
+  }
+  if (!totalSlots) return []
+  const avgLen = totalHours / totalSlots
+  const days = Object.keys(slotsByDay).map(Number)
+  const out = []
+  for (const s of (staff || [])) {
+    const maxDays = Math.floor((s.max || 48) / Math.max(avgLen, 1))
+    let essential = 0
+    for (const d of days) {
+      const availCount = staff.filter((x) => x.avail && x.avail[d]).length
+      if (availCount <= slotsByDay[d] && s.avail && s.avail[d]) essential++
+    }
+    if (essential > maxDays) out.push({ name: s.name, essential, maxDays })
+  }
+  return out
+}
+
 // ── Schedule coverage — the OTHER coverage question: do the SHIFTS span the hours? ──
 // Location-wide (union of every team's shifts) vs the operating window per open day,
 // plus a keyholder-present-at-open/close check pooled across ALL keyholders (any team).

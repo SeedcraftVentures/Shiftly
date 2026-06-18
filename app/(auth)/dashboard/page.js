@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { T, Card, Button, Tag, ProgressBar, fmtTime } from '@/app/components/ui/kit'
-import { TEAM_COLORS, cfgFromLocation, mapStaffForCoverage, readiness, scheduleCoverage } from '@/app/(auth)/dashboard/staff/utils/staffHelpers'
+import { TEAM_COLORS, cfgFromLocation, mapStaffForCoverage, readiness, scheduleCoverage, coverageBottlenecks } from '@/app/(auth)/dashboard/staff/utils/staffHelpers'
 
 // ════════════════════════════════════════════════════════════════════════════
 //  DASHBOARD (live) — wired to the NEW schema: /api/rotas (name/week_start/status),
@@ -71,12 +71,13 @@ export default function DashboardPage() {
     const teamRows = (data.teams || []).map((t, i) => {
       const ts = data.shifts.filter((s) => s.team_id === t.id)
       const tp = mapped.filter((s) => s.team_id === t.id)
-      return { team: t, color: TEAM_COLORS[i % TEAM_COLORS.length], r: readiness(tp, ts, cfg) }
+      return { team: t, color: TEAM_COLORS[i % TEAM_COLORS.length], r: readiness(tp, ts, cfg), bottlenecks: coverageBottlenecks(tp, ts, cfg) }
     })
     const req = teamRows.reduce((a, x) => a + x.r.req, 0)
     const maxh = teamRows.reduce((a, x) => a + x.r.maxh, 0)
-    const anyShort = teamRows.some((x) => !x.r.coverableAtMax)
-    return { teamRows, req: Math.round(req), maxh: Math.round(maxh), readiness: req === 0 ? 1 : Math.min(1, maxh / req), status: anyShort ? 'short' : 'ok' }
+    const bottlenecks = teamRows.flatMap((x) => x.bottlenecks.map((b) => ({ ...b, team: x.team.name })))
+    const anyShort = teamRows.some((x) => !x.r.coverableAtMax || x.bottlenecks.length > 0)
+    return { teamRows, bottlenecks, req: Math.round(req), maxh: Math.round(maxh), readiness: req === 0 ? 1 : Math.min(1, maxh / req), status: anyShort ? 'short' : 'ok' }
   }, [data])
 
   // The OTHER question: do the shifts span the operating hours (location-wide)?
@@ -182,8 +183,8 @@ export default function DashboardPage() {
           <ProgressBar value={coverage.readiness} height={9} color={cov.color} radius={99} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
             {coverage.teamRows.length === 0 && <p style={{ fontSize: 13, color: T.faint, margin: 0 }}>No teams yet.</p>}
-            {coverage.teamRows.map(({ team, color, r }) => {
-              const st = r.coverableAtMax ? COVERED : SHORT
+            {coverage.teamRows.map(({ team, color, r, bottlenecks }) => {
+              const st = (r.coverableAtMax && bottlenecks.length === 0) ? COVERED : SHORT
               return <div key={team.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ width: 9, height: 9, borderRadius: 99, background: color, flexShrink: 0 }} />
                 <span style={{ fontSize: 13, fontWeight: 600, color: T.body, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{team.name}</span>
@@ -192,6 +193,9 @@ export default function DashboardPage() {
               </div>
             })}
           </div>
+          {coverage.bottlenecks.length > 0 && <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: T.r.sm, background: T.amber + '12', border: `1px solid ${T.amber}30` }}>
+            {coverage.bottlenecks.slice(0, 3).map((b, i) => <p key={i} style={{ fontSize: 12, color: '#92660B', margin: i ? '6px 0 0' : 0, lineHeight: 1.45 }}><b>{b.name}</b> ({b.team}) is the only cover available every open day — they'd work {b.essential} days but can do {b.maxDays}. Spread availability or add staff.</p>)}
+          </div>}
           <button onClick={() => router.push('/dashboard/staff')} style={{ marginTop: 14, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: T.font, fontSize: 12.5, fontWeight: 700, color: T.pink }}>Review staffing →</button>
         </Card>
 

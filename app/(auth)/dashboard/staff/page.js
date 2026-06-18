@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { TEAM_COLORS } from './utils/staffHelpers'
+import { TEAM_COLORS, coverageBottlenecks } from './utils/staffHelpers'
 
 // ════════════════════════════════════════════════════════════════════════════
 //  STAFF PAGE (live) — locked lab design wired to /api/teams + /api/location + /api/shifts + /api/staff
@@ -324,12 +324,17 @@ function ShortfallList({ staff, shifts, teamId, onFix, cfg }) {
 }
 function TeamGlance({ staff, shifts, teamName, teamId, accent, onFix, cfg }) {
   const r = readiness(staff, shifts, cfg)
+  const bottlenecks = coverageBottlenecks(staff, shifts, cfg)
+  const ok = r.ready && bottlenecks.length === 0
   return <div>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
       <span style={{ fontSize: 13, fontWeight: 800 }}>Can we cover the shifts?</span>
-      <span style={{ fontSize: 13, fontWeight: 800, color: r.ready ? '#16A34A' : accent }}>{r.overallPct}%</span>
+      <span style={{ fontSize: 13, fontWeight: 800, color: ok ? '#16A34A' : (bottlenecks.length ? '#EF4444' : accent) }}>{r.overallPct}%</span>
     </div>
     <div style={{ fontSize: 11, color: accent, fontWeight: 600, marginBottom: 16 }}>{teamName}</div>
+    {bottlenecks.length > 0 && <div style={{ marginBottom: 16, padding: '10px 12px', borderRadius: 9, background: '#FEF2F2', border: '1px solid #FECACA' }}>
+      {bottlenecks.map((b, i) => <div key={i} style={{ fontSize: 12, color: '#B91C1C', lineHeight: 1.45, marginTop: i ? 6 : 0 }}><b>{b.name}</b> is the only person available every open day — they'd need to work {b.essential} days but can do {b.maxDays}. The rota won't build until you spread availability across the week or add staff.</div>)}
+    </div>}
     <CapacityLine r={r} accent={accent} teamId={teamId} onFix={onFix} />
     <div style={{ borderTop: '1px solid #ECECEF', margin: '16px 0 14px' }} />
     <ShortfallList staff={staff} shifts={shifts} teamId={teamId} onFix={onFix} cfg={cfg} />
