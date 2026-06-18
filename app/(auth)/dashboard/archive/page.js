@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { T, Card, Button, Tag, Segmented } from '@/app/components/ui/kit'
 import { TEAM_COLORS } from '@/app/(auth)/dashboard/staff/utils/staffHelpers'
+import { rotaBlock } from '@/lib/rotaColors'
 
 // ════════════════════════════════════════════════════════════════════════════
 //  ARCHIVE — browse every saved rota, jump to a week, open any past rota read-only.
@@ -12,7 +13,6 @@ const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const prettyDate = (s) => { try { return new Date(s + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) } catch { return s } }
 const monthLabel = (s) => { try { return new Date(s + 'T00:00:00Z').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) } catch { return '' } }
 const fmt = (hhmm) => { if (!hhmm) return ''; const [h, m] = hhmm.split(':').map(Number); const ap = h < 12 ? 'am' : 'pm'; let hh = h % 12; if (hh === 0) hh = 12; return m === 0 ? `${hh}${ap}` : `${hh}:${String(m).padStart(2, '0')}${ap}` }
-function lighten(hex, amt) { const n = parseInt(hex.slice(1), 16); let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255; r = Math.round(r + (255 - r) * amt); g = Math.round(g + (255 - g) * amt); b = Math.round(b + (255 - b) * amt); return '#' + [r, g, b].map((x) => x.toString(16).padStart(2, '0')).join('') }
 const mondayOfDate = (s) => { const d = new Date(s + 'T00:00:00Z'); const dow = (d.getUTCDay() + 6) % 7; d.setUTCDate(d.getUTCDate() - dow); return d.toISOString().slice(0, 10) }
 
 // Read-only rendering of a saved rota (team sections · staff rows · day columns).
@@ -45,13 +45,13 @@ function ArchiveGrid({ data, teamColor }) {
               </div>
             </td></tr>
             {team.staff.map((s, idx) => {
-              const c = lighten(color, (idx % 4) * 0.17)
+              const blk = rotaBlock(color, idx)
               return <tr key={s.id}>
-                <td style={{ padding: '4px 4px', verticalAlign: 'top' }}><span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 600, color: '#111827' }}><span style={{ width: 9, height: 9, borderRadius: 99, background: c, flexShrink: 0 }} />{s.name}</span></td>
+                <td style={{ padding: '4px 4px', verticalAlign: 'top' }}><span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 600, color: '#111827' }}><span style={{ width: 9, height: 9, borderRadius: 99, background: color, flexShrink: 0 }} />{s.name}</span></td>
                 {[0, 1, 2, 3, 4, 5, 6].map((d) => <td key={d} style={{ padding: '4px 4px', verticalAlign: 'top' }}>
-                  {(s.blocks[d] || []).map((a, i) => <div key={i} style={{ background: c, borderRadius: 10, padding: '7px 10px', marginBottom: 4 }}>
-                    <div style={{ color: '#fff', fontWeight: 700, fontSize: 11, lineHeight: 1.25 }}>{a.shift_name}</div>
-                    <div style={{ color: 'rgba(255,255,255,.85)', fontSize: 9.5 }}>{fmt(a.start_time)}–{fmt(a.end_time)}</div>
+                  {(s.blocks[d] || []).map((a, i) => <div key={i} style={{ background: blk.background, borderRadius: 10, padding: '7px 10px', marginBottom: 4, boxShadow: blk.shadow }}>
+                    <div style={{ color: blk.color, fontWeight: 700, fontSize: 11, lineHeight: 1.25 }}>{a.shift_name}</div>
+                    <div style={{ color: blk.subColor, fontSize: 9.5 }}>{fmt(a.start_time)}–{fmt(a.end_time)}</div>
                   </div>)}
                 </td>)}
               </tr>
@@ -144,18 +144,19 @@ async function shareRotaImage(data, teamColor) {
     ctx.strokeStyle = '#F0F0F2'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(PAD, y + TEAMH - 6); ctx.lineTo(W - PAD, y + TEAMH - 6); ctx.stroke()
     y += TEAMH
     t.staff.forEach((s, idx) => {
-      const c = lighten(t.color, (idx % 4) * 0.17)
+      const blk = rotaBlock(t.color, idx)
       const h = rowH(s)
-      ctx.fillStyle = c; ctx.beginPath(); ctx.arc(PAD + 5, y + RPAD + 9, 4, 0, Math.PI * 2); ctx.fill()
+      ctx.fillStyle = t.color; ctx.beginPath(); ctx.arc(PAD + 5, y + RPAD + 9, 4, 0, Math.PI * 2); ctx.fill()
       ctx.fillStyle = '#111827'; ctx.font = `600 13px ${FONT}`
       ctx.fillText(trunc(s.name, LABELW - 22), PAD + 16, y + RPAD + 2)
       for (let d = 0; d < 7; d++) {
         let by = y + RPAD
         for (const a of (s.blocks[d] || [])) {
           const bx = PAD + LABELW + d * DAYW + 3, bw = DAYW - 6
-          ctx.fillStyle = c; rrect(bx, by, bw, BLOCKH, 8); ctx.fill()
-          ctx.fillStyle = '#fff'; ctx.font = `700 11px ${FONT}`; ctx.fillText(trunc(a.shift_name, bw - 14), bx + 7, by + 5)
-          ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.font = `500 10px ${FONT}`; ctx.fillText(`${fmt(a.start_time)}–${fmt(a.end_time)}`, bx + 7, by + 18)
+          ctx.save(); ctx.shadowColor = t.color + '40'; ctx.shadowBlur = 5; ctx.shadowOffsetY = 1.5
+          ctx.fillStyle = blk.background; rrect(bx, by, bw, BLOCKH, 8); ctx.fill(); ctx.restore()
+          ctx.fillStyle = blk.color; ctx.font = `700 11px ${FONT}`; ctx.fillText(trunc(a.shift_name, bw - 14), bx + 7, by + 5)
+          ctx.fillStyle = blk.subColor; ctx.font = `500 10px ${FONT}`; ctx.fillText(`${fmt(a.start_time)}–${fmt(a.end_time)}`, bx + 7, by + 18)
           by += BLOCKH + BGAP
         }
       }

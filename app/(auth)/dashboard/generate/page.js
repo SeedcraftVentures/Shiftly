@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef, Fragment } from 'react'
 import { Field, Input, TimeRange, Switch, Button } from '@/app/components/ui/kit'
+import { rotaBlock } from '@/lib/rotaColors'
 
 // ════════════════════════════════════════════════════════════════════════════
 //  ROTA BUILDER (live) — pick week → Generate (OR-Tools) → grid → save/publish.
@@ -35,8 +36,6 @@ function initials(name) { return (name || '?').split(' ').map((w) => w[0]).slice
 
 // ── grid helpers ────────────────────────────────────────────────────────────────
 const toHHMM = (d) => { const h = Math.floor(d), m = Math.round((d - h) * 60); return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}` }
-function lighten(hex, amt) { const n = parseInt(hex.slice(1), 16); let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255; r = Math.round(r + (255 - r) * amt); g = Math.round(g + (255 - g) * amt); b = Math.round(b + (255 - b) * amt); return '#' + [r, g, b].map((x) => x.toString(16).padStart(2, '0')).join('') }
-const staffColor = (teamColor, idx) => lighten(teamColor, (idx % 4) * 0.17)
 function dateForDay(weekStart, weekNum, dayIdx) { const x = new Date(weekStart + 'T00:00:00Z'); x.setUTCDate(x.getUTCDate() + (weekNum - 1) * 7 + dayIdx); return x }
 
 // ── REFINED rota grid — one rota, team sections, per-staff colour, drag/remove/add ──
@@ -109,18 +108,18 @@ function RefinedRotaGrid({ gridTeams, staff, shifts, assignments, weekStart, wee
                 </div>
               </td></tr>
               {rows.map((s, idx) => {
-                const c = staffColor(team.color, idx)
+                const blk = rotaBlock(team.color, idx)
                 return <tr key={s.id}>
-                  <td style={RTD_STAFF}><span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 600, color: '#111827' }}><span style={{ width: 9, height: 9, borderRadius: 99, background: c, flexShrink: 0 }} />{s.name}</span></td>
+                  <td style={RTD_STAFF}><span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 600, color: '#111827' }}><span style={{ width: 9, height: 9, borderRadius: 99, background: team.color, flexShrink: 0 }} />{s.name}</span></td>
                   {[0, 1, 2, 3, 4, 5, 6].map((d) => {
                     const blocks = assignments.filter((a) => a.staff_id === s.id && di(a) === d)
                     return <td key={d} onDragOver={(e) => e.preventDefault()} onDrop={() => { const dr = dragRef.current; if (dr && dr.day === d && dr.staffId !== s.id) onReassign(dr._id, s.id) }} style={RTD}>
                       {blocks.length > 0
                         ? <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                            {blocks.map((a) => <div key={a._id} draggable onDragStart={() => { dragRef.current = { _id: a._id, day: d, staffId: s.id } }} onDragEnd={() => { dragRef.current = null }} onClick={() => onEditRequest(s, d, a)} title="Click to edit" style={{ position: 'relative', background: c, borderRadius: 10, padding: '7px 18px 7px 10px', cursor: 'pointer', boxShadow: `0 2px 6px ${c}33` }}>
-                              <div style={{ color: '#fff', fontWeight: 700, fontSize: 11, lineHeight: 1.25 }}>{a.shift_name}</div>
-                              <div style={{ color: 'rgba(255,255,255,.85)', fontSize: 9.5 }}>{fmt(a.start_time)}–{fmt(a.end_time)}</div>
-                              <button onClick={(e) => { e.stopPropagation(); onRemove(a._id) }} style={{ position: 'absolute', top: 3, right: 5, color: 'rgba(255,255,255,.9)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, lineHeight: 1, padding: 0 }}>×</button>
+                            {blocks.map((a) => <div key={a._id} draggable onDragStart={() => { dragRef.current = { _id: a._id, day: d, staffId: s.id } }} onDragEnd={() => { dragRef.current = null }} onClick={() => onEditRequest(s, d, a)} title="Click to edit" style={{ position: 'relative', background: blk.background, borderRadius: 10, padding: '7px 18px 7px 10px', cursor: 'pointer', boxShadow: blk.shadow }}>
+                              <div style={{ color: blk.color, fontWeight: 700, fontSize: 11, lineHeight: 1.25 }}>{a.shift_name}</div>
+                              <div style={{ color: blk.subColor, fontSize: 9.5 }}>{fmt(a.start_time)}–{fmt(a.end_time)}</div>
+                              <button onClick={(e) => { e.stopPropagation(); onRemove(a._id) }} style={{ position: 'absolute', top: 3, right: 5, color: blk.filled ? 'rgba(255,255,255,.9)' : '#9CA3AF', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, lineHeight: 1, padding: 0 }}>×</button>
                             </div>)}
                           </div>
                         : <AddCell onAdd={() => onAddRequest(s, d)} />}
