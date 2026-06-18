@@ -86,7 +86,7 @@ export default function Navigation({ collapsed = false, onToggleCollapse }) {
     const rail = mini && !mobile
     return (
       <Link id={mobile ? `${item.id}-mobile` : item.id} href={item.path} title={rail ? item.name : undefined}
-        className={`flex items-center rounded-xl transition-all ${rail ? 'justify-center py-3' : 'justify-between px-4 py-3'} ${active ? 'bg-white text-pink-600 shadow-lg' : 'text-white/90 hover:bg-white/10 hover:text-white'}`}>
+        className={`flex items-center rounded-xl transition-all ${rail ? 'justify-center py-2.5' : 'justify-between px-4 py-2.5'} ${active ? 'bg-white text-pink-600 shadow-lg' : 'text-white/90 hover:bg-white/10 hover:text-white'}`}>
         <div className={`flex items-center ${rail ? '' : 'space-x-3'}`}>
           <Icon k={item.icon} />
           {!rail && <span className="font-medium text-sm">{item.name}</span>}
@@ -193,7 +193,7 @@ export default function Navigation({ collapsed = false, onToggleCollapse }) {
       {/* ── Mobile slide-out (always full width) ── */}
       <div className={`lg:hidden fixed top-16 left-0 bottom-0 w-72 bg-[#FF1F7D] z-50 flex flex-col transform transition-transform duration-300 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="px-3 pt-4 pb-2"><Switcher mobile /></div>
-        <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
+        <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {MAIN_ITEMS.map((item) => <div key={item.path}><NavLink item={item} mobile />{item.dividerAfter && <div className="my-3 mx-4 border-t border-white/30" />}</div>)}
         </div>
         <div className="px-3 pt-3 pb-5 border-t border-white/15 space-y-1">
@@ -208,22 +208,23 @@ export default function Navigation({ collapsed = false, onToggleCollapse }) {
       {/* ── Desktop sidebar (collapsible + hover-to-peek) ── */}
       <nav onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
         className={`hidden lg:flex fixed left-0 top-0 bottom-0 bg-[#FF1F7D] flex-col z-50 rounded-r-[2rem] transition-[width] duration-200 ${mini ? 'w-[4.75rem]' : 'w-52'} ${collapsed && hovered ? 'shadow-2xl' : ''}`}>
-        {/* brand */}
-        <Link href="/dashboard" className={`flex items-center pt-5 pb-3 ${mini ? 'justify-center px-0' : 'gap-2 px-5'}`}>
+        {/* brand — logo kept on the same vertical axis as the nav icons (≈38px),
+            so it doesn't shift when the rail collapses/expands */}
+        <Link href="/dashboard" className={`flex items-center pt-4 pb-2 ${mini ? 'justify-center px-0' : 'gap-2 pl-[25px] pr-4'}`}>
           <Image src="/logo-white.svg" alt="Shiftly" width={26} height={26} className="flex-shrink-0" />
           {!mini && <span className="text-white font-semibold text-xl" style={{ fontFamily: "'Cal Sans', sans-serif" }}>Shiftly</span>}
         </Link>
 
         {/* workspace / location switcher */}
-        <div className={mini ? 'px-2.5 pb-3' : 'px-3 pb-3'}><Switcher /></div>
+        <div className={mini ? 'px-2.5 pb-2' : 'px-3 pb-2'}><Switcher /></div>
 
-        {/* main nav */}
-        <div className={`flex-1 overflow-y-auto overflow-x-hidden py-1 space-y-1 ${mini ? 'px-2.5' : 'px-3'}`}>
-          {MAIN_ITEMS.map((item) => <div key={item.path}><NavLink item={item} />{item.dividerAfter && <div className={`my-3 border-t border-white/30 ${mini ? 'mx-2' : 'mx-4'}`} />}</div>)}
+        {/* main nav — scrollbar hidden (still scrolls by wheel/trackpad if ever needed) */}
+        <div className={`flex-1 overflow-y-auto overflow-x-hidden py-1 space-y-0.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden ${mini ? 'px-2.5' : 'px-3'}`}>
+          {MAIN_ITEMS.map((item) => <div key={item.path}><NavLink item={item} />{item.dividerAfter && <div className={`my-2 border-t border-white/30 ${mini ? 'mx-2' : 'mx-4'}`} />}</div>)}
         </div>
 
         {/* pinned bottom: settings, help, collapse toggle, account */}
-        <div className={`pt-3 pb-5 border-t border-white/15 space-y-1 ${mini ? 'px-2.5' : 'px-3'}`}>
+        <div className={`pt-2 pb-4 border-t border-white/15 space-y-0.5 ${mini ? 'px-2.5' : 'px-3'}`}>
           {BOTTOM_ITEMS.map((item) => <NavLink key={item.path} item={item} />)}
           <button onClick={onToggleCollapse} title={collapsed ? 'Pin nav open' : 'Collapse nav'}
             className={`w-full flex items-center rounded-xl text-white/80 hover:bg-white/10 hover:text-white transition ${mini ? 'justify-center py-3' : 'gap-3 px-4 py-3'}`}>
