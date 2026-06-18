@@ -406,7 +406,11 @@ export default function ShiftsPage() {
   const teamName = teams.find((t) => t.id === teamId)?.name || ''
 
   return <div style={{ fontFamily: FONT, background: '#FAFAFB', minHeight: '100vh', color: '#111827' }}>
-    <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 0 14px' }}>
+    <div style={{ maxWidth: 1240, margin: '0 auto', padding: '26px 24px 0' }}>
+      <h1 style={{ fontSize: 26, fontWeight: 800, color: '#111827', margin: 0, letterSpacing: -0.3 }}>Shifts</h1>
+      <p style={{ fontSize: 13.5, color: '#6B7280', margin: '5px 0 0' }}>The shift patterns each team runs every week.</p>
+    </div>
+    <div style={{ maxWidth: 1240, margin: '0 auto', padding: '14px 24px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
       <div style={{ display: 'inline-flex', background: '#F1F1F4', borderRadius: 11, padding: 4, gap: 2 }}>
         {tabs.map((t) => {
           const active = t.id === teamId
@@ -414,6 +418,17 @@ export default function ShiftsPage() {
           return <button key={t.id} onClick={() => setTeamId(t.id)} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 700, padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', color: active ? '#111827' : '#9CA3AF', background: active ? '#fff' : 'transparent', boxShadow: active ? '0 1px 3px rgba(0,0,0,.1)' : 'none', transition: 'all .15s' }}>{t.id !== 'all' && <span style={{ width: 8, height: 8, borderRadius: 99, background: t.color }} />}{t.name}<span style={{ fontSize: 11, fontWeight: 700, color: active ? (t.color || PINK) : '#C4C4CC' }}>{count}</span></button>
         })}
       </div>
+      {!isAll && <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {selectMode ? <>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#6B7280', marginRight: 2 }}>{selectedIds.size} selected</span>
+          <button onClick={() => { setSelectMode(false); setSelectedIds(new Set()) }} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: '#6B7280', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 9, padding: '9px 14px', cursor: 'pointer' }}>Cancel</button>
+          <button onClick={bulkDelete} disabled={selectedIds.size === 0} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: '#fff', background: selectedIds.size ? '#EF4444' : '#E5E7EB', border: 'none', borderRadius: 9, padding: '9px 16px', cursor: selectedIds.size ? 'pointer' : 'default' }}>Delete{selectedIds.size ? ` ${selectedIds.size}` : ''}</button>
+        </> : <>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#6B7280', marginRight: 2 }}>{teamShifts.length} shift{teamShifts.length === 1 ? '' : 's'}</span>
+          {teamShifts.length > 0 && <button onClick={() => setSelectMode(true)} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: '#6B7280', background: '#fff', border: '1px solid #E5E7EB', borderRadius: 9, padding: '9px 14px', cursor: 'pointer' }}>Select</button>}
+          <button onClick={() => addShift(teamId)} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: '#fff', background: accent, border: 'none', borderRadius: 9, padding: '9px 16px', cursor: 'pointer' }}>+ Add shift</button>
+        </>}
+      </div>}
     </div>
 
     {isAll ? (
@@ -423,23 +438,11 @@ export default function ShiftsPage() {
         <div style={{ fontSize: 11.5, color: '#9CA3AF', marginTop: 12, textAlign: 'center' }}>Click a team row to see its week and fill gaps.</div>
       </div>
     ) : (
-      <div style={{ display: 'flex', gap: 18, alignItems: 'flex-start', padding: '4px 24px 40px', maxWidth: 1240, margin: '0 auto' }}>
+      <div style={{ display: 'flex', gap: 18, alignItems: 'flex-start', padding: '2px 24px 40px', maxWidth: 1240, margin: '0 auto' }}>
         <div style={{ ...panel, width: 320, flexShrink: 0, position: 'sticky', top: 16, minHeight: 420 }}>
           <Inspector shift={selected} patch={(p) => patch(selected.id, p)} onDelete={() => removeShift(selected.id)} saveState={saveState} onSave={() => saveShift(selected)} accent={accent} cfg={cfg} />
         </div>
         <div style={{ flex: 1, minWidth: 320 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#6B7280' }}>{selectMode ? `${selectedIds.size} selected` : `${teamShifts.length} shift${teamShifts.length === 1 ? '' : 's'} in ${teamName}`}</span>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {selectMode ? <>
-                <button onClick={() => { setSelectMode(false); setSelectedIds(new Set()) }} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: '#6B7280', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 9, padding: '9px 14px', cursor: 'pointer' }}>Cancel</button>
-                <button onClick={bulkDelete} disabled={selectedIds.size === 0} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: '#fff', background: selectedIds.size ? '#EF4444' : '#E5E7EB', border: 'none', borderRadius: 9, padding: '9px 16px', cursor: selectedIds.size ? 'pointer' : 'default' }}>Delete{selectedIds.size ? ` ${selectedIds.size}` : ''}</button>
-              </> : <>
-                {teamShifts.length > 0 && <button onClick={() => setSelectMode(true)} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: '#6B7280', background: '#fff', border: '1px solid #E5E7EB', borderRadius: 9, padding: '9px 14px', cursor: 'pointer' }}>Select</button>}
-                <button onClick={() => addShift(teamId)} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: '#fff', background: accent, border: 'none', borderRadius: 9, padding: '9px 16px', cursor: 'pointer' }}>+ Add shift</button>
-              </>}
-            </div>
-          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {teamShifts.map((s) => <ShiftCard key={s.id} shift={s} selected={selectedId === s.id} onClick={() => (selectMode ? toggleSelect(s.id) : setSelectedId(s.id))} accent={accent} cfg={cfg} selectMode={selectMode} checked={selectedIds.has(s.id)} />)}
             {teamShifts.length === 0 && <div style={{ textAlign: 'center', color: '#9CA3AF', fontSize: 13, padding: '50px 0', ...panel }}>No shifts yet. Add one to get started.</div>}
