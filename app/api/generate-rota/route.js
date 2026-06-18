@@ -162,30 +162,25 @@ export async function POST(request) {
       // NOT a per-team rule — so the per-team solver never enforces it. We check it
       // location-wide after every team has built (below).
       const solverRules = { ...rules, enforce_keyholder: false }
-      // generate each week independently (avoids the scheduler's cross-week diversity constraint)
-      for (let wk = 1; wk <= weekCount; wk++) {
-        let result = await callScheduler(pythonUrl, { staff, shifts, rules: solverRules, weeks: 1 }) // stage 1: full constraints
-        if (!result.success) {
-          // Relax the policy rules that can block a build — max consecutive days, min rest —
-          // leaving only the physically-unavoidable ones. Honours "always builds, then flag".
+
+      // 3-stage solve ladder for `weeksN` weeks: full constraints → relax policy rules
+      // (keep contracted as a soft target) → drop contracted entirely (last resort).
+      // Always builds something, then we flag whatever isn't fully met.
+      const solveLadder = async (weeksN) => {
+        let r = await callScheduler(pythonUrl, { staff, shifts, rules: solverRules, weeks: weeksN })
+        if (!r.success) {
           const relaxedRules = { ...solverRules, fair_distribution: true, max_consecutive_days: 7, min_rest_hours: 0 }
-          // Stage 2: KEEP contracted hours as a (soft) target so distribution stays good.
-          result = await callScheduler(pythonUrl, { staff, shifts, rules: relaxedRules, weeks: 1 })
-          if (!result.success) {
-            // Stage 3 (last resort): drop the contracted target entirely. Only needed for the
-            // legacy solver that treats contracted as a HARD minimum; a no-op once redeployed.
+          r = await callScheduler(pythonUrl, { staff, shifts, rules: relaxedRules, weeks: weeksN })
+          if (!r.success) {
             const zeroed = staff.map((s) => ({ ...s, contracted_hours: 0 }))
-            result = await callScheduler(pythonUrl, { staff: zeroed, shifts, rules: relaxedRules, weeks: 1 })
+            r = await callScheduler(pythonUrl, { staff: zeroed, shifts, rules: relaxedRules, weeks: weeksN })
           }
-          if (result.success) relaxedTeams.add(teamName[teamId])
+          if (r.success) relaxedTeams.add(teamName[teamId])
         }
-        if (!result.success) {
-          skipped.push({ teamId, teamName: teamName[teamId], reason: diagnoseTeam(teamStaff, teamPatterns, openDayNames) })
-          break // skip this team, keep building the rest
-        }
-        builtTeamIds.add(teamId)
-        wallTime += result.stats?.wall_time || 0
-        for (const a of result.assignments || []) {
+        return r
+      }
+      const pushAssignments = (assignments, wk) => {
+        for (const a of assignments || []) {
           allAssignments.push({
             team_id: teamId, team_name: teamName[teamId], week: wk,
             shift_id: a.shift_id, shift_name: a.shift_name, day: a.day,
@@ -193,6 +188,29 @@ export async function POST(request) {
             start_time: a.start_time, end_time: a.end_time,
             keyholder_required: a.keyholder_required, staff_id: a.staff_id, staff_name: a.staff_name,
           })
+        }
+      }
+
+      // Solve all weeks together so the scheduler can rotate weekend duty across the
+      // weeks (cross-week weekend fairness). Fall back to independent per-week solves
+      // if the multi-week model can't be satisfied, so a rota always builds.
+      const multi = weekCount > 1 ? await solveLadder(weekCount) : null
+      if (multi && multi.success) {
+        builtTeamIds.add(teamId)
+        wallTime += multi.stats?.wall_time || 0
+        const byWeek = {}
+        for (const a of multi.assignments || []) (byWeek[a.week || 1] ||= []).push(a)
+        for (let wk = 1; wk <= weekCount; wk++) pushAssignments(byWeek[wk] || [], wk)
+      } else {
+        for (let wk = 1; wk <= weekCount; wk++) {
+          const result = await solveLadder(1)
+          if (!result.success) {
+            skipped.push({ teamId, teamName: teamName[teamId], reason: diagnoseTeam(teamStaff, teamPatterns, openDayNames) })
+            break // skip this team, keep building the rest
+          }
+          builtTeamIds.add(teamId)
+          wallTime += result.stats?.wall_time || 0
+          pushAssignments(result.assignments, wk)
         }
       }
     }
