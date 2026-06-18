@@ -39,6 +39,87 @@ const toHHMM = (d) => { const h = Math.floor(d), m = Math.round((d - h) * 60); r
 function dateForDay(weekStart, weekNum, dayIdx) { const x = new Date(weekStart + 'T00:00:00Z'); x.setUTCDate(x.getUTCDate() + (weekNum - 1) * 7 + dayIdx); return x }
 
 // ── REFINED rota grid — one rota, team sections, per-staff colour, drag/remove/add ──
+// ── week picker (custom, on-brand — replaces the native date input) ──────────
+const mondayOf = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x }
+const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+const parseYMD = (s) => { const [y, m, dd] = String(s).split('-').map(Number); return new Date(y, (m || 1) - 1, dd || 1) }
+const MonthNav = ({ dir, onClick }) => (
+  <button type="button" onClick={onClick} style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, border: '1px solid #E5E7EB', background: '#fff', cursor: 'pointer', color: '#6B7280' }}>
+    <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={dir < 0 ? 'M15 19l-7-7 7-7' : 'M9 5l7 7-7 7'} /></svg>
+  </button>
+)
+function WeekPicker({ value, onChange }) {
+  const [open, setOpen] = useState(false)
+  const [hoverRow, setHoverRow] = useState(-1)
+  const ref = useRef(null)
+  const selMon = mondayOf(parseYMD(value))
+  const [viewMonth, setViewMonth] = useState(() => new Date(selMon.getFullYear(), selMon.getMonth(), 1))
+
+  useEffect(() => {
+    if (!open) return
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    const esc = (e) => { if (e.key === 'Escape') setOpen(false) }
+    window.addEventListener('mousedown', h); window.addEventListener('keydown', esc)
+    return () => { window.removeEventListener('mousedown', h); window.removeEventListener('keydown', esc) }
+  }, [open])
+  useEffect(() => { if (open) setViewMonth(new Date(selMon.getFullYear(), selMon.getMonth(), 1)) }, [open]) // eslint-disable-line
+
+  const gridStart = mondayOf(new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1))
+  const weeks = Array.from({ length: 6 }, (_, w) => Array.from({ length: 7 }, (_, d) => { const x = new Date(gridStart); x.setDate(gridStart.getDate() + w * 7 + d); return x }))
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const selKey = ymd(selMon)
+  const pick = (day) => { onChange(ymd(mondayOf(day))); setOpen(false) }
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button type="button" onClick={() => setOpen((o) => !o)} style={{ width: '100%', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontFamily: 'inherit', fontSize: 14, fontWeight: 600, color: '#111827', padding: '10px 12px', borderRadius: 10, border: `1px solid ${open ? PINK : '#E5E7EB'}`, background: '#fff', cursor: 'pointer', transition: 'border-color .15s' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#9CA3AF"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+          {selMon.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+        </span>
+        <svg width="15" height="15" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} fill="none" viewBox="0 0 24 24" stroke="#9CA3AF"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+      </button>
+
+      {open && (
+        <div style={{ position: 'absolute', zIndex: 60, top: 'calc(100% + 6px)', left: 0, width: 304, background: '#fff', border: '1px solid #ECECEF', borderRadius: 14, boxShadow: '0 12px 32px rgba(0,0,0,.12)', padding: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <span style={{ fontSize: 14, fontWeight: 800, color: '#111827' }}>{viewMonth.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</span>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <MonthNav dir={-1} onClick={() => setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))} />
+              <MonthNav dir={1} onClick={() => setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))} />
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2, marginBottom: 4 }}>
+            {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map((d) => <div key={d} style={{ textAlign: 'center', fontSize: 10.5, fontWeight: 700, color: '#9CA3AF', padding: '2px 0' }}>{d}</div>)}
+          </div>
+          {weeks.map((row, wi) => {
+            const isSel = ymd(row[0]) === selKey
+            return (
+              <div key={wi} onClick={() => pick(row[0])} onMouseEnter={() => setHoverRow(wi)} onMouseLeave={() => setHoverRow(-1)}
+                style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2, borderRadius: 9, cursor: 'pointer', background: isSel ? PINK : (hoverRow === wi ? PINK + '12' : 'transparent'), transition: 'background .1s' }}>
+                {row.map((day) => {
+                  const inMonth = day.getMonth() === viewMonth.getMonth()
+                  const isToday = day.getTime() === today.getTime()
+                  return (
+                    <div key={day.getTime()} style={{ position: 'relative', textAlign: 'center', fontSize: 12.5, fontWeight: isToday ? 800 : 600, padding: '7px 0', color: isSel ? '#fff' : (inMonth ? '#111827' : '#C9C9D0') }}>
+                      {day.getDate()}
+                      {isToday && !isSel && <span style={{ position: 'absolute', bottom: 3, left: '50%', transform: 'translateX(-50%)', width: 4, height: 4, borderRadius: 99, background: PINK }} />}
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })}
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, paddingTop: 10, borderTop: '1px solid #F0F0F2' }}>
+            <button type="button" onClick={() => { const m = mondayOf(new Date()); onChange(ymd(m)); setViewMonth(new Date(m.getFullYear(), m.getMonth(), 1)); setOpen(false) }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 700, color: '#6B7280', padding: 0 }}>This week</button>
+            <button type="button" onClick={() => { onChange(nextMonday()); setOpen(false) }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 700, color: PINK, padding: 0 }}>Next week</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const RTH = { fontSize: 11, fontWeight: 700, color: '#6B7280', padding: '6px 6px 10px', textAlign: 'center' }
 const RTH_STAFF = { ...RTH, textAlign: 'left', position: 'sticky', left: 0, background: '#fff', minWidth: 160 }
 const RTD = { padding: '4px 4px', verticalAlign: 'top' }
@@ -279,7 +360,7 @@ export default function RotaBuilder() {
           </div>
           <div style={{ flex: 1, minWidth: 180 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 8 }}>Week starting (Monday)</div>
-            <input type="date" value={weekStart} onChange={(e) => setWeekStart(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, padding: '10px 12px', borderRadius: 9, border: '1px solid #E5E7EB' }} />
+            <WeekPicker value={weekStart} onChange={setWeekStart} />
           </div>
           <div style={{ flex: 1, minWidth: 140 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 8 }}>Weeks</div>
