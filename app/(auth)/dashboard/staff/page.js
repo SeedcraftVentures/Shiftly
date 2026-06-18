@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { TEAM_COLORS, coverageBottlenecks, availableHours, keyholderBottleneck } from './utils/staffHelpers'
+import { TEAM_COLORS, coverageBottlenecks, availableHours, locationKeyholderGaps } from './utils/staffHelpers'
 
 // ════════════════════════════════════════════════════════════════════════════
 //  STAFF PAGE (live) — locked lab design wired to /api/teams + /api/location + /api/shifts + /api/staff
@@ -59,9 +59,9 @@ function staffing(staff, shifts, cfg) {
     for (const d of sh.days) {
       if (!cfg.openDays.includes(d)) continue
       demand += sh.staff
-      const q = staff.filter((st) => canWork(st, d, sh, cfg) && (!sh.keyholder || st.keyholder))
+      const q = staff.filter((st) => canWork(st, d, sh, cfg)) // keyholder is location-wide, not a per-shift filter
       filled += Math.min(q.length, sh.staff)
-      if (q.length < sh.staff) short.push({ day: d, name: sh.name, need: sh.staff, have: q.length, kh: sh.keyholder, start: sh.start, end: sh.end })
+      if (q.length < sh.staff) short.push({ day: d, name: sh.name, need: sh.staff, have: q.length, start: sh.start, end: sh.end })
     }
   }
   return { demand, filled, pct: demand ? Math.round((filled / demand) * 100) : 100, short }
@@ -329,8 +329,7 @@ function ShortfallList({ staff, shifts, teamId, onFix, cfg }) {
 function TeamGlance({ staff, shifts, teamName, teamId, accent, onFix, cfg }) {
   const r = readiness(staff, shifts, cfg)
   const bottlenecks = coverageBottlenecks(staff, shifts, cfg)
-  const khBot = keyholderBottleneck(staff, shifts, cfg)
-  const ok = r.ready && bottlenecks.length === 0 && !khBot
+  const ok = r.ready && bottlenecks.length === 0
   return <div>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
       <span style={{ fontSize: 13, fontWeight: 800 }}>Can we cover the shifts?</span>
@@ -348,10 +347,6 @@ function TeamGlance({ staff, shifts, teamName, teamId, accent, onFix, cfg }) {
           </div>}
         </div>
       })}
-    </div>}
-    {khBot && <div style={{ marginBottom: 16, padding: '11px 13px', borderRadius: 9, background: AMBER + '14', border: `1px solid ${AMBER}40` }}>
-      <div style={{ fontSize: 12, color: '#92660B', lineHeight: 1.45 }}><b>{khBot.khHours}h</b> of keyholder-only shifts but your keyholder{khBot.khContracted ? `s are contracted just ${khBot.khContracted}h` : ' is unset'} — they'll be pushed into overtime while others fall short of their hours. Add a keyholder or drop the keyholder requirement on some shifts.</div>
-      {onFix && khBot.promote && <div style={{ marginTop: 8 }}><button onClick={() => onFix(teamId, { kind: 'keyholder', id: khBot.promote.id })} style={FIX_BTN}>↳ Make {first(khBot.promote.name)} a keyholder</button></div>}
     </div>}
     <CapacityLine r={r} accent={accent} teamId={teamId} onFix={onFix} />
     <div style={{ borderTop: '1px solid #ECECEF', margin: '16px 0 14px' }} />
@@ -480,6 +475,8 @@ export default function StaffPage() {
   const tabs = [...teams, { id: 'all', name: 'All teams' }]
   const panel = { background: '#fff', border: '1px solid #ECECEF', borderRadius: 14, padding: 20 }
   const teamName = teams.find((t) => t.id === teamId)?.name || ''
+  const khGaps = locationKeyholderGaps(staff, shifts, cfg)
+  const khFlag = khGaps.noKeyholder || khGaps.openMissing.length > 0 || khGaps.closeMissing.length > 0
 
   return <div style={{ fontFamily: FONT, background: '#FAFAFB', minHeight: '100vh', color: '#111827' }}>
     <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 0 14px' }}>
@@ -491,6 +488,11 @@ export default function StaffPage() {
         })}
       </div>
     </div>
+    {khFlag && <div style={{ maxWidth: 640, margin: '0 auto 10px', padding: '11px 14px', borderRadius: 10, background: AMBER + '14', border: `1px solid ${AMBER}40`, fontSize: 12.5, color: '#92660B', lineHeight: 1.45 }}>
+      🔑 {khGaps.noKeyholder
+        ? <>No keyholders set — mark at least one person as a keyholder so someone can open &amp; close the location.</>
+        : <>No keyholder available to {khGaps.openMissing.length ? `open ${khGaps.openMissing.map((d) => DAYS[d]).join(', ')}` : ''}{khGaps.openMissing.length && khGaps.closeMissing.length ? ' · ' : ''}{khGaps.closeMissing.length ? `close ${khGaps.closeMissing.map((d) => DAYS[d]).join(', ')}` : ''}. Widen a keyholder’s availability or add another keyholder. <span style={{ color: '#6B7280' }}>(One keyholder covers the whole location — not per team.)</span></>}
+    </div>}
 
     {isAll ? (
       <div style={{ maxWidth: 1000, margin: '0 auto', padding: '4px 24px 40px' }}><AllTeams teams={teams} staff={staff} shifts={shifts} onFix={applyFix} cfg={cfg} /></div>

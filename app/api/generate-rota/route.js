@@ -158,17 +158,17 @@ export async function POST(request) {
       }
       if (shifts.length === 0) { skipped.push({ teamId, teamName: teamName[teamId], reason: 'No shift days' }); continue }
 
+      // Keyholder is a LOCATION concern (one person opens, one closes for the whole site),
+      // NOT a per-team rule — so the per-team solver never enforces it. We check it
+      // location-wide after every team has built (below).
+      const solverRules = { ...rules, enforce_keyholder: false }
       // generate each week independently (avoids the scheduler's cross-week diversity constraint)
       for (let wk = 1; wk <= weekCount; wk++) {
-        let result = await callScheduler(pythonUrl, { staff, shifts, rules, weeks: 1 }) // stage 1: full constraints
+        let result = await callScheduler(pythonUrl, { staff, shifts, rules: solverRules, weeks: 1 }) // stage 1: full constraints
         if (!result.success) {
-          // Relax the policy rules that block a build — max consecutive days, min rest, and
-          // keyholder ONLY if the team has no keyholder (then it's a location-wide concern,
-          // flagged afterwards). If the team HAS keyholders, keep enforcing it so they take
-          // open/close — otherwise the rota could put a non-keyholder there while the Staff
-          // tab (which counts keyholders) says it's covered. Honours "always builds, then flag".
-          const teamHasKeyholder = staff.some((s) => s.keyholder)
-          const relaxedRules = { ...rules, fair_distribution: true, enforce_keyholder: teamHasKeyholder, max_consecutive_days: 7, min_rest_hours: 0 }
+          // Relax the policy rules that can block a build — max consecutive days, min rest —
+          // leaving only the physically-unavoidable ones. Honours "always builds, then flag".
+          const relaxedRules = { ...solverRules, fair_distribution: true, max_consecutive_days: 7, min_rest_hours: 0 }
           // Stage 2: KEEP contracted hours as a (soft) target so distribution stays good.
           result = await callScheduler(pythonUrl, { staff, shifts, rules: relaxedRules, weeks: 1 })
           if (!result.success) {
@@ -205,9 +205,22 @@ export async function POST(request) {
     const dms = (d) => new Date(d + 'T00:00:00Z').getTime()
     const compliance = []
 
-    if (rules.enforce_keyholder !== false) {
-      const bad = allAssignments.filter((a) => a.keyholder_required && !keyholderSet.has(a.staff_id))
-      compliance.push({ key: 'enforce_keyholder', label: 'Keyholder on open & close', ok: bad.length === 0, detail: bad.length ? `${bad.length} open/close shift(s) without a keyholder` : '' })
+    // Keyholder is LOCATION-wide: a keyholder must be on at the location's open and close
+    // each day, across ALL teams (one to open, one to close — possibly the same person).
+    {
+      const byDayLoc = {}
+      for (const a of allAssignments) (byDayLoc[`${a.week}__${a.day}`] ||= []).push(a)
+      let openMiss = 0, closeMiss = 0
+      for (const list of Object.values(byDayLoc)) {
+        const spans = list.map((a) => { let s = toMin(a.start_time), e = toMin(a.end_time); if (e <= s) e += 1440; return { s, e, kh: keyholderSet.has(a.staff_id) } })
+        const openT = Math.min(...spans.map((x) => x.s)), closeT = Math.max(...spans.map((x) => x.e))
+        if (!spans.some((x) => x.kh && x.s <= openT + 1)) openMiss++
+        if (!spans.some((x) => x.kh && x.e >= closeT - 1)) closeMiss++
+      }
+      const parts = []
+      if (openMiss) parts.push(`${openMiss} day(s) with no keyholder at open`)
+      if (closeMiss) parts.push(`${closeMiss} day(s) with no keyholder at close`)
+      compliance.push({ key: 'keyholder', label: 'Keyholder on open & close', ok: parts.length === 0, detail: parts.join('; ') })
     }
     const minRest = Number(rules.min_rest_hours ?? 11)
     let restViol = 0

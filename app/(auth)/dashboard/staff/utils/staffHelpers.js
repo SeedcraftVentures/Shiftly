@@ -270,9 +270,9 @@ export function staffing(staff, shifts, cfg) {
     for (const d of sh.days) {
       if (!cfg.openDays.includes(d)) continue
       demand += sh.staff
-      const q = staff.filter((st) => canWork(st, d, sh, cfg) && (!sh.keyholder || st.keyholder))
+      const q = staff.filter((st) => canWork(st, d, sh, cfg)) // keyholder is location-wide, not a per-shift filter
       filled += Math.min(q.length, sh.staff)
-      if (q.length < sh.staff) short.push({ day: d, name: sh.name, need: sh.staff, have: q.length, kh: sh.keyholder, start: sh.start, end: sh.end })
+      if (q.length < sh.staff) short.push({ day: d, name: sh.name, need: sh.staff, have: q.length, start: sh.start, end: sh.end })
     }
   }
   return { demand, filled, pct: demand ? Math.round((filled / demand) * 100) : 100, short }
@@ -336,23 +336,26 @@ export function coverageBottlenecks(staff, shifts, cfg) {
   return out
 }
 
-// Keyholder over-concentration: more keyholder-required shift hours than the keyholders
-// are contracted for, so keyholders get forced into overtime while non-keyholders fall
-// short of their contracts (the "40/16" symptom). Returns { khHours, khContracted, promote }
-// or null. (The no-keyholder-at-all case is handled by the rota's keyholder compliance flag.)
-export function keyholderBottleneck(staff, shifts, cfg) {
-  let khHours = 0
-  for (const sh of (shifts || [])) {
-    if (!sh.keyholder) continue
-    for (const d of (sh.days || [])) if (cfg.openDays.includes(d)) khHours += (sh.end - sh.start) * (sh.staff || 1)
-  }
-  if (khHours <= 0) return null
+// Location-wide keyholder check: a keyholder must be AVAILABLE to open and to close each
+// open day (one to open, one to close, across ALL teams — possibly the same person). Pass
+// ALL the location's staff + ALL shifts. Returns { noKeyholder, openMissing[], closeMissing[] }.
+export function locationKeyholderGaps(staff, shifts, cfg) {
   const keyholders = (staff || []).filter((s) => s.keyholder)
-  if (keyholders.length === 0) return null
-  const khContracted = keyholders.reduce((a, s) => a + (s.contracted || 0), 0)
-  if (khHours <= khContracted + 0.5) return null
-  const promote = (staff || []).filter((s) => !s.keyholder).sort((a, b) => (b.contracted || 0) - (a.contracted || 0))[0]
-  return { khHours: Math.round(khHours), khContracted, promote: promote ? { id: promote.id, name: promote.name } : null }
+  if (keyholders.length === 0) return { noKeyholder: true, openMissing: [], closeMissing: [] }
+  const dayWin = {}
+  for (const sh of (shifts || [])) for (const d of (sh.days || [])) {
+    if (!cfg.openDays.includes(d)) continue
+    const w = dayWin[d] || { open: 24, close: 0 }
+    w.open = Math.min(w.open, sh.start); w.close = Math.max(w.close, sh.end)
+    dayWin[d] = w
+  }
+  const availAt = (d, t) => keyholders.some((s) => { const w = windowForDay(s, d, cfg); return w && w[0] <= t + 0.01 && w[1] >= t - 0.01 })
+  const openMissing = [], closeMissing = []
+  for (const d of Object.keys(dayWin).map(Number)) {
+    if (!availAt(d, dayWin[d].open)) openMissing.push(d)
+    if (!availAt(d, dayWin[d].close)) closeMissing.push(d)
+  }
+  return { noKeyholder: false, openMissing, closeMissing }
 }
 
 // ── Schedule coverage — the OTHER coverage question: do the SHIFTS span the hours? ──
