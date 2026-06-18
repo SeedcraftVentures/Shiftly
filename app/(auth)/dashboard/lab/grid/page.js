@@ -24,6 +24,9 @@ const SHIFTS = {
   lunch: { label: 'Lunch relief', time: '12–3', cat: 'mid' },
   close: { label: 'Close', time: '3–11', cat: 'close' },
 }
+// fixed palette for SHIFT TYPE — used when colour encodes the shift, not the team
+// (morning warm → midday blue → evening deep, roughly by time of day)
+const SHIFT_TYPE_COLORS = { early: '#F59E0B', mid: '#0EA5E9', lunch: '#14B8A6', close: '#6D28D9' }
 
 const STAFF = [
   { name: 'Gareth', team: 'foh', week: ['mid', 'close', 'close', 'close', 'close', 'mid', null] },
@@ -112,6 +115,13 @@ function Block({ staff, type, variant }) {
     const bg = personTone(hue, staffIdxInTeam(staff)) // tone per person, same family
     style = { background: bg, boxShadow: `0 2px 6px ${bg}33` }
     fg = textOn(bg)
+  } else if (variant === 'frame') {
+    const bg = SHIFT_TYPE_COLORS[type] // colour = SHIFT TYPE (team lives in the frame)
+    style = { background: bg, boxShadow: `0 2px 6px ${bg}33` }
+    fg = textOn(bg)
+  } else if (variant === 'neutral') {
+    style = { background: '#F3F4F6' } // neutral & readable; colour does not carry info here
+    fg = '#1F2937'
   } else if (variant === 'stripe') {
     style = { background: lighten(hue, 0.92), borderLeft: `4px solid ${hue}` }
     fg = '#1F2937'
@@ -121,10 +131,14 @@ function Block({ staff, type, variant }) {
     fg = textOn(bg)
   }
 
+  const mutedTime = variant === 'stripe' || variant === 'neutral'
   return (
     <div style={{ borderRadius: 9, padding: variant === 'stripe' ? '6px 8px 6px 9px' : '6px 9px', ...style }}>
-      <div style={{ color: fg, fontWeight: 700, fontSize: 11, lineHeight: 1.2 }}>{s.label}</div>
-      <div style={{ color: variant === 'stripe' ? '#6B7280' : (fg === '#fff' ? 'rgba(255,255,255,.85)' : '#4B5563'), fontSize: 9.5 }}>{s.time}</div>
+      <div style={{ color: fg, fontWeight: 700, fontSize: 11, lineHeight: 1.2, display: 'flex', alignItems: 'center', gap: 5 }}>
+        {variant === 'neutral' && <span style={{ width: 7, height: 7, borderRadius: 99, background: SHIFT_TYPE_COLORS[type], flexShrink: 0 }} />}
+        {s.label}
+      </div>
+      <div style={{ color: mutedTime ? '#6B7280' : (fg === '#fff' ? 'rgba(255,255,255,.85)' : '#4B5563'), fontSize: 9.5 }}>{s.time}</div>
     </div>
   )
 }
@@ -185,7 +199,22 @@ export default function GridLab() {
     <div style={{ fontFamily: FONT, background: '#FAFAFB', minHeight: '100vh', color: '#111827', padding: '28px 28px 60px' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <h1 style={{ fontSize: 26, fontWeight: 800, margin: 0, letterSpacing: -0.3 }}>Rota colour sandbox</h1>
-        <p style={{ fontSize: 13.5, color: '#6B7280', margin: '5px 0 18px' }}>Same week, four colour treatments — reconciling team grouping with readability for staff finding their shifts.</p>
+        <p style={{ fontSize: 13.5, color: '#6B7280', margin: '5px 0 22px' }}>Reframed: stop overloading the block fill. Each job goes to the channel that’s good at it — team to the frame, shift to the cell, “find my row” to layout.</p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 32, marginBottom: 36 }}>
+          <div>
+            <Head tag="Route A" title="Team in the frame, shift-type in the cells" desc="Team colour lives in the chrome — a coloured name column with a left rail + section header — so the eye anchors on your name and tracks across. The cells go back to being coloured by SHIFT TYPE (the old grid you missed): morning/mid/evening each a colour, with readable text. Two channels, no conflict, scales to any team size." />
+            <TypeLegend />
+            <RouteA />
+          </div>
+          <div>
+            <Head tag="Route B" title="Colour = grouping only; structure finds the row" desc="Cells are neutral and maximally readable (a small dot hints the shift type). Team is just a dot + section. Finding your shifts is a layout job: pick “Viewing as” to highlight your row, or “Show only me” to filter to just you — exactly what the shared/printed staff version would do." />
+            <RouteB />
+          </div>
+        </div>
+
+        <div style={{ height: 1, background: '#ECECEF', margin: '4px 0 18px' }} />
+        <p style={{ fontSize: 12, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 14 }}>Earlier experiments (overloaded block fill) — for reference</p>
 
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 22 }}>
           <Btn active={!solo} onClick={() => setSolo('')}>All four</Btn>
@@ -205,6 +234,131 @@ export default function GridLab() {
           ))}
           {(!solo || solo === 'family') && <ScalingTest />}
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ── shift-type legend (for the routes where colour encodes the shift) ────────
+function TypeLegend() {
+  return (
+    <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 10 }}>
+      {Object.entries(SHIFTS).map(([k, v]) => (
+        <span key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11.5, fontWeight: 600, color: '#6B7280' }}>
+          <span style={{ width: 10, height: 10, borderRadius: 3, background: SHIFT_TYPE_COLORS[k] }} />{v.label}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+function Head({ tag, title, desc }) {
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 4 }}>
+        <span style={{ fontSize: 11, fontWeight: 800, color: '#FF1F7D', textTransform: 'uppercase', letterSpacing: 0.5 }}>{tag}</span>
+        <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>{title}</h2>
+      </div>
+      <p style={{ fontSize: 12.5, color: '#6B7280', margin: '0 0 10px', maxWidth: 760 }}>{desc}</p>
+    </>
+  )
+}
+
+const cell = { padding: '4px 5px', verticalAlign: 'top' }
+function HeadRow() {
+  return (
+    <thead>
+      <tr>
+        <th style={{ ...cell, textAlign: 'left', minWidth: 150, fontSize: 11, fontWeight: 700, color: '#9CA3AF', padding: '10px 12px' }}>Staff</th>
+        {DAYS.map((d) => <th key={d} style={{ ...cell, fontSize: 11, fontWeight: 700, color: '#9CA3AF', padding: '10px 5px' }}>{d}</th>)}
+      </tr>
+    </thead>
+  )
+}
+
+// ── ROUTE A: team in the frame (coloured name column + section), shift-type fill ──
+function RouteA() {
+  return (
+    <div style={{ overflowX: 'auto', border: '1px solid #ECECEF', borderRadius: 14, background: '#fff' }}>
+      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 720 }}>
+        <HeadRow />
+        <tbody>
+          {TEAMS.map((team) => {
+            const tint = lighten(team.color, 0.9)
+            return (
+              <Fragment key={team.id}>
+                <tr><td colSpan={8} style={{ padding: '12px 12px 4px' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 11.5, fontWeight: 700, color: team.color }}>
+                    <span style={{ width: 9, height: 9, borderRadius: 99, background: team.color }} />{team.name}
+                  </span>
+                </td></tr>
+                {STAFF.filter((s) => s.team === team.id).map((staff) => (
+                  <tr key={staff.name} style={{ borderTop: '1px solid #F4F4F6' }}>
+                    <td style={{ ...cell, padding: '6px 12px', borderLeft: `4px solid ${team.color}`, background: tint }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 700, color: '#111827' }}>
+                        <span style={{ width: 9, height: 9, borderRadius: 99, background: team.color, flexShrink: 0 }} />{staff.name}
+                      </span>
+                    </td>
+                    {staff.week.map((type, di) => <td key={di} style={cell}>{type ? <Block staff={staff} type={type} variant="frame" /> : <div style={{ height: 1 }} />}</td>)}
+                  </tr>
+                ))}
+              </Fragment>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+// ── ROUTE B: neutral readable cells; team = dot/section; find your row by structure ──
+function RouteB() {
+  const [viewAs, setViewAs] = useState('Hannah')
+  const [onlyMe, setOnlyMe] = useState(false)
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
+        <span style={{ fontSize: 12.5, fontWeight: 700, color: '#6B7280' }}>Viewing as</span>
+        <select value={viewAs} onChange={(e) => setViewAs(e.target.value)} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 600, padding: '7px 10px', borderRadius: 8, border: '1px solid #E5E7EB', background: '#fff', cursor: 'pointer' }}>
+          {STAFF.map((s) => <option key={s.name}>{s.name}</option>)}
+        </select>
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: '#374151', cursor: 'pointer' }}>
+          <input type="checkbox" checked={onlyMe} onChange={(e) => setOnlyMe(e.target.checked)} /> Show only me
+        </label>
+      </div>
+      <div style={{ overflowX: 'auto', border: '1px solid #ECECEF', borderRadius: 14, background: '#fff' }}>
+        <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 720 }}>
+          <HeadRow />
+          <tbody>
+            {TEAMS.map((team) => {
+              const members = STAFF.filter((s) => s.team === team.id && (!onlyMe || s.name === viewAs))
+              if (!members.length) return null
+              return (
+                <Fragment key={team.id}>
+                  <tr><td colSpan={8} style={{ padding: '12px 12px 4px' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 11.5, fontWeight: 700, color: '#6B7280' }}>
+                      <span style={{ width: 9, height: 9, borderRadius: 99, background: team.color }} />{team.name}
+                    </span>
+                  </td></tr>
+                  {members.map((staff) => {
+                    const me = staff.name === viewAs
+                    return (
+                      <tr key={staff.name} style={{ borderTop: '1px solid #F4F4F6', background: me ? '#FFF5F9' : 'transparent' }}>
+                        <td style={{ ...cell, padding: '6px 12px', borderLeft: `3px solid ${me ? '#FF1F7D' : 'transparent'}` }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: me ? 800 : 600, color: '#111827' }}>
+                            <span style={{ width: 9, height: 9, borderRadius: 99, background: team.color, flexShrink: 0 }} />{staff.name}
+                            {me && <span style={{ fontSize: 9.5, fontWeight: 800, color: '#FF1F7D', background: '#FF1F7D18', padding: '1px 6px', borderRadius: 5 }}>YOU</span>}
+                          </span>
+                        </td>
+                        {staff.week.map((type, di) => <td key={di} style={cell}>{type ? <Block staff={staff} type={type} variant="neutral" /> : <div style={{ height: 1 }} />}</td>)}
+                      </tr>
+                    )
+                  })}
+                </Fragment>
+              )
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   )
