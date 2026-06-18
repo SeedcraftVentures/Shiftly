@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { TEAM_COLORS, coverageBottlenecks } from './utils/staffHelpers'
+import { TEAM_COLORS, coverageBottlenecks, availableHours } from './utils/staffHelpers'
 
 // ════════════════════════════════════════════════════════════════════════════
 //  STAFF PAGE (live) — locked lab design wired to /api/teams + /api/location + /api/shifts + /api/staff
@@ -250,6 +250,9 @@ function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg }) {
         <Switch on={s.keyholder} onClick={() => patch({ keyholder: !s.keyholder })} accent={accent} />
       </div>
       <AvailabilityEditor s={s} patch={patch} accent={accent} cfg={cfg} />
+      {availableHours(s, cfg) < s.contracted && <div style={{ fontSize: 12, color: '#B91C1C', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 9, padding: '10px 12px', lineHeight: 1.45 }}>
+        ⚠ Available <b>{availableHours(s, cfg)}h</b> but contracted <b>{s.contracted}h</b> — {first(s.name) || 'they'} can’t reach their contract. Widen availability or lower the contracted hours.
+      </div>}
       <button onClick={onSave} disabled={saveState !== 'dirty'} style={{ marginTop: 4, fontFamily: 'inherit', fontSize: 13.5, fontWeight: 700, color: '#fff', background: saveState === 'dirty' ? accent : '#E5E7EB', border: 'none', borderRadius: 10, padding: '11px 0', cursor: saveState === 'dirty' ? 'pointer' : 'default' }}>Save staff</button>
     </div>
   </>
@@ -270,6 +273,7 @@ function StaffCard({ s, selected, onClick, accent, cfg, selectMode = false, chec
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>{s.name}</span>
           {s.keyholder && <span title="Keyholder" style={{ color: accent, fontSize: 12 }}>🔑</span>}
+          {availableHours(s, cfg) < s.contracted && <span title={`Available ${availableHours(s, cfg)}h but contracted ${s.contracted}h`} style={{ color: '#EF4444', fontSize: 12 }}>⚠</span>}
         </div>
         <div style={{ fontSize: 12.5, color: '#6B7280', marginTop: 3 }}>{s.role || 'No role'} · {s.contracted}/{s.max}h · £{(s.wage || 0).toFixed(2)} · {availTxt}</div>
       </div>
@@ -332,8 +336,17 @@ function TeamGlance({ staff, shifts, teamName, teamId, accent, onFix, cfg }) {
       <span style={{ fontSize: 13, fontWeight: 800, color: ok ? '#16A34A' : (bottlenecks.length ? '#EF4444' : accent) }}>{r.overallPct}%</span>
     </div>
     <div style={{ fontSize: 11, color: accent, fontWeight: 600, marginBottom: 16 }}>{teamName}</div>
-    {bottlenecks.length > 0 && <div style={{ marginBottom: 16, padding: '10px 12px', borderRadius: 9, background: '#FEF2F2', border: '1px solid #FECACA' }}>
-      {bottlenecks.map((b, i) => <div key={i} style={{ fontSize: 12, color: '#B91C1C', lineHeight: 1.45, marginTop: i ? 6 : 0 }}><b>{b.name}</b> is the only person available every open day — they'd need to work {b.essential} days but can do {b.maxDays}. The rota won't build until you spread availability across the week or add staff.</div>)}
+    {bottlenecks.length > 0 && <div style={{ marginBottom: 16, padding: '11px 13px', borderRadius: 9, background: '#FEF2F2', border: '1px solid #FECACA' }}>
+      {bottlenecks.map((b, i) => {
+        const lim = staff.filter((s) => s.id !== b.id).map((s) => ({ s, days: cfg.openDays.filter((d) => s.avail?.[d]).length })).sort((a, z) => a.days - z.days)[0]
+        return <div key={i} style={{ marginTop: i ? 12 : 0 }}>
+          <div style={{ fontSize: 12, color: '#B91C1C', lineHeight: 1.45 }}><b>{b.name}</b> is the only person available every open day — they'd need to work {b.essential} days but can only do {b.maxDays}. Spread availability or add staff.</div>
+          {onFix && <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+            <button onClick={() => onFix(teamId, { kind: 'addstaff', contracted: 0, kh: false })} style={FIX_BTN}>↳ Add a team member</button>
+            {lim && lim.days < cfg.openDays.length && <button onClick={() => onFix(teamId, { kind: 'fullweek', id: lim.s.id })} style={FIX_BTN}>↳ Give {first(lim.s.name)} the full week</button>}
+          </div>}
+        </div>
+      })}
     </div>}
     <CapacityLine r={r} accent={accent} teamId={teamId} onFix={onFix} />
     <div style={{ borderTop: '1px solid #ECECEF', margin: '16px 0 14px' }} />
@@ -449,6 +462,7 @@ export default function StaffPage() {
     if (!target) return
     let updated
     if (fix.kind === 'keyholder') updated = { ...target, keyholder: true }
+    else if (fix.kind === 'fullweek') updated = { ...target, avail: allDayAvail(cfg.openDays) }
     else if (fix.kind === 'adddays') updated = { ...target, avail: { ...target.avail, ...Object.fromEntries(fix.days.map((d) => [d, [fix.start, fix.end]])) } }
     else { const a = { ...target.avail }; for (const d of fix.days) { const cur = a[d]; if (Array.isArray(cur)) a[d] = [Math.min(cur[0], fix.start), Math.max(cur[1], fix.end)] } updated = { ...target, avail: a } }
     setStaff((prev) => prev.map((s) => (s.id === fix.id ? updated : s)))

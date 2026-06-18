@@ -293,6 +293,17 @@ export function readiness(staff, shifts, cfg) {
   }
 }
 
+// Total hours a staff member is actually available across the open week — the ceiling on
+// what they can ever work. Used to fail-safe: availability must cover contracted hours.
+export function availableHours(s, cfg) {
+  let h = 0
+  for (const d of cfg.openDays) {
+    const w = windowForDay(s, d, cfg)
+    if (w) h += w[1] - w[0]
+  }
+  return Math.round(h * 10) / 10
+}
+
 // ── Coverage bottlenecks — catch the "looks covered per day, but no valid weekly rota
 // fits inside everyone's max hours" case (e.g. one person available every day while
 // teammates are weekday-/weekend-only, so that person would have to work too many days).
@@ -320,7 +331,7 @@ export function coverageBottlenecks(staff, shifts, cfg) {
       const availCount = staff.filter((x) => x.avail && x.avail[d]).length
       if (availCount <= slotsByDay[d] && s.avail && s.avail[d]) essential++
     }
-    if (essential > maxDays) out.push({ name: s.name, essential, maxDays })
+    if (essential > maxDays) out.push({ id: s.id, name: s.name, essential, maxDays })
   }
   return out
 }
