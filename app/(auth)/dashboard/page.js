@@ -137,20 +137,30 @@ export default function DashboardPage() {
         <Button accent={T.pink} arrow onClick={() => router.push('/dashboard/generate')}>Build rota</Button>
       </div>
 
-      {/* Living Hours nudge — keep 4 weeks of published rotas ahead */}
-      {horizon && horizon.published < 4 && (
-        <Card pad={18} style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', background: T.pink + '0A', border: `1px solid ${T.pink}2E` }}>
-          <span style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, background: T.pink + '18', color: T.pink, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-          </span>
-          <div style={{ flex: 1, minWidth: 220 }}>
-            <p style={{ fontSize: 14, fontWeight: 800, color: T.ink, margin: 0 }}>Give your staff 4 weeks’ notice</p>
-            <p style={{ fontSize: 12.5, color: T.muted, margin: '3px 0 8px' }}>The UK Living Hours standard is 4 weeks’ advance notice of shifts. You’ve published <b style={{ color: T.ink }}>{horizon.published} of the next 4 weeks</b>.</p>
-            <div style={{ maxWidth: 280 }}><ProgressBar value={horizon.published / 4} height={7} color={T.pink} radius={99} /></div>
-          </div>
-          {horizon.firstGap && <Button accent={T.pink} arrow onClick={() => router.push(`/dashboard/generate?start=${horizon.firstGap}`)}>Build w/c {prettyDate(horizon.firstGap)}</Button>}
-        </Card>
-      )}
+      {/* Living Hours — persists 4 weeks ahead; turns green with a tick once met */}
+      {horizon && (() => {
+        const met = horizon.published >= 4
+        const accent = met ? T.green : T.pink
+        return (
+          <Card pad={18} style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', background: accent + '0A', border: `1px solid ${accent}2E` }}>
+            <span style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, background: accent + '18', color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {met
+                ? <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                : <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
+            </span>
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <p style={{ fontSize: 14, fontWeight: 800, color: T.ink, margin: 0 }}>{met ? 'Meeting the Living Hours standard' : 'Give your staff 4 weeks’ notice'}</p>
+              <p style={{ fontSize: 12.5, color: T.muted, margin: '3px 0 8px' }}>
+                {met
+                  ? <>Your staff have <b style={{ color: T.ink }}>4 weeks’ advance notice</b> of their shifts. Keep it up to stay compliant.</>
+                  : <>The UK Living Hours standard is 4 weeks’ advance notice of shifts. You’ve published <b style={{ color: T.ink }}>{horizon.published} of the next 4 weeks</b>.</>}
+              </p>
+              <div style={{ maxWidth: 280 }}><ProgressBar value={horizon.published / 4} height={7} color={accent} radius={99} /></div>
+            </div>
+            {!met && horizon.firstGap && <Button accent={T.pink} arrow onClick={() => router.push(`/dashboard/generate?start=${horizon.firstGap}`)}>Build w/c {prettyDate(horizon.firstGap)}</Button>}
+          </Card>
+        )
+      })()}
 
       {/* hero — reads left→right: do shifts cover hours? → can we cover shifts? → build it */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginBottom: 16 }}>
