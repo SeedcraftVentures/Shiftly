@@ -56,6 +56,39 @@ function shadeFor(hex, cat) {
   return hex
 }
 
+// ── per-person tone WITHIN a team's hue family ──────────────────────────────
+// Each person gets a distinct, solid tone that still reads as the team colour.
+// Spread across TWO axes (lightness + saturation, tiny hue shimmer) and ordered
+// by the golden ratio so adjacent rows are always far apart → scales to ~20.
+function hexToHsl(hex) {
+  const n = hexN(hex); let r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255
+  const max = Math.max(r, g, b), min = Math.min(r, g, b); let h = 0, s = 0; const l = (max + min) / 2
+  if (max !== min) {
+    const d = max - min; s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    if (max === r) h = (g - b) / d + (g < b ? 6 : 0)
+    else if (max === g) h = (b - r) / d + 2
+    else h = (r - g) / d + 4
+    h /= 6
+  }
+  return { h: h * 360, s: s * 100, l: l * 100 }
+}
+function hslToHex(h, s, l) {
+  h = ((h % 360) + 360) % 360 / 360; s /= 100; l /= 100
+  const f = (m) => { const k = (m + h * 12) % 12, a = s * Math.min(l, 1 - l); return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)) }
+  const to = (x) => Math.round(x * 255).toString(16).padStart(2, '0')
+  return '#' + to(f(0)) + to(f(8)) + to(f(4))
+}
+const frac = (x) => x - Math.floor(x)
+function personTone(teamHex, idx) {
+  const base = hexToHsl(teamHex)
+  const a = frac(idx * 0.6180339887) // lightness axis  (golden-ratio spacing)
+  const b = frac(idx * 0.7548776662) // saturation axis (second irrational)
+  const L = 38 + a * 40              // 38–78% — solid, never washed out or muddy
+  const S = 60 + b * 32              // 60–92% — stays punchy / "blocky"
+  const H = base.h + (b - 0.5) * 10  // ±5° shimmer, still clearly the family
+  return hslToHex(H, S, L)
+}
+
 const teamOf = (id) => TEAMS.find((t) => t.id === id)
 // staff index within their own team (drives the current "faded per-person" look)
 function staffIdxInTeam(staff) {
@@ -75,6 +108,10 @@ function Block({ staff, type, variant }) {
   } else if (variant === 'solid') {
     style = { background: hue, boxShadow: `0 2px 6px ${hue}33` }
     fg = textOn(hue)
+  } else if (variant === 'family') {
+    const bg = personTone(hue, staffIdxInTeam(staff)) // tone per person, same family
+    style = { background: bg, boxShadow: `0 2px 6px ${bg}33` }
+    fg = textOn(bg)
   } else if (variant === 'stripe') {
     style = { background: lighten(hue, 0.92), borderLeft: `4px solid ${hue}` }
     fg = '#1F2937'
@@ -134,6 +171,7 @@ function Grid({ variant }) {
 
 const VARIANTS = [
   { key: 'current', tag: 'Current', title: 'Current — faded per person', desc: 'Each block is the team hue lightened by the person’s position in the team, with white text. The 3rd/4th person ends up near-white — the readability problem.' },
+  { key: 'family', tag: '★ Hybrid', title: 'Tone per person, within the team family', desc: 'Each person gets their own solid tone, but all of a team’s tones stay in the same hue family (FOH = pinks, Kitchen = indigos…). Find your name once and your colour is consistent across the whole row; the family says which team. Scaling test below.' },
   { key: 'solid', tag: 'Option 1', title: 'Solid team hue + auto-contrast text', desc: 'Full-saturation team colour, text auto-set to white or near-black for contrast. Grouping = hue; readability = solid block + bold label. Shift type read from the label.' },
   { key: 'stripe', tag: 'Option 2', title: 'Team stripe + neutral block', desc: 'Light near-white blocks with dark text (max readability), team shown as a bold left bar. Most on-brand with the monochrome system.' },
   { key: 'shade', tag: 'Option 3', title: 'Hue = team, shade = shift type', desc: 'Team hue carries grouping; light/mid/dark shade brings back shift-type colour from the old grid. Open = light, mid = base, close = dark.' },
@@ -165,7 +203,66 @@ export default function GridLab() {
               <Grid variant={v.key} />
             </div>
           ))}
+          {(!solo || solo === 'family') && <ScalingTest />}
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ── scaling test: one team's hue family blown up to N people ─────────────────
+const SCALE_TYPES = ['mid', 'close', 'early', 'lunch', null, 'mid', null]
+function ScalingTest() {
+  const [n, setN] = useState(20)
+  const [hue, setHue] = useState('#FF1F7D')
+  const people = Array.from({ length: n }, (_, i) => i)
+  const cell = { padding: '4px 5px', verticalAlign: 'top' }
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 4 }}>
+        <span style={{ fontSize: 11, fontWeight: 800, color: '#FF1F7D', textTransform: 'uppercase', letterSpacing: 0.5 }}>Scaling test</span>
+        <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>Does it hold at {n} in one team?</h2>
+      </div>
+      <p style={{ fontSize: 12.5, color: '#6B7280', margin: '0 0 10px', maxWidth: 720 }}>The same hybrid scheme, one team scaled up. Adjacent rows are always far apart in tone (golden-ratio spacing), so neighbours stay distinct even when the family is dense — and the name in the first column is always the real anchor.</p>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+        {[8, 12, 16, 20].map((x) => <Btn key={x} active={n === x} onClick={() => setN(x)}>{x} people</Btn>)}
+        <span style={{ width: 1, background: '#E5E7EB', margin: '0 4px' }} />
+        {TEAMS.map((t) => <Btn key={t.id} active={hue === t.color} onClick={() => setHue(t.color)}>{t.name.split(' ')[0]}</Btn>)}
+      </div>
+      {/* full family swatch strip */}
+      <div style={{ display: 'flex', gap: 3, marginBottom: 12, flexWrap: 'wrap' }}>
+        {people.map((i) => <div key={i} style={{ width: 26, height: 26, borderRadius: 6, background: personTone(hue, i) }} title={`Person ${i + 1}`} />)}
+      </div>
+      <div style={{ overflowX: 'auto', border: '1px solid #ECECEF', borderRadius: 14, background: '#fff' }}>
+        <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 720 }}>
+          <thead>
+            <tr>
+              <th style={{ ...cell, textAlign: 'left', minWidth: 130, fontSize: 11, fontWeight: 700, color: '#9CA3AF', padding: '10px 12px' }}>Staff</th>
+              {DAYS.map((d) => <th key={d} style={{ ...cell, fontSize: 11, fontWeight: 700, color: '#9CA3AF', padding: '10px 5px' }}>{d}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {people.map((i) => {
+              const bg = personTone(hue, i), fg = textOn(bg)
+              return (
+                <tr key={i} style={{ borderTop: '1px solid #F4F4F6' }}>
+                  <td style={{ ...cell, fontSize: 12.5, fontWeight: 600, color: '#111827', padding: '6px 12px' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><span style={{ width: 10, height: 10, borderRadius: 3, background: bg, flexShrink: 0 }} />Person {i + 1}</span>
+                  </td>
+                  {DAYS.map((d, di) => {
+                    const type = SCALE_TYPES[(i * 3 + di * 2) % SCALE_TYPES.length]
+                    return <td key={di} style={cell}>{type
+                      ? <div style={{ borderRadius: 9, padding: '6px 9px', background: bg, boxShadow: `0 2px 6px ${bg}33` }}>
+                          <div style={{ color: fg, fontWeight: 700, fontSize: 11, lineHeight: 1.2 }}>{SHIFTS[type].label}</div>
+                          <div style={{ color: fg === '#fff' ? 'rgba(255,255,255,.85)' : '#4B5563', fontSize: 9.5 }}>{SHIFTS[type].time}</div>
+                        </div>
+                      : <div style={{ height: 1 }} />}</td>
+                  })}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   )
