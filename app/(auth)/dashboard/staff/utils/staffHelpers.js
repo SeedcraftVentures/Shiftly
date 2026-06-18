@@ -270,9 +270,9 @@ export function staffing(staff, shifts, cfg) {
     for (const d of sh.days) {
       if (!cfg.openDays.includes(d)) continue
       demand += sh.staff
-      const q = staff.filter((st) => canWork(st, d, sh, cfg) && (!sh.keyholder || st.keyholder))
+      const q = staff.filter((st) => canWork(st, d, sh, cfg)) // keyholder is location-wide, not a per-shift filter
       filled += Math.min(q.length, sh.staff)
-      if (q.length < sh.staff) short.push({ day: d, name: sh.name, need: sh.staff, have: q.length, kh: sh.keyholder, start: sh.start, end: sh.end })
+      if (q.length < sh.staff) short.push({ day: d, name: sh.name, need: sh.staff, have: q.length, start: sh.start, end: sh.end })
     }
   }
   return { demand, filled, pct: demand ? Math.round((filled / demand) * 100) : 100, short }
@@ -291,6 +291,71 @@ export function readiness(staff, shifts, cfg) {
     overContractH: coverableAtMax && !withinContract ? req - contracted : 0,
     shortAtMaxH: Math.max(0, req - maxh),
   }
+}
+
+// Total hours a staff member is actually available across the open week — the ceiling on
+// what they can ever work. Used to fail-safe: availability must cover contracted hours.
+export function availableHours(s, cfg) {
+  let h = 0
+  for (const d of cfg.openDays) {
+    const w = windowForDay(s, d, cfg)
+    if (w) h += w[1] - w[0]
+  }
+  return Math.round(h * 10) / 10
+}
+
+// ── Coverage bottlenecks — catch the "looks covered per day, but no valid weekly rota
+// fits inside everyone's max hours" case (e.g. one person available every day while
+// teammates are weekday-/weekend-only, so that person would have to work too many days).
+// Returns [{ name, essential, maxDays }] for staff who'd be over-worked.
+export function coverageBottlenecks(staff, shifts, cfg) {
+  const slotsByDay = {}
+  let totalSlots = 0, totalHours = 0
+  for (const sh of (shifts || [])) {
+    for (const d of (sh.days || [])) {
+      if (!cfg.openDays.includes(d)) continue
+      const need = sh.staff || 1
+      slotsByDay[d] = (slotsByDay[d] || 0) + need
+      totalSlots += need
+      totalHours += (sh.end - sh.start) * need
+    }
+  }
+  if (!totalSlots) return []
+  const avgLen = totalHours / totalSlots
+  const days = Object.keys(slotsByDay).map(Number)
+  const out = []
+  for (const s of (staff || [])) {
+    const maxDays = Math.floor((s.max || 48) / Math.max(avgLen, 1))
+    let essential = 0
+    for (const d of days) {
+      const availCount = staff.filter((x) => x.avail && x.avail[d]).length
+      if (availCount <= slotsByDay[d] && s.avail && s.avail[d]) essential++
+    }
+    if (essential > maxDays) out.push({ id: s.id, name: s.name, essential, maxDays })
+  }
+  return out
+}
+
+// Location-wide keyholder check: a keyholder must be AVAILABLE to open and to close each
+// open day (one to open, one to close, across ALL teams — possibly the same person). Pass
+// ALL the location's staff + ALL shifts. Returns { noKeyholder, openMissing[], closeMissing[] }.
+export function locationKeyholderGaps(staff, shifts, cfg) {
+  const keyholders = (staff || []).filter((s) => s.keyholder)
+  if (keyholders.length === 0) return { noKeyholder: true, openMissing: [], closeMissing: [] }
+  const dayWin = {}
+  for (const sh of (shifts || [])) for (const d of (sh.days || [])) {
+    if (!cfg.openDays.includes(d)) continue
+    const w = dayWin[d] || { open: 24, close: 0 }
+    w.open = Math.min(w.open, sh.start); w.close = Math.max(w.close, sh.end)
+    dayWin[d] = w
+  }
+  const availAt = (d, t) => keyholders.some((s) => { const w = windowForDay(s, d, cfg); return w && w[0] <= t + 0.01 && w[1] >= t - 0.01 })
+  const openMissing = [], closeMissing = []
+  for (const d of Object.keys(dayWin).map(Number)) {
+    if (!availAt(d, dayWin[d].open)) openMissing.push(d)
+    if (!availAt(d, dayWin[d].close)) closeMissing.push(d)
+  }
+  return { noKeyholder: false, openMissing, closeMissing }
 }
 
 // ── Schedule coverage — the OTHER coverage question: do the SHIFTS span the hours? ──

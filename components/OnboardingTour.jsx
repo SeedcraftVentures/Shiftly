@@ -303,26 +303,23 @@ export default function OnboardingTour({ onComplete }) {
 
   return (
     <>
-      {/* Backdrop */}
-      <div style={{
-        position: 'fixed', inset: 0, zIndex: 100,
-        background: 'rgba(0,0,0,0.45)',
-        backdropFilter: 'blur(2px)',
-      }} />
-
-      {/* Highlight ring */}
-      {targetRect && !navigating && (
+      {/* Spotlight: dim everything EXCEPT the target via a big box-shadow (no blur),
+          so the element the tour is pointing at stays crisp and readable. */}
+      {targetRect && !navigating ? (
         <div style={{
-          position: 'fixed', zIndex: 101, borderRadius: 14,
-          outline: `3px solid ${PINK}`,
-          outlineOffset: 6,
+          position: 'fixed', zIndex: 100, borderRadius: 14,
           top: targetRect.top - 6,
           left: targetRect.left - 6,
           width: targetRect.width + 12,
           height: targetRect.height + 12,
+          boxShadow: '0 0 0 9999px rgba(17,24,39,0.55)',
+          outline: `3px solid ${PINK}`,
+          outlineOffset: 4,
           pointerEvents: 'none',
           transition: 'all .25s',
         }} />
+      ) : (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(17,24,39,0.55)' }} />
       )}
 
       {/* Tooltip */}

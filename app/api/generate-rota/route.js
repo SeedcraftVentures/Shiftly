@@ -40,22 +40,41 @@ function shiftHours(p) {
 // When a team can't be scheduled even with policy constraints relaxed, work out the
 // real, actionable reason: a day short of available people, or not enough staff-hours.
 function diagnoseTeam(teamStaff, teamPatterns, openDayNames) {
-  let demandH = 0
+  const isOpen = (day) => openDayNames.size === 0 || openDayNames.has(day)
+  let demandH = 0, totalSlots = 0
   const gaps = []
+  const daySlots = {} // day index → staff-slots needed that day
   for (const p of teamPatterns) {
     const need = p.num_staff_needed || 1
     for (const day of (p.days || [])) {
-      if (openDayNames.size > 0 && !openDayNames.has(day)) continue
-      demandH += shiftHours(p) * need
+      if (!isOpen(day)) continue
       const di = DAY_INDEX[day]
+      demandH += shiftHours(p) * need
+      totalSlots += need
+      daySlots[di] = (daySlots[di] || 0) + need
       const avail = teamStaff.filter((s) => s.availability && s.availability[di]).length
       if (avail < need) gaps.push(`${p.shift_name} on ${day} needs ${need} but ${avail} available`)
     }
   }
   if (gaps.length) return `Not enough available staff — ${gaps.slice(0, 2).join('; ')}${gaps.length > 2 ? `; +${gaps.length - 2} more` : ''}. Widen availability or add staff.`
+
+  // Linchpin: someone forced to work more days than their max hours allow, because they're
+  // the only flexible cover (e.g. teammates are weekday-only / weekend-only). The per-day
+  // headcount looks fine, but no single assignment fits within everyone's max hours.
+  const avgLen = totalSlots ? demandH / totalSlots : 8
+  for (const s of teamStaff) {
+    const maxDays = Math.floor(Math.min(s.max_hours || LEGAL_MAX, LEGAL_MAX) / Math.max(avgLen, 1))
+    let essential = 0
+    for (const di of Object.keys(daySlots)) {
+      const avail = teamStaff.filter((x) => x.availability && x.availability[di])
+      if (avail.length <= daySlots[di] && avail.some((x) => x.staff_id === s.staff_id)) essential++
+    }
+    if (essential > maxDays) return `${s.name} would have to work ${essential} days but can only do ${maxDays} within their max hours — they're the only cover available every open day (teammates are limited to certain days). Spread the team's availability across the week, add staff, or raise ${s.name}'s max hours.`
+  }
+
   const capacity = teamStaff.reduce((a, s) => a + Math.min(s.max_hours || s.contracted_hours || LEGAL_MAX, LEGAL_MAX), 0)
   if (demandH > capacity + 0.5) return `Needs more staff — ${Math.round(demandH)}h of shifts but only about ${Math.round(capacity)}h of staff capacity (max ${LEGAL_MAX}h each). Add staff or reduce shift coverage.`
-  return 'Could not find a valid schedule. Try adding staff, widening availability, or reducing shift coverage.'
+  return 'Could not find a valid schedule. Try widening availability, adding staff, or reducing shift coverage.'
 }
 
 export async function POST(request) {
@@ -139,32 +158,29 @@ export async function POST(request) {
       }
       if (shifts.length === 0) { skipped.push({ teamId, teamName: teamName[teamId], reason: 'No shift days' }); continue }
 
-      // generate each week independently (avoids the scheduler's cross-week diversity constraint)
-      for (let wk = 1; wk <= weekCount; wk++) {
-        let result = await callScheduler(pythonUrl, { staff, shifts, rules, weeks: 1 })
-        if (!result.success) {
-          // Safety net for the deployed solver: drop the contracted-hours minimum so a
-          // rota still builds (shortfalls flagged below). No-op once the solver treats
-          // contracted as a soft target. Force fair distribution so the fallback still
-          // balances hours sensibly rather than dumping them on one person.
-          // Relax every policy ("soft") constraint — contracted hours, keyholder, max
-          // consecutive days, min rest — leaving only the physically-unavoidable ones
-          // (a shift needs N people and only M are available). This honours "the rota
-          // always builds, then we flag what couldn't be met": violations show up in the
-          // rule-compliance + contracted-hours diagnostics. If it STILL can't build, the
-          // failure is real (not enough available staff) and the reason is specific.
-          const relaxed = staff.map((s) => ({ ...s, contracted_hours: 0 }))
-          const relaxedRules = { ...rules, fair_distribution: true, enforce_keyholder: false, max_consecutive_days: 7, min_rest_hours: 0 }
-          result = await callScheduler(pythonUrl, { staff: relaxed, shifts, rules: relaxedRules, weeks: 1 })
-          if (result.success) relaxedTeams.add(teamName[teamId])
+      // Keyholder is a LOCATION concern (one person opens, one closes for the whole site),
+      // NOT a per-team rule — so the per-team solver never enforces it. We check it
+      // location-wide after every team has built (below).
+      const solverRules = { ...rules, enforce_keyholder: false }
+
+      // 3-stage solve ladder for `weeksN` weeks: full constraints → relax policy rules
+      // (keep contracted as a soft target) → drop contracted entirely (last resort).
+      // Always builds something, then we flag whatever isn't fully met.
+      const solveLadder = async (weeksN) => {
+        let r = await callScheduler(pythonUrl, { staff, shifts, rules: solverRules, weeks: weeksN })
+        if (!r.success) {
+          const relaxedRules = { ...solverRules, fair_distribution: true, max_consecutive_days: 7, min_rest_hours: 0 }
+          r = await callScheduler(pythonUrl, { staff, shifts, rules: relaxedRules, weeks: weeksN })
+          if (!r.success) {
+            const zeroed = staff.map((s) => ({ ...s, contracted_hours: 0 }))
+            r = await callScheduler(pythonUrl, { staff: zeroed, shifts, rules: relaxedRules, weeks: weeksN })
+          }
+          if (r.success) relaxedTeams.add(teamName[teamId])
         }
-        if (!result.success) {
-          skipped.push({ teamId, teamName: teamName[teamId], reason: diagnoseTeam(teamStaff, teamPatterns, openDayNames) })
-          break // skip this team, keep building the rest
-        }
-        builtTeamIds.add(teamId)
-        wallTime += result.stats?.wall_time || 0
-        for (const a of result.assignments || []) {
+        return r
+      }
+      const pushAssignments = (assignments, wk) => {
+        for (const a of assignments || []) {
           allAssignments.push({
             team_id: teamId, team_name: teamName[teamId], week: wk,
             shift_id: a.shift_id, shift_name: a.shift_name, day: a.day,
@@ -172,6 +188,29 @@ export async function POST(request) {
             start_time: a.start_time, end_time: a.end_time,
             keyholder_required: a.keyholder_required, staff_id: a.staff_id, staff_name: a.staff_name,
           })
+        }
+      }
+
+      // Solve all weeks together so the scheduler can rotate weekend duty across the
+      // weeks (cross-week weekend fairness). Fall back to independent per-week solves
+      // if the multi-week model can't be satisfied, so a rota always builds.
+      const multi = weekCount > 1 ? await solveLadder(weekCount) : null
+      if (multi && multi.success) {
+        builtTeamIds.add(teamId)
+        wallTime += multi.stats?.wall_time || 0
+        const byWeek = {}
+        for (const a of multi.assignments || []) (byWeek[a.week || 1] ||= []).push(a)
+        for (let wk = 1; wk <= weekCount; wk++) pushAssignments(byWeek[wk] || [], wk)
+      } else {
+        for (let wk = 1; wk <= weekCount; wk++) {
+          const result = await solveLadder(1)
+          if (!result.success) {
+            skipped.push({ teamId, teamName: teamName[teamId], reason: diagnoseTeam(teamStaff, teamPatterns, openDayNames) })
+            break // skip this team, keep building the rest
+          }
+          builtTeamIds.add(teamId)
+          wallTime += result.stats?.wall_time || 0
+          pushAssignments(result.assignments, wk)
         }
       }
     }
@@ -184,9 +223,22 @@ export async function POST(request) {
     const dms = (d) => new Date(d + 'T00:00:00Z').getTime()
     const compliance = []
 
-    if (rules.enforce_keyholder !== false) {
-      const bad = allAssignments.filter((a) => a.keyholder_required && !keyholderSet.has(a.staff_id))
-      compliance.push({ key: 'enforce_keyholder', label: 'Keyholder on open & close', ok: bad.length === 0, detail: bad.length ? `${bad.length} open/close shift(s) without a keyholder` : '' })
+    // Keyholder is LOCATION-wide: a keyholder must be on at the location's open and close
+    // each day, across ALL teams (one to open, one to close — possibly the same person).
+    {
+      const byDayLoc = {}
+      for (const a of allAssignments) (byDayLoc[`${a.week}__${a.day}`] ||= []).push(a)
+      let openMiss = 0, closeMiss = 0
+      for (const list of Object.values(byDayLoc)) {
+        const spans = list.map((a) => { let s = toMin(a.start_time), e = toMin(a.end_time); if (e <= s) e += 1440; return { s, e, kh: keyholderSet.has(a.staff_id) } })
+        const openT = Math.min(...spans.map((x) => x.s)), closeT = Math.max(...spans.map((x) => x.e))
+        if (!spans.some((x) => x.kh && x.s <= openT + 1)) openMiss++
+        if (!spans.some((x) => x.kh && x.e >= closeT - 1)) closeMiss++
+      }
+      const parts = []
+      if (openMiss) parts.push(`${openMiss} day(s) with no keyholder at open`)
+      if (closeMiss) parts.push(`${closeMiss} day(s) with no keyholder at close`)
+      compliance.push({ key: 'keyholder', label: 'Keyholder on open & close', ok: parts.length === 0, detail: parts.join('; ') })
     }
     const minRest = Number(rules.min_rest_hours ?? 11)
     let restViol = 0

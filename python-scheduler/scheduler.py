@@ -160,7 +160,7 @@ class ShiftlyScheduler:
 
     # ── Single week solver ────────────────────────────────────────────────────
 
-    def solve_single_week(self, week_num, previous_solutions=None):
+    def solve_single_week(self, week_num, previous_solutions=None, weekend_counts=None):
         model = cp_model.CpModel()
         solver = cp_model.CpSolver()
 
@@ -298,30 +298,28 @@ class ShiftlyScheduler:
                 contracted_overages.append(overage)
 
         # ── Soft: variety between weeks ───────────────────────────────────────
-        if previous_solutions:
-            variety_penalties = []
-            for prev in previous_solutions:
-                same_count = model.NewIntVar(0, n_staff * n_shifts, f'same_w{week_num}')
-                match_vars = []
-                for si in range(n_shifts):
-                    for st in range(n_staff):
-                        prev_val = prev.get(si, {}).get(st, 0)
-                        if prev_val == 1:
-                            match = model.NewBoolVar(f'match_{si}_{st}_w{week_num}')
-                            model.Add(schedule[si][st] == 1).OnlyEnforceIf(match)
-                            model.Add(schedule[si][st] == 0).OnlyEnforceIf(match.Not())
-                            match_vars.append(match)
-                if match_vars:
-                    model.Add(same_count == sum(match_vars))
-                    variety_penalties.append(same_count)
+        # A penalty (NOT a hard constraint — the old hard "≥30% different" made multi-week
+        # infeasible). Each match = an assignment identical to a previous week → penalised,
+        # so weeks differ where they can.
+        week_variety_terms = []
+        for pidx, prev in enumerate(previous_solutions or []):
+            for si in range(n_shifts):
+                for st in range(n_staff):
+                    if prev.get(si, {}).get(st, 0) == 1:
+                        match = model.NewBoolVar(f'match_{si}_{st}_w{week_num}_p{pidx}')
+                        model.Add(schedule[si][st] == 1).OnlyEnforceIf(match)
+                        model.Add(schedule[si][st] == 0).OnlyEnforceIf(match.Not())
+                        week_variety_terms.append(match)
 
-            if variety_penalties:
-                total_same = model.NewIntVar(0, n_staff * n_shifts * len(previous_solutions), 'total_same')
-                model.Add(total_same == sum(variety_penalties))
-                # Force meaningful difference: at least 30% different assignments
-                min_different = max(1, int(n_staff * 0.3))
-                max_same = (n_staff * n_shifts) - min_different
-                model.Add(total_same <= max_same)
+        # ── Soft: weekend fairness ACROSS weeks — rotate who works Sat/Sun. Penalise
+        #    giving a weekend shift to someone who has already worked weekends. ───────────
+        weekend_terms = []
+        if weekend_counts:
+            weekend_si = [si for si, s in enumerate(self.shifts) if s['day'] in ('Saturday', 'Sunday')]
+            for si in weekend_si:
+                for st in range(n_staff):
+                    if weekend_counts[st] > 0:
+                        weekend_terms.append(schedule[si][st] * weekend_counts[st])
 
         # ── Soft: fair distribution ───────────────────────────────────────────
         minimize_terms = []
@@ -388,6 +386,8 @@ class ShiftlyScheduler:
         objective = []
         objective += [s * 10 for s in contracted_shortfalls]
         objective += [o * 3 for o in contracted_overages]
+        objective += [w * 6 for w in weekend_terms]       # rotate weekends across weeks
+        objective += [v * 2 for v in week_variety_terms]  # general week-to-week variety
         objective += minimize_terms
         if objective:
             model.Minimize(sum(objective))
@@ -414,14 +414,23 @@ class ShiftlyScheduler:
         start = time.time()
 
         all_weeks = []
+        # Cumulative count of weekends each staff member has worked so far, fed into each
+        # subsequent week so the solver rotates weekend duty instead of repeating it.
+        weekend_counts = [0] * len(self.staff)
+        weekend_si = [si for si, s in enumerate(self.shifts) if s['day'] in ('Saturday', 'Sunday')]
         for week_num in range(self.weeks):
-            solution = self.solve_single_week(week_num, previous_solutions=all_weeks)
+            solution = self.solve_single_week(
+                week_num, previous_solutions=all_weeks, weekend_counts=weekend_counts
+            )
             if solution is None:
                 return {
                     'success': False,
                     'error': self._diagnose_failure(),
                 }
             all_weeks.append(solution)
+            for st in range(len(self.staff)):
+                if any(solution[si][st] == 1 for si in weekend_si):
+                    weekend_counts[st] += 1
 
         # Build result
         assignments = []
