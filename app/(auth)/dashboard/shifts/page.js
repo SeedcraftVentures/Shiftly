@@ -406,6 +406,10 @@ export default function ShiftsPage() {
   const teamName = teams.find((t) => t.id === teamId)?.name || ''
 
   return <div style={{ fontFamily: FONT, background: '#FAFAFB', minHeight: '100vh', color: '#111827' }}>
+    <div style={{ textAlign: 'center', padding: '24px 0 0' }}>
+      <h1 style={{ fontSize: 26, fontWeight: 800, color: '#111827', margin: 0, letterSpacing: -0.3 }}>Shifts</h1>
+      <p style={{ fontSize: 13.5, color: '#6B7280', margin: '5px 0 0' }}>The shift patterns each team runs every week.</p>
+    </div>
     <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 0 14px' }}>
       <div style={{ display: 'inline-flex', background: '#F1F1F4', borderRadius: 11, padding: 4, gap: 2 }}>
         {tabs.map((t) => {
