@@ -3,12 +3,14 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
-const FONT_HEADING = "'Cal Sans', 'Plus Jakarta Sans', sans-serif"
+const FONT_HEADING = "'Plus Jakarta Sans', sans-serif"
 const FONT_BODY = "'Plus Jakarta Sans', sans-serif"
 const PINK = '#FF1F7D'
+const OPERATING = '#6366F1' // operating-hours accent — matches the Settings/Shifts pages
 
-const PALETTE = ['#8B5CF6', '#10B981', '#3B82F6', '#F97316', '#EF4444', '#6366F1']
-const PALETTE_LIGHT = ['#F5F3FF', '#ECFDF5', '#EFF6FF', '#FFF7ED', '#FEF2F2', '#EEF2FF']
+// Team palette — matches the app's shared TEAM_COLORS so wizard previews line up with the dashboard.
+const PALETTE = ['#FF1F7D', '#6366F1', '#14B8A6', '#F59E0B', '#0EA5E9', '#8B5CF6', '#EC4899', '#10B981']
+const PALETTE_LIGHT = ['#FFE7F1', '#EEF0FE', '#E6FBF6', '#FEF6E7', '#E8F6FE', '#F3EDFE', '#FDEBF4', '#E7FBF1']
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
@@ -255,14 +257,14 @@ function HoursRow({ day, data, onChange, onCopyTo, allDays }) {
             <span style={{ color: '#D1D5DB', fontSize: 12, marginTop: 14 }}>→</span>
 
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-              <span style={{ fontSize: 8, fontWeight: 600, color: '#8B5CF6', letterSpacing: 0.4 }}>FIRST SHIFT</span>
+              <span style={{ fontSize: 8, fontWeight: 600, color: OPERATING, letterSpacing: 0.4 }}>FIRST SHIFT</span>
               <TimeSelect value={data.first_shift} onChange={v => onChange({ ...data, first_shift: v })} />
             </div>
 
             <span style={{ color: '#D1D5DB', fontSize: 12, marginTop: 14 }}>→</span>
 
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-              <span style={{ fontSize: 8, fontWeight: 600, color: '#8B5CF6', letterSpacing: 0.4 }}>LAST SHIFT</span>
+              <span style={{ fontSize: 8, fontWeight: 600, color: OPERATING, letterSpacing: 0.4 }}>LAST SHIFT</span>
               <TimeSelect value={data.last_shift} onChange={v => onChange({ ...data, last_shift: v })} />
             </div>
 
@@ -459,7 +461,7 @@ export default function PreWizardOnboarding() {
   return (
     <div style={{
       minHeight: '100vh', fontFamily: FONT_BODY,
-      background: 'linear-gradient(135deg, #FFF0F5 0%, #fff 50%, #F5F3FF 100%)',
+      background: 'linear-gradient(180deg, #FFEFF6 0%, #F7F7F9 340px)',
       display: 'flex', flexDirection: 'column', alignItems: 'center',
       justifyContent: 'center', padding: 24,
     }}>
@@ -691,7 +693,7 @@ export default function PreWizardOnboarding() {
               </h1>
               <p style={{ fontSize: 14, color: '#6B7280', margin: '0 0 6px' }}>
                 Open and Close times anchor your shift patterns.{' '}
-                <span style={{ color: '#8B5CF6', fontWeight: 600 }}>First/Last shift</span>
+                <span style={{ color: OPERATING, fontWeight: 600 }}>First/Last shift</span>
                 {' '}set when staff rotas begin and end.
               </p>
 
@@ -723,7 +725,7 @@ export default function PreWizardOnboarding() {
               onClick={() => setStep(s => s - 1)}
               disabled={step === 1}
               style={{
-                padding: '10px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                padding: '11px 20px', borderRadius: 11, fontSize: 13, fontWeight: 600,
                 border: '1px solid #E5E7EB', background: '#fff', color: '#6B7280',
                 cursor: step === 1 ? 'default' : 'pointer',
                 opacity: step === 1 ? 0 : 1, transition: 'opacity .15s',
@@ -737,7 +739,7 @@ export default function PreWizardOnboarding() {
                 onClick={() => setStep(s => s + 1)}
                 disabled={!canProceed()}
                 style={{
-                  padding: '10px 24px', borderRadius: 8, fontSize: 13, fontWeight: 700,
+                  padding: '11px 24px', borderRadius: 11, fontSize: 13, fontWeight: 700,
                   border: 'none', background: canProceed() ? PINK : '#F3F4F6',
                   color: canProceed() ? '#fff' : '#9CA3AF',
                   cursor: canProceed() ? 'pointer' : 'not-allowed',
@@ -752,7 +754,7 @@ export default function PreWizardOnboarding() {
                 onClick={handleSubmit}
                 disabled={!canProceed() || saving}
                 style={{
-                  padding: '10px 24px', borderRadius: 8, fontSize: 13, fontWeight: 700,
+                  padding: '11px 24px', borderRadius: 11, fontSize: 13, fontWeight: 700,
                   border: 'none', background: canProceed() && !saving ? PINK : '#F3F4F6',
                   color: canProceed() && !saving ? '#fff' : '#9CA3AF',
                   cursor: canProceed() && !saving ? 'pointer' : 'not-allowed',
