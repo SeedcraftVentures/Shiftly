@@ -127,6 +127,23 @@ export async function DELETE(request) {
     const { locationIds } = await getOrgScope(userId)
     if (locationIds.length === 0) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
+    // verify the team is in this org before touching anything
+    const { data: team } = await supabaseAdmin
+      .from('Teams').select('team_id').eq('team_id', teamId).in('location_id', locationIds).maybeSingle()
+    if (!team) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+    // cascade: remove the team's rota assignments, then its staff + shift patterns, then the team
+    const [{ data: staff }, { data: shifts }] = await Promise.all([
+      supabaseAdmin.from('Staff').select('staff_id').eq('team_id', teamId),
+      supabaseAdmin.from('Shift Patterns').select('shift_id').eq('shift_team', teamId),
+    ])
+    const staffIds = (staff || []).map((s) => s.staff_id)
+    const shiftIds = (shifts || []).map((s) => s.shift_id)
+    if (staffIds.length) await supabaseAdmin.from('Rota Assignments').delete().in('staff_id', staffIds)
+    if (shiftIds.length) await supabaseAdmin.from('Rota Assignments').delete().in('shift_id', shiftIds)
+    if (staffIds.length) await supabaseAdmin.from('Staff').delete().eq('team_id', teamId)
+    if (shiftIds.length) await supabaseAdmin.from('Shift Patterns').delete().eq('shift_team', teamId)
+
     const { error } = await supabaseAdmin
       .from('Teams')
       .delete()
