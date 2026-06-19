@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback, useRef, Fragment } from 'react'
-import { Field, Input, TimeRange, Switch, Button } from '@/app/components/ui/kit'
+import { Field, Input, TimeRange, Switch, Button, T } from '@/app/components/ui/kit'
 import { rotaBlock } from '@/lib/rotaColors'
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -340,7 +340,7 @@ export default function RotaBuilder() {
   if (loading) return <div style={{ fontFamily: FONT, padding: 60, textAlign: 'center', color: '#9CA3AF' }}>Loading…</div>
 
   const inspectorAccent = editCell ? TEAM_COLORS[Math.max(0, teams.findIndex((t) => t.id === editCell.staff.team_id)) % TEAM_COLORS.length] : PINK
-  const card = { background: '#fff', border: '1px solid #ECECEF', borderRadius: 14, padding: 22, marginBottom: 18 }
+  const card = { background: '#fff', border: '1px solid #ECECEF', borderRadius: 14, padding: 22, marginBottom: 18, boxShadow: T.shadow.md }
   const inner = { maxWidth: 1040, margin: '0 auto', padding: '0 24px' }
 
   return <div style={{ fontFamily: FONT, background: '#FAFAFB', minHeight: '100vh', color: '#111827', paddingTop: 28, paddingBottom: 50 }}>
@@ -368,7 +368,7 @@ export default function RotaBuilder() {
               {[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n} week{n > 1 ? 's' : ''}</option>)}
             </select>
           </div>
-          <button onClick={generate} disabled={generating} style={{ fontFamily: 'inherit', fontSize: 14, fontWeight: 700, color: '#fff', background: generating ? '#F9A8D0' : PINK, border: 'none', borderRadius: 10, padding: '12px 28px', cursor: generating ? 'default' : 'pointer' }}>{generating ? 'Building…' : 'Build rota'}</button>
+          <button onClick={generate} disabled={generating} style={{ fontFamily: 'inherit', fontSize: 14, fontWeight: 700, color: '#fff', background: generating ? '#F9A8D0' : PINK, border: 'none', borderRadius: 10, padding: '12px 28px', cursor: generating ? 'default' : 'pointer', boxShadow: generating ? 'none' : T.lift(PINK) }}>{generating ? 'Building…' : 'Build rota'}</button>
         </div>
       </div>
 
@@ -430,16 +430,22 @@ export default function RotaBuilder() {
         </div>}
       </>}
 
-      {saved.length > 0 && <div style={card}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 6 }}>Saved rotas</div>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {saved.slice(0, 10).map((r) => <button key={r.id} onClick={() => loadSaved(r.id)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 4px', borderBottom: '1px solid #F4F4F6', background: 'none', border: 'none', borderBottomColor: '#F4F4F6', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{r.name || `Week of ${prettyDate(r.week_start)}`} <span style={{ color: '#9CA3AF', fontWeight: 500 }}>· w/c {prettyDate(r.week_start)}</span></span>
-            <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 6, background: r.status === 'Published' ? '#16A34A14' : '#F3F4F6', color: r.status === 'Published' ? '#16A34A' : '#6B7280' }}>{r.status}</span>
-          </button>)}
+      {(() => {
+        // Only DRAFTS belong here — somewhere to resume an unpublished build.
+        // Published rotas live in the Archive, so they don't compete for attention.
+        const drafts = saved.filter((r) => r.status !== 'Published')
+        if (drafts.length === 0) return null
+        return <div style={card}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 6 }}>Continue a draft</div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {drafts.slice(0, 10).map((r) => <button key={r.id} onClick={() => loadSaved(r.id)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 4px', borderBottom: '1px solid #F4F4F6', background: 'none', border: 'none', borderBottomColor: '#F4F4F6', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{r.name || `Week of ${prettyDate(r.week_start)}`} <span style={{ color: '#9CA3AF', fontWeight: 500 }}>· w/c {prettyDate(r.week_start)}</span></span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: PINK }}>Continue →</span>
+            </button>)}
+          </div>
+          <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 8 }}>Published rotas live in the Archive.</div>
         </div>
-        <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 8 }}>Click a rota to open and edit it.</div>
-      </div>}
+      })()}
     </div>
   </div>
 }

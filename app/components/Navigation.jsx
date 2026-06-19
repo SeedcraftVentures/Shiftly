@@ -106,7 +106,7 @@ export default function Navigation({ collapsed = false, onToggleCollapse }) {
     return (
       <div className="relative">
         <button onClick={() => setSwitcherOpen((o) => !o)} disabled={switching} title={rail ? `${orgName} · ${activeLoc?.name || ''}` : undefined}
-          className={`w-full flex items-center bg-transparent hover:bg-white/10 border border-white/25 rounded-2xl transition disabled:opacity-60 ${rail ? 'justify-center p-1.5' : 'gap-2.5 px-2.5 py-2.5'}`}>
+          className={`w-full flex items-center bg-white/10 hover:bg-white/[0.18] border border-white/20 rounded-2xl shadow-[0_4px_14px_rgba(0,0,0,0.16)] transition disabled:opacity-60 ${rail ? 'justify-center p-1.5' : 'gap-2.5 px-2.5 py-2.5'}`}>
           <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center text-[#FF1F7D] font-extrabold text-sm flex-shrink-0 shadow-sm">{initials(orgName)}</div>
           {!rail && (
             <>

@@ -402,7 +402,7 @@ export default function ShiftsPage() {
   if (teams.length === 0) return <div style={{ fontFamily: FONT, padding: 60, textAlign: 'center', color: '#6B7280' }}>No teams yet. Finish onboarding to add teams first.</div>
 
   const tabs = [...teams, { id: 'all', name: 'All teams' }]
-  const panel = { background: '#fff', border: '1px solid #ECECEF', borderRadius: 14, padding: 20 }
+  const panel = { background: '#fff', border: '1px solid #ECECEF', borderRadius: 14, padding: 20, boxShadow: '0 3px 10px rgba(17,24,39,.06), 0 1px 2px rgba(17,24,39,.04)' }
   const teamName = teams.find((t) => t.id === teamId)?.name || ''
 
   return <div style={{ fontFamily: FONT, background: '#FAFAFB', minHeight: '100vh', color: '#111827' }}>
