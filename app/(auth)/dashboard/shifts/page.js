@@ -91,13 +91,38 @@ function Switch({ on, onClick, accent = PINK }) {
 function Label({ children }) {
   return <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 8 }}>{children}</div>
 }
-function Stepper({ value, onChange, min, max }) {
-  const btn = { width: 34, height: 34, border: '1px solid #E5E7EB', background: '#F9FAFB', cursor: 'pointer', fontSize: 17, color: '#6B7280' }
-  return <div style={{ display: 'flex', alignItems: 'center' }}>
-    <button onClick={() => onChange(Math.max(min, value - 1))} style={{ ...btn, borderRadius: '8px 0 0 8px' }}>−</button>
-    <div style={{ minWidth: 50, height: 34, borderTop: '1px solid #E5E7EB', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#111827', background: '#fff' }}>{value}</div>
-    <button onClick={() => onChange(Math.min(max, value + 1))} style={{ ...btn, borderRadius: '0 8px 8px 0' }}>+</button>
+// Shared interactive convention: pink outline on hover OR focus, soft ring while focused.
+function Stepper({ value, onChange, min = 0, max = 99, step = 1, suffix = '', full = true }) {
+  const [text, setText] = useState(String(value ?? 0))
+  const [focused, setFocused] = useState(false)
+  const [hover, setHover] = useState(false)
+  const inputRef = useRef(null)
+  useEffect(() => { setText(String(value ?? 0)) }, [value])
+  const clamp = (n) => Math.max(min, Math.min(max, n))
+  const commit = (raw) => { let n = parseFloat(raw); if (isNaN(n)) n = min; n = clamp(n); onChange(n); setText(String(n)) }
+  const nudge = (d) => { const n = clamp((parseFloat(text) || 0) + d); onChange(n); setText(String(n)) }
+  const btn = { width: 36, height: 38, border: '1px solid #E5E7EB', borderRadius: 9, background: '#F9FAFB', cursor: 'pointer', fontSize: 18, color: '#6B7280', flexShrink: 0, fontFamily: 'inherit', transition: 'background .12s' }
+  const lit = focused || hover
+  const fieldShadow = focused ? `0 0 0 3px ${PINK}33` : (hover ? `0 0 0 3px ${PINK}1F` : 'inset 0 1px 2px rgba(17,24,39,.08)')
+  return <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} style={{ display: full ? 'flex' : 'inline-flex', alignItems: 'center', gap: 6 }}>
+    <button type="button" onClick={() => nudge(-step)} style={btn}>−</button>
+    <div onMouseDown={(e) => { if (e.target !== inputRef.current) { e.preventDefault(); inputRef.current?.focus() } }}
+      style={{ ...(full ? { flex: 1, minWidth: 0 } : { width: 72 }), display: 'flex', alignItems: 'center', height: 38, boxSizing: 'border-box', border: `1px solid ${lit ? PINK : '#E5E7EB'}`, borderRadius: 9, background: '#fff', boxShadow: fieldShadow, cursor: 'text', transition: 'box-shadow .12s, border-color .12s' }}>
+      <input ref={inputRef} type="text" inputMode="decimal" value={text}
+        onChange={(e) => setText(e.target.value.replace(/[^\d.]/g, ''))}
+        onFocus={(e) => { setFocused(true); e.target.select() }}
+        onBlur={(e) => { setFocused(false); commit(e.target.value) }}
+        onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'ArrowUp') { e.preventDefault(); nudge(step) } if (e.key === 'ArrowDown') { e.preventDefault(); nudge(-step) } }}
+        style={{ flex: 1, minWidth: 0, width: '100%', height: '100%', textAlign: 'center', border: 'none', outline: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, color: focused ? PINK : '#111827', cursor: 'text', padding: suffix ? '0 0 0 12px' : 0 }} />
+      {suffix && <span style={{ flexShrink: 0, paddingRight: 10, paddingLeft: 1, fontSize: 11.5, fontWeight: 600, color: lit ? PINK : '#9CA3AF', pointerEvents: 'none', transition: 'color .12s' }}>{suffix}</span>}
+    </div>
+    <button type="button" onClick={() => nudge(step)} style={btn}>+</button>
   </div>
+}
+function FieldInput({ style, onFocus, onBlur, ...rest }) {
+  const [f, setF] = useState(false), [h, setH] = useState(false); const lit = f || h
+  return <input {...rest} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} onFocus={(e) => { setF(true); onFocus?.(e) }} onBlur={(e) => { setF(false); onBlur?.(e) }}
+    style={{ width: '100%', boxSizing: 'border-box', fontSize: 14, fontWeight: 600, fontFamily: 'inherit', color: '#111827', padding: '10px 12px', borderRadius: 9, outline: 'none', border: `1px solid ${lit ? PINK : '#E5E7EB'}`, boxShadow: f ? `0 0 0 3px ${PINK}33` : 'none', transition: 'border-color .12s, box-shadow .12s', ...style }} />
 }
 function DayPicker({ days, onChange, openDays, accent = PINK }) {
   const preset = activePreset(days, openDays)
@@ -164,7 +189,7 @@ function Inspector({ shift, patch, onDelete, saveState, onSave, accent, cfg }) {
     <div style={{ marginBottom: 18 }}><SaveStatus state={saveState} /></div>
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <div><Label>Shift name</Label>
-        <input value={shift.name} onChange={(e) => patch({ name: e.target.value })} style={{ width: '100%', boxSizing: 'border-box', fontSize: 14, fontWeight: 600, fontFamily: 'inherit', color: '#111827', padding: '10px 12px', borderRadius: 9, border: '1px solid #E5E7EB', outline: 'none' }} />
+        <FieldInput value={shift.name} onChange={(e) => patch({ name: e.target.value })} />
       </div>
       <div><Label>Time</Label>
         <TimeRange start={shift.start} end={shift.end} onChange={(start, end) => patch({ start, end })} accent={accent} domain={cfg.slider} />

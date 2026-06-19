@@ -223,12 +223,19 @@ function SaveStatus({ state }) {
   return <span style={{ fontSize: 11.5, fontWeight: 600, color: c.c }}>{c.t}</span>
 }
 const inputStyle = (extra = {}) => ({ width: '100%', boxSizing: 'border-box', fontSize: 14, fontWeight: 600, fontFamily: 'inherit', color: '#111827', padding: '10px 12px', borderRadius: 9, border: '1px solid #E5E7EB', outline: 'none', ...extra })
+// app-wide convention: pink outline on hover OR focus, soft ring while focused
+const litStyle = (lit, f) => ({ border: `1px solid ${lit ? PINK : '#E5E7EB'}`, boxShadow: f ? `0 0 0 3px ${PINK}33` : 'none', transition: 'border-color .12s, box-shadow .12s' })
 function FieldLabel({ children }) { return <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 8 }}>{children}</div> }
+function FieldInput({ style, onFocus, onBlur, ...rest }) {
+  const [f, setF] = useState(false), [h, setH] = useState(false)
+  return <input {...rest} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} onFocus={(e) => { setF(true); onFocus?.(e) }} onBlur={(e) => { setF(false); onBlur?.(e) }} style={inputStyle({ ...litStyle(f || h, f), ...style })} />
+}
 function Money({ value, onChange, step = '0.25', suffix = '' }) {
-  return <div style={{ position: 'relative' }}>
-    <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 14, fontWeight: 700, color: '#9CA3AF' }}>£</span>
-    <input value={value || ''} onChange={(e) => onChange(parseFloat(e.target.value) || 0)} type="number" step={step} style={inputStyle({ paddingLeft: 24, paddingRight: suffix ? 44 : 12 })} />
-    {suffix && <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, fontWeight: 600, color: '#9CA3AF', pointerEvents: 'none' }}>{suffix}</span>}
+  const [f, setF] = useState(false), [h, setH] = useState(false); const lit = f || h
+  return <div style={{ position: 'relative' }} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}>
+    <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 14, fontWeight: 700, color: lit ? PINK : '#9CA3AF', transition: 'color .12s' }}>£</span>
+    <input value={value || ''} onChange={(e) => onChange(parseFloat(e.target.value) || 0)} onFocus={() => setF(true)} onBlur={() => setF(false)} type="number" step={step} style={inputStyle({ paddingLeft: 24, paddingRight: suffix ? 44 : 12, ...litStyle(lit, f) })} />
+    {suffix && <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, fontWeight: 600, color: lit ? PINK : '#9CA3AF', pointerEvents: 'none', transition: 'color .12s' }}>{suffix}</span>}
   </div>
 }
 function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg }) {
@@ -240,8 +247,8 @@ function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg }) {
     </div>
     <div style={{ marginBottom: 18 }}><SaveStatus state={saveState} /></div>
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div><FieldLabel>Name</FieldLabel><input value={s.name} onChange={(e) => patch({ name: e.target.value })} style={inputStyle()} /></div>
-      <div><FieldLabel>Role</FieldLabel><input value={s.role || ''} onChange={(e) => patch({ role: e.target.value })} style={inputStyle()} /></div>
+      <div><FieldLabel>Name</FieldLabel><FieldInput value={s.name} onChange={(e) => patch({ name: e.target.value })} /></div>
+      <div><FieldLabel>Role</FieldLabel><FieldInput value={s.role || ''} onChange={(e) => patch({ role: e.target.value })} /></div>
       <div style={{ display: 'flex', gap: 12 }}>
         <div style={{ flex: 1 }}><FieldLabel>Contracted</FieldLabel><Stepper value={s.contracted} onChange={(v) => patch({ contracted: v })} min={0} max={60} suffix="h" /></div>
         <div style={{ flex: 1 }}><FieldLabel>Max / week</FieldLabel><Stepper value={s.max} onChange={(v) => patch({ max: v })} min={0} max={60} suffix="h" /></div>

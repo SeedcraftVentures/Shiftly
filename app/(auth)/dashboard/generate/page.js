@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback, useRef, Fragment } from 'react'
-import { Field, Input, TimeRange, Switch, Button, T } from '@/app/components/ui/kit'
+import { Field, Input, Select, TimeRange, Switch, Button, T } from '@/app/components/ui/kit'
 import { rotaBlock } from '@/lib/rotaColors'
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -50,6 +50,7 @@ const MonthNav = ({ dir, onClick }) => (
 )
 function WeekPicker({ value, onChange }) {
   const [open, setOpen] = useState(false)
+  const [hover, setHover] = useState(false)
   const [hoverRow, setHoverRow] = useState(-1)
   const ref = useRef(null)
   const selMon = mondayOf(parseYMD(value))
@@ -72,12 +73,12 @@ function WeekPicker({ value, onChange }) {
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
-      <button type="button" onClick={() => setOpen((o) => !o)} style={{ width: '100%', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontFamily: 'inherit', fontSize: 14, fontWeight: 600, color: '#111827', padding: '10px 12px', borderRadius: 10, border: `1px solid ${open ? PINK : '#E5E7EB'}`, background: '#fff', cursor: 'pointer', transition: 'border-color .15s' }}>
+      <button type="button" onClick={() => setOpen((o) => !o)} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} style={{ width: '100%', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontFamily: 'inherit', fontSize: 14, fontWeight: 600, color: '#111827', padding: '10px 12px', borderRadius: 10, border: `1px solid ${open || hover ? PINK : '#E5E7EB'}`, background: '#fff', cursor: 'pointer', boxShadow: open ? `0 0 0 3px ${PINK}33` : 'none', transition: 'border-color .15s, box-shadow .15s' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#9CA3AF"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke={open || hover ? PINK : '#9CA3AF'}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
           {selMon.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
         </span>
-        <svg width="15" height="15" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} fill="none" viewBox="0 0 24 24" stroke="#9CA3AF"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+        <svg width="15" height="15" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} fill="none" viewBox="0 0 24 24" stroke={open || hover ? PINK : '#9CA3AF'}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
       </button>
 
       {open && (
@@ -353,10 +354,10 @@ export default function RotaBuilder() {
         <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <div style={{ flex: 1, minWidth: 180 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 8 }}>Team</div>
-            <select value={teamId} onChange={(e) => setTeamId(e.target.value)} style={{ width: '100%', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, padding: '10px 12px', borderRadius: 9, border: '1px solid #E5E7EB', background: '#fff', cursor: 'pointer' }}>
+            <Select value={teamId} onChange={(e) => setTeamId(e.target.value)}>
               <option value="all">All teams</option>
               {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
+            </Select>
           </div>
           <div style={{ flex: 1, minWidth: 180 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 8 }}>Week starting (Monday)</div>
@@ -364,9 +365,9 @@ export default function RotaBuilder() {
           </div>
           <div style={{ flex: 1, minWidth: 140 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 8 }}>Weeks</div>
-            <select value={weekCount} onChange={(e) => setWeekCount(Number(e.target.value))} style={{ width: '100%', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, padding: '10px 12px', borderRadius: 9, border: '1px solid #E5E7EB', background: '#fff', cursor: 'pointer' }}>
+            <Select value={weekCount} onChange={(e) => setWeekCount(Number(e.target.value))}>
               {[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n} week{n > 1 ? 's' : ''}</option>)}
-            </select>
+            </Select>
           </div>
           <button onClick={generate} disabled={generating} style={{ fontFamily: 'inherit', fontSize: 14, fontWeight: 700, color: '#fff', background: generating ? '#F9A8D0' : PINK, border: 'none', borderRadius: 10, padding: '12px 28px', cursor: generating ? 'default' : 'pointer', boxShadow: generating ? 'none' : T.lift(PINK) }}>{generating ? 'Building…' : 'Build rota'}</button>
         </div>
@@ -381,7 +382,7 @@ export default function RotaBuilder() {
         {/* save bar */}
         <div style={card}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-            <input value={rotaName} onChange={(e) => setRotaName(e.target.value)} placeholder="Name this rota" style={{ flex: 1, minWidth: 200, boxSizing: 'border-box', fontFamily: 'inherit', fontSize: 15, fontWeight: 700, color: '#111827', padding: '9px 12px', borderRadius: 9, border: '1px solid #E5E7EB', outline: 'none' }} />
+            <div style={{ flex: 1, minWidth: 200 }}><Input value={rotaName} onChange={(e) => setRotaName(e.target.value)} placeholder="Name this rota" style={{ fontSize: 15, fontWeight: 700, padding: '9px 12px' }} /></div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               {saveMsg === 'draft' && <span style={{ fontSize: 12, color: '#16A34A', fontWeight: 600 }}>✓ Saved draft</span>}
               {saveMsg === 'published' && <span style={{ fontSize: 12, color: '#16A34A', fontWeight: 600 }}>✓ Published</span>}
