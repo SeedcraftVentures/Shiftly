@@ -118,12 +118,34 @@ function Switch({ on, onClick, accent = PINK, size = 1 }) {
 function Label({ children }) {
   return <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase' }}>{children}</div>
 }
-function Stepper({ value, onChange, min, max, suffix = '' }) {
-  const btn = { width: 32, height: 32, border: '1px solid #E5E7EB', background: '#F9FAFB', cursor: 'pointer', fontSize: 17, color: '#6B7280' }
-  return <div style={{ display: 'flex', alignItems: 'center' }}>
-    <button onClick={() => onChange(Math.max(min, value - 1))} style={{ ...btn, borderRadius: '8px 0 0 8px' }}>−</button>
-    <div style={{ minWidth: 56, height: 32, borderTop: '1px solid #E5E7EB', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13.5, fontWeight: 700, color: '#111827', background: '#fff' }}>{value}{suffix}</div>
-    <button onClick={() => onChange(Math.min(max, value + 1))} style={{ ...btn, borderRadius: '0 8px 8px 0' }}>+</button>
+function Stepper({ value, onChange, min, max, suffix = '', step = 1 }) {
+  // Typeable: type the number directly (no more 40 clicks). +/- nudge by `step`.
+  // Styled to look like an editable field (recessed well, hover highlight, focus ring)
+  // so it's obvious you can click in and type, not just use the buttons.
+  const [text, setText] = useState(String(value ?? 0))
+  const [focused, setFocused] = useState(false)
+  const [hover, setHover] = useState(false)
+  const inputRef = useRef(null)
+  useEffect(() => { setText(String(value ?? 0)) }, [value])
+  const clamp = (n) => Math.max(min, Math.min(max, n))
+  const commit = (raw) => { let n = parseFloat(raw); if (isNaN(n)) n = min; n = clamp(n); onChange(n); setText(String(n)) }
+  const nudge = (d) => { const n = clamp((parseFloat(text) || 0) + d); onChange(n); setText(String(n)) }
+  const btn = { width: 36, height: 38, border: '1px solid #E5E7EB', borderRadius: 9, background: '#F9FAFB', cursor: 'pointer', fontSize: 18, color: '#6B7280', flexShrink: 0, fontFamily: 'inherit', transition: 'background .12s' }
+  const lit = focused || hover // pink outline whenever interactive, so it's clearly clickable
+  const fieldShadow = focused ? `0 0 0 3px ${PINK}33` : (hover ? `0 0 0 3px ${PINK}1F` : 'inset 0 1px 2px rgba(17,24,39,.08)')
+  return <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+    <button type="button" onClick={() => nudge(-step)} style={btn}>−</button>
+    <div onMouseDown={(e) => { if (e.target !== inputRef.current) { e.preventDefault(); inputRef.current?.focus() } }}
+      style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', height: 38, boxSizing: 'border-box', border: `1px solid ${lit ? PINK : '#E5E7EB'}`, borderRadius: 9, background: '#fff', boxShadow: fieldShadow, cursor: 'text', transition: 'box-shadow .12s, border-color .12s' }}>
+      <input ref={inputRef} type="text" inputMode="decimal" value={text} aria-label={suffix === 'h' ? 'hours' : undefined}
+        onChange={(e) => setText(e.target.value.replace(/[^\d.]/g, ''))}
+        onFocus={(e) => { setFocused(true); e.target.select() }}
+        onBlur={(e) => { setFocused(false); commit(e.target.value) }}
+        onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'ArrowUp') { e.preventDefault(); nudge(step) } if (e.key === 'ArrowDown') { e.preventDefault(); nudge(-step) } }}
+        style={{ flex: 1, minWidth: 0, width: '100%', height: '100%', textAlign: 'center', border: 'none', outline: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, color: focused ? PINK : '#111827', cursor: 'text', padding: suffix ? '0 0 0 12px' : 0 }} />
+      {suffix && <span style={{ flexShrink: 0, paddingRight: 10, paddingLeft: 1, fontSize: 11.5, fontWeight: 600, color: lit ? PINK : '#9CA3AF', pointerEvents: 'none', transition: 'color .12s' }}>{suffix}</span>}
+    </div>
+    <button type="button" onClick={() => nudge(step)} style={btn}>+</button>
   </div>
 }
 function MiniBtn({ children, onClick, accent = PINK, active = false }) {
@@ -201,12 +223,19 @@ function SaveStatus({ state }) {
   return <span style={{ fontSize: 11.5, fontWeight: 600, color: c.c }}>{c.t}</span>
 }
 const inputStyle = (extra = {}) => ({ width: '100%', boxSizing: 'border-box', fontSize: 14, fontWeight: 600, fontFamily: 'inherit', color: '#111827', padding: '10px 12px', borderRadius: 9, border: '1px solid #E5E7EB', outline: 'none', ...extra })
+// app-wide convention: pink outline on hover OR focus, soft ring while focused
+const litStyle = (lit, f) => ({ border: `1px solid ${lit ? PINK : '#E5E7EB'}`, boxShadow: f ? `0 0 0 3px ${PINK}33` : 'none', transition: 'border-color .12s, box-shadow .12s' })
 function FieldLabel({ children }) { return <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 8 }}>{children}</div> }
+function FieldInput({ style, onFocus, onBlur, ...rest }) {
+  const [f, setF] = useState(false), [h, setH] = useState(false)
+  return <input {...rest} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} onFocus={(e) => { setF(true); onFocus?.(e) }} onBlur={(e) => { setF(false); onBlur?.(e) }} style={inputStyle({ ...litStyle(f || h, f), ...style })} />
+}
 function Money({ value, onChange, step = '0.25', suffix = '' }) {
-  return <div style={{ position: 'relative' }}>
-    <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 14, fontWeight: 700, color: '#9CA3AF' }}>£</span>
-    <input value={value || ''} onChange={(e) => onChange(parseFloat(e.target.value) || 0)} type="number" step={step} style={inputStyle({ paddingLeft: 24, paddingRight: suffix ? 44 : 12 })} />
-    {suffix && <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, fontWeight: 600, color: '#9CA3AF', pointerEvents: 'none' }}>{suffix}</span>}
+  const [f, setF] = useState(false), [h, setH] = useState(false); const lit = f || h
+  return <div style={{ position: 'relative' }} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}>
+    <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 14, fontWeight: 700, color: lit ? PINK : '#9CA3AF', transition: 'color .12s' }}>£</span>
+    <input value={value || ''} onChange={(e) => onChange(parseFloat(e.target.value) || 0)} onFocus={() => setF(true)} onBlur={() => setF(false)} type="number" step={step} style={inputStyle({ paddingLeft: 24, paddingRight: suffix ? 44 : 12, ...litStyle(lit, f) })} />
+    {suffix && <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, fontWeight: 600, color: lit ? PINK : '#9CA3AF', pointerEvents: 'none', transition: 'color .12s' }}>{suffix}</span>}
   </div>
 }
 function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg }) {
@@ -218,8 +247,8 @@ function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg }) {
     </div>
     <div style={{ marginBottom: 18 }}><SaveStatus state={saveState} /></div>
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div><FieldLabel>Name</FieldLabel><input value={s.name} onChange={(e) => patch({ name: e.target.value })} style={inputStyle()} /></div>
-      <div><FieldLabel>Role</FieldLabel><input value={s.role || ''} onChange={(e) => patch({ role: e.target.value })} style={inputStyle()} /></div>
+      <div><FieldLabel>Name</FieldLabel><FieldInput value={s.name} onChange={(e) => patch({ name: e.target.value })} /></div>
+      <div><FieldLabel>Role</FieldLabel><FieldInput value={s.role || ''} onChange={(e) => patch({ role: e.target.value })} /></div>
       <div style={{ display: 'flex', gap: 12 }}>
         <div style={{ flex: 1 }}><FieldLabel>Contracted</FieldLabel><Stepper value={s.contracted} onChange={(v) => patch({ contracted: v })} min={0} max={60} suffix="h" /></div>
         <div style={{ flex: 1 }}><FieldLabel>Max / week</FieldLabel><Stepper value={s.max} onChange={(v) => patch({ max: v })} min={0} max={60} suffix="h" /></div>
@@ -441,7 +470,7 @@ export default function StaffPage() {
   const persist = useCallback(async (s) => { const res = await fetch('/api/staff', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: s.id, ...toApi(s) }) }); if (res.ok) { const saved = fromApi(await res.json()); setStaff((prev) => prev.map((x) => (x.id === s.id ? saved : x))) } }, [])
   const saveStaff = useCallback(async (s) => { setSaveState('saved'); await persist(s); setTimeout(() => setSaveState((x) => (x === 'saved' ? 'clean' : x)), 1500) }, [persist])
   const addStaff = useCallback(async (tId, over = {}) => {
-    const draft = { team_id: tId, name: over.name || 'New staff member', role: over.role || '', contracted: over.contracted ?? 0, max: over.max ?? 40, wage: over.wage ?? 11.44, pay_basis: over.pay_basis || 'hourly', annual_salary: over.annual_salary ?? 0, annualised_hours: over.annualised_hours ?? 0, keyholder: over.keyholder ?? false, avail: over.avail || Object.fromEntries(WEEKDAYS.filter((d) => cfg.openDays.includes(d)).map((d) => [d, true])) }
+    const draft = { team_id: tId, name: over.name || 'New staff member', role: over.role || '', contracted: over.contracted ?? 0, max: over.max ?? 40, wage: over.wage ?? 11.44, pay_basis: over.pay_basis || 'hourly', annual_salary: over.annual_salary ?? 0, annualised_hours: over.annualised_hours ?? 0, keyholder: over.keyholder ?? false, avail: over.avail || allDayAvail(cfg.openDays) }
     const res = await fetch('/api/staff', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(toApi(draft)) })
     if (!res.ok) return
     const created = fromApi(await res.json())
@@ -473,13 +502,13 @@ export default function StaffPage() {
   if (teams.length === 0) return <div style={{ fontFamily: FONT, padding: 60, textAlign: 'center', color: '#6B7280' }}>No teams yet. Finish onboarding to add teams first.</div>
 
   const tabs = [...teams, { id: 'all', name: 'All teams' }]
-  const panel = { background: '#fff', border: '1px solid #ECECEF', borderRadius: 14, padding: 20 }
+  const panel = { background: '#fff', border: '1px solid #ECECEF', borderRadius: 14, padding: 20, boxShadow: '0 3px 10px rgba(17,24,39,.06), 0 1px 2px rgba(17,24,39,.04)' }
   const teamName = teams.find((t) => t.id === teamId)?.name || ''
   const khGaps = locationKeyholderGaps(staff, shifts, cfg)
   const khFlag = khGaps.noKeyholder || khGaps.openMissing.length > 0 || khGaps.closeMissing.length > 0
 
   return <div style={{ fontFamily: FONT, background: '#FAFAFB', minHeight: '100vh', color: '#111827' }}>
-    <div style={{ maxWidth: 1240, margin: '0 auto', padding: '26px 24px 0' }}>
+    <div style={{ maxWidth: 1240, margin: '0 auto', padding: '20px 24px 0' }}>
       <h1 style={{ fontSize: 26, fontWeight: 800, color: '#111827', margin: 0, letterSpacing: -0.3 }}>Staff</h1>
       <p style={{ fontSize: 13.5, color: '#6B7280', margin: '5px 0 0' }}>Your team members, their contracts and availability.</p>
     </div>

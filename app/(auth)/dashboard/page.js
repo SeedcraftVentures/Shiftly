@@ -112,7 +112,7 @@ export default function DashboardPage() {
     return { wk, rota }
   }, [data])
 
-  const recentRotas = useMemo(() => (data?.rotas || []).slice(0, 6), [data])
+  const recentRotas = useMemo(() => (data?.rotas || []).slice(0, 4), [data])
 
   if (checking || !data) {
     return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: T.font }}>
@@ -125,7 +125,7 @@ export default function DashboardPage() {
   const cov = coverage.status === 'short' ? SHORT : COVERED
 
   return (
-    <div style={{ fontFamily: T.font, maxWidth: 1080, margin: '0 auto', padding: '28px 28px 56px' }}>
+    <div style={{ fontFamily: T.font, maxWidth: 1080, margin: '0 auto', padding: '20px 28px 56px' }}>
       {/* header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14, marginBottom: 24 }}>
         <div>
@@ -134,7 +134,6 @@ export default function DashboardPage() {
             {DAYNAMES[new Date().getDay()]}{data.locName ? <> · <span style={{ fontWeight: 600, color: T.body }}>{data.locName}</span></> : null}
           </p>
         </div>
-        <Button accent={T.pink} arrow onClick={() => router.push('/dashboard/generate')}>Build rota</Button>
       </div>
 
       {/* Living Hours — persists 4 weeks ahead; turns green with a tick once met */}
@@ -190,16 +189,17 @@ export default function DashboardPage() {
         </Card>
 
         {/* COVERAGE — can we cover the shifts? (middle) */}
-        <Card pad={22} style={{ order: 2 }}>
+        <Card pad={22} style={{ order: 2, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: T.faint, letterSpacing: 0.5, textTransform: 'uppercase' }}>Can we cover the shifts?</span>
             <Tag color={cov.color}>{cov.label}</Tag>
           </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
+          <div style={{ minHeight: 46, display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
             <span style={{ fontSize: 30, fontWeight: 800, color: T.ink }}>{Math.round(coverage.readiness * 100)}%</span>
-            <span style={{ fontSize: 13, color: T.muted }}>of shift hours covered by capacity</span>
+            <span style={{ fontSize: 13, color: T.muted, lineHeight: 1.3 }}>of shift hours covered by capacity</span>
           </div>
           <ProgressBar value={coverage.readiness} height={9} color={cov.color} radius={99} />
+          <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
             {coverage.teamRows.length === 0 && <p style={{ fontSize: 13, color: T.faint, margin: 0 }}>No teams yet.</p>}
             {coverage.teamRows.map(({ team, color, r, bottlenecks }) => {
@@ -220,22 +220,24 @@ export default function DashboardPage() {
               ? 'No keyholders set — mark someone as a keyholder so the location can open and close.'
               : `No keyholder available to ${coverage.khGaps.openMissing.length ? `open ${coverage.khGaps.openMissing.map((d) => DSHORT[d]).join(', ')}` : ''}${coverage.khGaps.openMissing.length && coverage.khGaps.closeMissing.length ? ' · ' : ''}${coverage.khGaps.closeMissing.length ? `close ${coverage.khGaps.closeMissing.map((d) => DSHORT[d]).join(', ')}` : ''} (one keyholder covers the whole location).`}</p>
           </div>}
-          <button onClick={() => router.push('/dashboard/staff')} style={{ marginTop: 14, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: T.font, fontSize: 12.5, fontWeight: 700, color: T.pink }}>Review staffing →</button>
+          </div>
+          <button onClick={() => router.push('/dashboard/staff')} style={{ marginTop: 14, alignSelf: 'flex-start', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: T.font, fontSize: 12.5, fontWeight: 700, color: T.pink }}>Review staffing →</button>
         </Card>
 
         {/* SCHEDULE COVERAGE — do the shifts cover the open hours? (left) */}
-        <Card pad={22} style={{ order: 1 }}>
+        <Card pad={22} style={{ order: 1, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: T.faint, letterSpacing: 0.5, textTransform: 'uppercase' }}>Do shifts cover your hours?</span>
             <Tag color={schedule.hasGaps ? T.red : schedule.hasKeyGaps ? T.amber : T.green}>{schedule.hasGaps ? 'Gaps' : schedule.hasKeyGaps ? 'No keyholder' : 'Complete'}</Tag>
           </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
+          <div style={{ minHeight: 46, display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
             <span style={{ fontSize: 30, fontWeight: 800, color: T.ink }}>{Math.round(schedule.coveredPct * 100)}%</span>
-            <span style={{ fontSize: 13, color: T.muted }}>of open hours have a shift</span>
+            <span style={{ fontSize: 13, color: T.muted, lineHeight: 1.3 }}>of open hours have a shift</span>
           </div>
           <ProgressBar value={schedule.coveredPct} height={9} color={schedule.hasGaps ? T.red : T.green} radius={99} />
+          <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginTop: 16 }}>
-            {!schedule.hasGaps && !schedule.hasKeyGaps && <p style={{ fontSize: 13, color: T.green, fontWeight: 600, margin: 0 }}>✓ Every open hour is scheduled, with a keyholder at open and close.</p>}
+            {!schedule.hasGaps && !schedule.hasKeyGaps && <p style={{ fontSize: 13, color: T.body, fontWeight: 600, margin: 0 }}><span style={{ color: T.green }}>✓</span> Every open hour is scheduled, with a keyholder at open and close.</p>}
             {schedule.dayGaps.slice(0, 4).map((g, i) => (
               <div key={`g${i}`} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
                 <span style={{ width: 8, height: 8, borderRadius: 99, background: T.red, flexShrink: 0 }} />
@@ -252,23 +254,24 @@ export default function DashboardPage() {
             ))}
             {(schedule.dayGaps.length > 4 || schedule.keyGaps.length > 3) && <p style={{ fontSize: 12, color: T.faint, margin: 0 }}>+ more on the Shifts page</p>}
           </div>
-          <button onClick={() => router.push('/dashboard/shifts')} style={{ marginTop: 14, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: T.font, fontSize: 12.5, fontWeight: 700, color: T.pink }}>Review shifts →</button>
+          </div>
+          <button onClick={() => router.push('/dashboard/shifts')} style={{ marginTop: 14, alignSelf: 'flex-start', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: T.font, fontSize: 12.5, fontWeight: 700, color: T.pink }}>Review shifts →</button>
         </Card>
       </div>
 
-      {/* stat tiles */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 16, marginBottom: 16 }}>
-        <StatTile label="Staff" value={data.staff.length} onClick={() => router.push('/dashboard/staff')} />
-        <StatTile label="Shift patterns" value={data.shifts.length} onClick={() => router.push('/dashboard/shifts')} />
-        <StatTile label="Teams" value={data.teams.length} onClick={() => router.push('/dashboard/staff')} />
-        <StatTile label="Pending requests" value={data.pending} accent={data.pending > 0} onClick={() => router.push('/dashboard/requests')} />
+      {/* quick actions — above recent rotas */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 16 }}>
+        <ActionTile title="Edit shifts" sub="Shift patterns" onClick={() => router.push('/dashboard/shifts')} />
+        <ActionTile title="Manage staff" sub="Team & availability" onClick={() => router.push('/dashboard/staff')} />
+        <ActionTile title="Scheduling rules" sub="Constraints" onClick={() => router.push('/dashboard/rules')} />
+        <ActionTile title="Pending requests" sub={`${data.pending} to review`} accent={data.pending > 0} onClick={() => router.push('/dashboard/requests')} />
       </div>
 
       {/* recent rotas */}
       <Card pad={0} style={{ marginBottom: 16, overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: `1px solid ${T.hair}` }}>
           <span style={{ fontSize: 12, fontWeight: 700, color: T.faint, letterSpacing: 0.5, textTransform: 'uppercase' }}>Recent rotas</span>
-          <Button variant="ghost" size="sm" onClick={() => router.push('/dashboard/generate')}>New rota</Button>
+          <Button accent={T.pink} size="sm" arrow onClick={() => router.push('/dashboard/generate')}>New rota</Button>
         </div>
         {recentRotas.length === 0 ? (
           <div style={{ padding: '36px 20px', textAlign: 'center' }}>
@@ -278,47 +281,39 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div>
-            {recentRotas.map((r, i) => (
-              <button key={r.id} onClick={() => router.push(`/dashboard/generate?rota=${r.id}`)}
-                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px', background: 'none', border: 'none', borderTop: i ? `1px solid ${T.hair}` : 'none', cursor: 'pointer', fontFamily: T.font, textAlign: 'left' }}>
-                <span style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: (r.status === 'Published' ? T.green : T.amber) + '14', color: r.status === 'Published' ? T.green : T.amber, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                </span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: T.ink, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name || `Week of ${prettyDate(r.week_start)}`}</p>
-                  <p style={{ fontSize: 12.5, color: T.muted, margin: '2px 0 0' }}>w/c {prettyDate(r.week_start)}</p>
-                </div>
-                <Tag color={r.status === 'Published' ? T.green : T.amber}>{r.status}</Tag>
-              </button>
-            ))}
+            {recentRotas.map((r, i) => <RotaRow key={r.id} r={r} top={i > 0} onClick={() => router.push(`/dashboard/generate?rota=${r.id}`)} />)}
           </div>
         )}
       </Card>
 
-      {/* quick actions */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-        <ActionTile title="Build next week" sub={`w/c ${prettyDate(mondayStr(1))}`} onClick={() => router.push(`/dashboard/generate?start=${mondayStr(1)}`)} />
-        <ActionTile title="Edit shifts" sub="Shift patterns" onClick={() => router.push('/dashboard/shifts')} />
-        <ActionTile title="Manage staff" sub="Team & availability" onClick={() => router.push('/dashboard/staff')} />
-        <ActionTile title="Scheduling rules" sub="Constraints" onClick={() => router.push('/dashboard/rules')} />
-      </div>
     </div>
   )
 }
 
-function StatTile({ label, value, accent, onClick }) {
-  return <Card pad={18} onClick={onClick} style={{ cursor: 'pointer' }}>
-    <p style={{ fontSize: 30, fontWeight: 800, color: accent ? T.pink : T.ink, margin: 0, lineHeight: 1 }}>{value}</p>
-    <p style={{ fontSize: 12.5, color: T.muted, margin: '8px 0 0', fontWeight: 600 }}>{label}</p>
-  </Card>
+// recent-rota row with a subtle hover (consistent with the app's interactive surfaces)
+function RotaRow({ r, top, onClick }) {
+  const [h, setH] = useState(false)
+  return <button onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px', background: h ? T.surface : 'none', border: 'none', borderTop: top ? `1px solid ${T.hair}` : 'none', cursor: 'pointer', fontFamily: T.font, textAlign: 'left', transition: 'background .12s' }}>
+    <span style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: T.pink + '14', color: T.pink, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+    </span>
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <p style={{ fontSize: 14, fontWeight: 700, color: T.ink, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name || `Week of ${prettyDate(r.week_start)}`}</p>
+      <p style={{ fontSize: 12.5, color: T.muted, margin: '2px 0 0' }}>w/c {prettyDate(r.week_start)}</p>
+    </div>
+    <Tag color={r.status === 'Published' ? T.green : T.amber}>{r.status}</Tag>
+  </button>
 }
 
-function ActionTile({ title, sub, onClick }) {
-  return <Card pad={18} onClick={onClick} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+function ActionTile({ title, sub, onClick, accent }) {
+  const [h, setH] = useState(false)
+  return <Card pad={18} onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+    style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, border: `1px solid ${h ? T.pink : T.line}`, boxShadow: h ? T.shadow.lg : T.shadow.md, transform: h ? 'translateY(-2px)' : 'none', transition: 'transform .12s, box-shadow .15s, border-color .12s' }}>
     <div>
-      <p style={{ fontSize: 14, fontWeight: 700, color: T.ink, margin: 0 }}>{title}</p>
+      <p style={{ fontSize: 14, fontWeight: 700, color: accent ? T.pink : T.ink, margin: 0 }}>{title}</p>
       <p style={{ fontSize: 12, color: T.muted, margin: '3px 0 0' }}>{sub}</p>
     </div>
-    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke={T.faint}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke={h ? T.pink : T.faint} style={{ transform: h ? 'translateX(2px)' : 'none', transition: 'transform .15s, stroke .12s' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
   </Card>
 }

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback, useRef, Fragment } from 'react'
-import { Field, Input, TimeRange, Switch, Button } from '@/app/components/ui/kit'
+import { Field, Input, Select, TimeRange, Switch, Button, T } from '@/app/components/ui/kit'
+import { rotaBlock } from '@/lib/rotaColors'
 
 // ════════════════════════════════════════════════════════════════════════════
 //  ROTA BUILDER (live) — pick week → Generate (OR-Tools) → grid → save/publish.
@@ -35,11 +36,91 @@ function initials(name) { return (name || '?').split(' ').map((w) => w[0]).slice
 
 // ── grid helpers ────────────────────────────────────────────────────────────────
 const toHHMM = (d) => { const h = Math.floor(d), m = Math.round((d - h) * 60); return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}` }
-function lighten(hex, amt) { const n = parseInt(hex.slice(1), 16); let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255; r = Math.round(r + (255 - r) * amt); g = Math.round(g + (255 - g) * amt); b = Math.round(b + (255 - b) * amt); return '#' + [r, g, b].map((x) => x.toString(16).padStart(2, '0')).join('') }
-const staffColor = (teamColor, idx) => lighten(teamColor, (idx % 4) * 0.17)
 function dateForDay(weekStart, weekNum, dayIdx) { const x = new Date(weekStart + 'T00:00:00Z'); x.setUTCDate(x.getUTCDate() + (weekNum - 1) * 7 + dayIdx); return x }
 
 // ── REFINED rota grid — one rota, team sections, per-staff colour, drag/remove/add ──
+// ── week picker (custom, on-brand — replaces the native date input) ──────────
+const mondayOf = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x }
+const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+const parseYMD = (s) => { const [y, m, dd] = String(s).split('-').map(Number); return new Date(y, (m || 1) - 1, dd || 1) }
+const MonthNav = ({ dir, onClick }) => (
+  <button type="button" onClick={onClick} style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, border: '1px solid #E5E7EB', background: '#fff', cursor: 'pointer', color: '#6B7280' }}>
+    <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={dir < 0 ? 'M15 19l-7-7 7-7' : 'M9 5l7 7-7 7'} /></svg>
+  </button>
+)
+function WeekPicker({ value, onChange }) {
+  const [open, setOpen] = useState(false)
+  const [hover, setHover] = useState(false)
+  const [hoverRow, setHoverRow] = useState(-1)
+  const ref = useRef(null)
+  const selMon = mondayOf(parseYMD(value))
+  const [viewMonth, setViewMonth] = useState(() => new Date(selMon.getFullYear(), selMon.getMonth(), 1))
+
+  useEffect(() => {
+    if (!open) return
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    const esc = (e) => { if (e.key === 'Escape') setOpen(false) }
+    window.addEventListener('mousedown', h); window.addEventListener('keydown', esc)
+    return () => { window.removeEventListener('mousedown', h); window.removeEventListener('keydown', esc) }
+  }, [open])
+  useEffect(() => { if (open) setViewMonth(new Date(selMon.getFullYear(), selMon.getMonth(), 1)) }, [open]) // eslint-disable-line
+
+  const gridStart = mondayOf(new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1))
+  const weeks = Array.from({ length: 6 }, (_, w) => Array.from({ length: 7 }, (_, d) => { const x = new Date(gridStart); x.setDate(gridStart.getDate() + w * 7 + d); return x }))
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const selKey = ymd(selMon)
+  const pick = (day) => { onChange(ymd(mondayOf(day))); setOpen(false) }
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button type="button" onClick={() => setOpen((o) => !o)} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} style={{ width: '100%', boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontFamily: 'inherit', fontSize: 14, fontWeight: 600, color: '#111827', padding: '10px 12px', borderRadius: 10, border: `1px solid ${open || hover ? PINK : '#E5E7EB'}`, background: '#fff', cursor: 'pointer', boxShadow: open ? `0 0 0 3px ${PINK}33` : 'none', transition: 'border-color .15s, box-shadow .15s' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke={open || hover ? PINK : '#9CA3AF'}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+          {selMon.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+        </span>
+        <svg width="15" height="15" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} fill="none" viewBox="0 0 24 24" stroke={open || hover ? PINK : '#9CA3AF'}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+      </button>
+
+      {open && (
+        <div style={{ position: 'absolute', zIndex: 60, top: 'calc(100% + 6px)', left: 0, width: 304, background: '#fff', border: '1px solid #ECECEF', borderRadius: 14, boxShadow: '0 12px 32px rgba(0,0,0,.12)', padding: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <span style={{ fontSize: 14, fontWeight: 800, color: '#111827' }}>{viewMonth.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</span>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <MonthNav dir={-1} onClick={() => setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))} />
+              <MonthNav dir={1} onClick={() => setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))} />
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2, marginBottom: 4 }}>
+            {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map((d) => <div key={d} style={{ textAlign: 'center', fontSize: 10.5, fontWeight: 700, color: '#9CA3AF', padding: '2px 0' }}>{d}</div>)}
+          </div>
+          {weeks.map((row, wi) => {
+            const isSel = ymd(row[0]) === selKey
+            return (
+              <div key={wi} onClick={() => pick(row[0])} onMouseEnter={() => setHoverRow(wi)} onMouseLeave={() => setHoverRow(-1)}
+                style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2, borderRadius: 9, cursor: 'pointer', background: isSel ? PINK : (hoverRow === wi ? PINK + '12' : 'transparent'), transition: 'background .1s' }}>
+                {row.map((day) => {
+                  const inMonth = day.getMonth() === viewMonth.getMonth()
+                  const isToday = day.getTime() === today.getTime()
+                  return (
+                    <div key={day.getTime()} style={{ position: 'relative', textAlign: 'center', fontSize: 12.5, fontWeight: isToday ? 800 : 600, padding: '7px 0', color: isSel ? '#fff' : (inMonth ? '#111827' : '#C9C9D0') }}>
+                      {day.getDate()}
+                      {isToday && !isSel && <span style={{ position: 'absolute', bottom: 3, left: '50%', transform: 'translateX(-50%)', width: 4, height: 4, borderRadius: 99, background: PINK }} />}
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })}
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, paddingTop: 10, borderTop: '1px solid #F0F0F2' }}>
+            <button type="button" onClick={() => { const m = mondayOf(new Date()); onChange(ymd(m)); setViewMonth(new Date(m.getFullYear(), m.getMonth(), 1)); setOpen(false) }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 700, color: '#6B7280', padding: 0 }}>This week</button>
+            <button type="button" onClick={() => { onChange(nextMonday()); setOpen(false) }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 700, color: PINK, padding: 0 }}>Next week</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const RTH = { fontSize: 11, fontWeight: 700, color: '#6B7280', padding: '6px 6px 10px', textAlign: 'center' }
 const RTH_STAFF = { ...RTH, textAlign: 'left', position: 'sticky', left: 0, background: '#fff', minWidth: 160 }
 const RTD = { padding: '4px 4px', verticalAlign: 'top' }
@@ -109,18 +190,18 @@ function RefinedRotaGrid({ gridTeams, staff, shifts, assignments, weekStart, wee
                 </div>
               </td></tr>
               {rows.map((s, idx) => {
-                const c = staffColor(team.color, idx)
+                const blk = rotaBlock(team.color, idx)
                 return <tr key={s.id}>
-                  <td style={RTD_STAFF}><span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 600, color: '#111827' }}><span style={{ width: 9, height: 9, borderRadius: 99, background: c, flexShrink: 0 }} />{s.name}</span></td>
+                  <td style={RTD_STAFF}><span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 600, color: '#111827' }}><span style={{ width: 9, height: 9, borderRadius: 99, background: team.color, flexShrink: 0 }} />{s.name}</span></td>
                   {[0, 1, 2, 3, 4, 5, 6].map((d) => {
                     const blocks = assignments.filter((a) => a.staff_id === s.id && di(a) === d)
                     return <td key={d} onDragOver={(e) => e.preventDefault()} onDrop={() => { const dr = dragRef.current; if (dr && dr.day === d && dr.staffId !== s.id) onReassign(dr._id, s.id) }} style={RTD}>
                       {blocks.length > 0
                         ? <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                            {blocks.map((a) => <div key={a._id} draggable onDragStart={() => { dragRef.current = { _id: a._id, day: d, staffId: s.id } }} onDragEnd={() => { dragRef.current = null }} onClick={() => onEditRequest(s, d, a)} title="Click to edit" style={{ position: 'relative', background: c, borderRadius: 10, padding: '7px 18px 7px 10px', cursor: 'pointer', boxShadow: `0 2px 6px ${c}33` }}>
-                              <div style={{ color: '#fff', fontWeight: 700, fontSize: 11, lineHeight: 1.25 }}>{a.shift_name}</div>
-                              <div style={{ color: 'rgba(255,255,255,.85)', fontSize: 9.5 }}>{fmt(a.start_time)}–{fmt(a.end_time)}</div>
-                              <button onClick={(e) => { e.stopPropagation(); onRemove(a._id) }} style={{ position: 'absolute', top: 3, right: 5, color: 'rgba(255,255,255,.9)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, lineHeight: 1, padding: 0 }}>×</button>
+                            {blocks.map((a) => <div key={a._id} draggable onDragStart={() => { dragRef.current = { _id: a._id, day: d, staffId: s.id } }} onDragEnd={() => { dragRef.current = null }} onClick={() => onEditRequest(s, d, a)} title="Click to edit" style={{ position: 'relative', background: blk.background, borderRadius: 10, padding: '7px 18px 7px 10px', cursor: 'pointer', boxShadow: blk.shadow }}>
+                              <div style={{ color: blk.color, fontWeight: 700, fontSize: 11, lineHeight: 1.25 }}>{a.shift_name}</div>
+                              <div style={{ color: blk.subColor, fontSize: 9.5 }}>{fmt(a.start_time)}–{fmt(a.end_time)}</div>
+                              <button onClick={(e) => { e.stopPropagation(); onRemove(a._id) }} style={{ position: 'absolute', top: 3, right: 5, color: blk.filled ? 'rgba(255,255,255,.9)' : '#9CA3AF', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, lineHeight: 1, padding: 0 }}>×</button>
                             </div>)}
                           </div>
                         : <AddCell onAdd={() => onAddRequest(s, d)} />}
@@ -260,10 +341,10 @@ export default function RotaBuilder() {
   if (loading) return <div style={{ fontFamily: FONT, padding: 60, textAlign: 'center', color: '#9CA3AF' }}>Loading…</div>
 
   const inspectorAccent = editCell ? TEAM_COLORS[Math.max(0, teams.findIndex((t) => t.id === editCell.staff.team_id)) % TEAM_COLORS.length] : PINK
-  const card = { background: '#fff', border: '1px solid #ECECEF', borderRadius: 14, padding: 22, marginBottom: 18 }
+  const card = { background: '#fff', border: '1px solid #ECECEF', borderRadius: 14, padding: 22, marginBottom: 18, boxShadow: T.shadow.md }
   const inner = { maxWidth: 1040, margin: '0 auto', padding: '0 24px' }
 
-  return <div style={{ fontFamily: FONT, background: '#FAFAFB', minHeight: '100vh', color: '#111827', paddingTop: 28, paddingBottom: 50 }}>
+  return <div style={{ fontFamily: FONT, background: '#FAFAFB', minHeight: '100vh', color: '#111827', paddingTop: 20, paddingBottom: 50 }}>
     <div style={inner}>
       <h1 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 4px' }}>Rota Builder</h1>
       <p style={{ fontSize: 13, color: '#6B7280', margin: '0 0 22px' }}>Generate a schedule that meets contracted hours and respects availability.</p>
@@ -273,22 +354,22 @@ export default function RotaBuilder() {
         <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <div style={{ flex: 1, minWidth: 180 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 8 }}>Team</div>
-            <select value={teamId} onChange={(e) => setTeamId(e.target.value)} style={{ width: '100%', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, padding: '10px 12px', borderRadius: 9, border: '1px solid #E5E7EB', background: '#fff', cursor: 'pointer' }}>
+            <Select value={teamId} onChange={(e) => setTeamId(e.target.value)}>
               <option value="all">All teams</option>
               {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
+            </Select>
           </div>
           <div style={{ flex: 1, minWidth: 180 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 8 }}>Week starting (Monday)</div>
-            <input type="date" value={weekStart} onChange={(e) => setWeekStart(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, padding: '10px 12px', borderRadius: 9, border: '1px solid #E5E7EB' }} />
+            <WeekPicker value={weekStart} onChange={setWeekStart} />
           </div>
           <div style={{ flex: 1, minWidth: 140 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 8 }}>Weeks</div>
-            <select value={weekCount} onChange={(e) => setWeekCount(Number(e.target.value))} style={{ width: '100%', fontFamily: 'inherit', fontSize: 14, fontWeight: 600, padding: '10px 12px', borderRadius: 9, border: '1px solid #E5E7EB', background: '#fff', cursor: 'pointer' }}>
+            <Select value={weekCount} onChange={(e) => setWeekCount(Number(e.target.value))}>
               {[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n} week{n > 1 ? 's' : ''}</option>)}
-            </select>
+            </Select>
           </div>
-          <button onClick={generate} disabled={generating} style={{ fontFamily: 'inherit', fontSize: 14, fontWeight: 700, color: '#fff', background: generating ? '#F9A8D0' : PINK, border: 'none', borderRadius: 10, padding: '12px 28px', cursor: generating ? 'default' : 'pointer' }}>{generating ? 'Building…' : 'Build rota'}</button>
+          <button onClick={generate} disabled={generating} style={{ fontFamily: 'inherit', fontSize: 14, fontWeight: 700, color: '#fff', background: generating ? '#F9A8D0' : PINK, border: 'none', borderRadius: 10, padding: '12px 28px', cursor: generating ? 'default' : 'pointer', boxShadow: generating ? 'none' : T.lift(PINK) }}>{generating ? 'Building…' : 'Build rota'}</button>
         </div>
       </div>
 
@@ -301,7 +382,7 @@ export default function RotaBuilder() {
         {/* save bar */}
         <div style={card}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-            <input value={rotaName} onChange={(e) => setRotaName(e.target.value)} placeholder="Name this rota" style={{ flex: 1, minWidth: 200, boxSizing: 'border-box', fontFamily: 'inherit', fontSize: 15, fontWeight: 700, color: '#111827', padding: '9px 12px', borderRadius: 9, border: '1px solid #E5E7EB', outline: 'none' }} />
+            <div style={{ flex: 1, minWidth: 200 }}><Input value={rotaName} onChange={(e) => setRotaName(e.target.value)} placeholder="Name this rota" style={{ fontSize: 15, fontWeight: 700, padding: '9px 12px' }} /></div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               {saveMsg === 'draft' && <span style={{ fontSize: 12, color: '#16A34A', fontWeight: 600 }}>✓ Saved draft</span>}
               {saveMsg === 'published' && <span style={{ fontSize: 12, color: '#16A34A', fontWeight: 600 }}>✓ Published</span>}
@@ -350,16 +431,22 @@ export default function RotaBuilder() {
         </div>}
       </>}
 
-      {saved.length > 0 && <div style={card}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 6 }}>Saved rotas</div>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {saved.slice(0, 10).map((r) => <button key={r.id} onClick={() => loadSaved(r.id)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 4px', borderBottom: '1px solid #F4F4F6', background: 'none', border: 'none', borderBottomColor: '#F4F4F6', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{r.name || `Week of ${prettyDate(r.week_start)}`} <span style={{ color: '#9CA3AF', fontWeight: 500 }}>· w/c {prettyDate(r.week_start)}</span></span>
-            <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 9px', borderRadius: 6, background: r.status === 'Published' ? '#16A34A14' : '#F3F4F6', color: r.status === 'Published' ? '#16A34A' : '#6B7280' }}>{r.status}</span>
-          </button>)}
+      {(() => {
+        // Only DRAFTS belong here — somewhere to resume an unpublished build.
+        // Published rotas live in the Archive, so they don't compete for attention.
+        const drafts = saved.filter((r) => r.status !== 'Published')
+        if (drafts.length === 0) return null
+        return <div style={card}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 6 }}>Continue a draft</div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {drafts.slice(0, 10).map((r) => <button key={r.id} onClick={() => loadSaved(r.id)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 4px', borderBottom: '1px solid #F4F4F6', background: 'none', border: 'none', borderBottomColor: '#F4F4F6', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{r.name || `Week of ${prettyDate(r.week_start)}`} <span style={{ color: '#9CA3AF', fontWeight: 500 }}>· w/c {prettyDate(r.week_start)}</span></span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: PINK }}>Continue →</span>
+            </button>)}
+          </div>
+          <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 8 }}>Published rotas live in the Archive.</div>
         </div>
-        <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 8 }}>Click a rota to open and edit it.</div>
-      </div>}
+      })()}
     </div>
   </div>
 }

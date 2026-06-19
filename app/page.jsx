@@ -64,7 +64,7 @@ const faqs = [
   },
   {
     q: 'Can I run multiple teams or locations?',
-    a: 'Yes. Create multiple teams within your workspace, each with its own staff, shifts, and rules. Reports roll up across all teams.'
+    a: 'Yes. Each location has its own teams — kitchen, bar, front of house — each with its own staff, shifts and rules. Switch between locations from the nav, and reports roll up across all your teams.'
   }
 ]
 

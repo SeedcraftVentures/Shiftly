@@ -86,7 +86,7 @@ export default function Navigation({ collapsed = false, onToggleCollapse }) {
     const rail = mini && !mobile
     return (
       <Link id={mobile ? `${item.id}-mobile` : item.id} href={item.path} title={rail ? item.name : undefined}
-        className={`flex items-center rounded-xl transition-all ${rail ? 'justify-center py-3' : 'justify-between px-4 py-3'} ${active ? 'bg-white text-pink-600 shadow-lg' : 'text-white/90 hover:bg-white/10 hover:text-white'}`}>
+        className={`flex items-center rounded-xl transition-all ${rail ? 'justify-center py-2.5' : 'justify-between px-4 py-2.5'} ${active ? 'bg-white text-pink-600 shadow-lg' : 'text-white/90 hover:bg-white/10 hover:text-white'}`}>
         <div className={`flex items-center ${rail ? '' : 'space-x-3'}`}>
           <Icon k={item.icon} />
           {!rail && <span className="font-medium text-sm">{item.name}</span>}
@@ -106,7 +106,7 @@ export default function Navigation({ collapsed = false, onToggleCollapse }) {
     return (
       <div className="relative">
         <button onClick={() => setSwitcherOpen((o) => !o)} disabled={switching} title={rail ? `${orgName} · ${activeLoc?.name || ''}` : undefined}
-          className={`w-full flex items-center bg-transparent hover:bg-white/10 border border-white/25 rounded-2xl transition disabled:opacity-60 ${rail ? 'justify-center p-1.5' : 'gap-2.5 px-2.5 py-2.5'}`}>
+          className={`w-full flex items-center bg-white/10 hover:bg-white/[0.18] border border-white/20 rounded-2xl shadow-[0_4px_14px_rgba(0,0,0,0.16)] transition disabled:opacity-60 ${rail ? 'justify-center p-1.5' : 'gap-2.5 px-2.5 py-2.5'}`}>
           <div className="w-9 h-9 rounded-xl bg-white flex items-center justify-center text-[#FF1F7D] font-extrabold text-sm flex-shrink-0 shadow-sm">{initials(orgName)}</div>
           {!rail && (
             <>
@@ -193,7 +193,7 @@ export default function Navigation({ collapsed = false, onToggleCollapse }) {
       {/* ── Mobile slide-out (always full width) ── */}
       <div className={`lg:hidden fixed top-16 left-0 bottom-0 w-72 bg-[#FF1F7D] z-50 flex flex-col transform transition-transform duration-300 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="px-3 pt-4 pb-2"><Switcher mobile /></div>
-        <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
+        <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {MAIN_ITEMS.map((item) => <div key={item.path}><NavLink item={item} mobile />{item.dividerAfter && <div className="my-3 mx-4 border-t border-white/30" />}</div>)}
         </div>
         <div className="px-3 pt-3 pb-5 border-t border-white/15 space-y-1">
@@ -208,31 +208,29 @@ export default function Navigation({ collapsed = false, onToggleCollapse }) {
       {/* ── Desktop sidebar (collapsible + hover-to-peek) ── */}
       <nav onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
         className={`hidden lg:flex fixed left-0 top-0 bottom-0 bg-[#FF1F7D] flex-col z-50 rounded-r-[2rem] transition-[width] duration-200 ${mini ? 'w-[4.75rem]' : 'w-52'} ${collapsed && hovered ? 'shadow-2xl' : ''}`}>
-        {/* brand */}
-        <Link href="/dashboard" className={`flex items-center pt-5 pb-3 ${mini ? 'justify-center px-0' : 'gap-2 px-5'}`}>
-          <Image src="/logo-white.svg" alt="Shiftly" width={26} height={26} className="flex-shrink-0" />
-          {!mini && <span className="text-white font-semibold text-xl" style={{ fontFamily: "'Cal Sans', sans-serif" }}>Shiftly</span>}
-        </Link>
+        {/* workspace / location switcher — sits at the very top of the rail. The logo
+            was decorative (users know they're in Shiftly), so it's gone to free space. */}
+        <div className={`pt-5 pb-4 ${mini ? 'px-2.5' : 'px-3'}`}><Switcher /></div>
 
-        {/* workspace / location switcher */}
-        <div className={mini ? 'px-2.5 pb-3' : 'px-3 pb-3'}><Switcher /></div>
-
-        {/* main nav */}
-        <div className={`flex-1 overflow-y-auto overflow-x-hidden py-1 space-y-1 ${mini ? 'px-2.5' : 'px-3'}`}>
-          {MAIN_ITEMS.map((item) => <div key={item.path}><NavLink item={item} />{item.dividerAfter && <div className={`my-3 border-t border-white/30 ${mini ? 'mx-2' : 'mx-4'}`} />}</div>)}
+        {/* main nav — scrollbar hidden (still scrolls by wheel/trackpad if ever needed) */}
+        <div className={`flex-1 overflow-y-auto overflow-x-hidden py-1 space-y-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden ${mini ? 'px-2.5' : 'px-3'}`}>
+          {MAIN_ITEMS.map((item) => <div key={item.path}><NavLink item={item} />{item.dividerAfter && <div className={`my-3.5 border-t border-white/30 ${mini ? 'mx-2' : 'mx-4'}`} />}</div>)}
         </div>
 
-        {/* pinned bottom: settings, help, collapse toggle, account */}
-        <div className={`pt-3 pb-5 border-t border-white/15 space-y-1 ${mini ? 'px-2.5' : 'px-3'}`}>
+        {/* pinned bottom: settings, help, collapse toggle, account — lifted off the
+            very bottom edge so 'Your account' reads as part of the nav, not an afterthought */}
+        <div className={`pt-3 pb-6 border-t border-white/15 space-y-1 ${mini ? 'px-2.5' : 'px-3'}`}>
           {BOTTOM_ITEMS.map((item) => <NavLink key={item.path} item={item} />)}
           <button onClick={onToggleCollapse} title={collapsed ? 'Pin nav open' : 'Collapse nav'}
-            className={`w-full flex items-center rounded-xl text-white/80 hover:bg-white/10 hover:text-white transition ${mini ? 'justify-center py-3' : 'gap-3 px-4 py-3'}`}>
+            className={`w-full flex items-center rounded-xl text-white/80 hover:bg-white/10 hover:text-white transition ${mini ? 'justify-center py-2.5' : 'gap-3 px-4 py-2.5'}`}>
             <svg className={`w-5 h-5 transition-transform ${collapsed ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
             {!mini && <span className="text-sm font-medium">{collapsed ? 'Pin open' : 'Collapse'}</span>}
           </button>
-          <div className={`flex items-center rounded-xl hover:bg-white/10 transition ${mini ? 'justify-center py-2' : 'gap-3 px-4 py-2 mt-0.5'}`}>
-            <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: 'w-8 h-8' } }} />
-            {!mini && <span onClick={(e) => e.currentTarget.parentElement?.querySelector('button')?.click()} className="text-white/80 hover:text-white text-sm font-medium truncate cursor-pointer">Your account</span>}
+          <div className={`mt-1.5 pt-2 border-t border-white/10 ${mini ? '' : ''}`}>
+            <div className={`flex items-center rounded-xl bg-white/5 hover:bg-white/15 transition ${mini ? 'justify-center py-2' : 'gap-3 px-3 py-2.5'}`}>
+              <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: 'w-8 h-8' } }} />
+              {!mini && <span onClick={(e) => e.currentTarget.parentElement?.querySelector('button')?.click()} className="text-white text-sm font-semibold truncate cursor-pointer">Your account</span>}
+            </div>
           </div>
         </div>
       </nav>

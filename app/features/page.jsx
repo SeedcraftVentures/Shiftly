@@ -19,7 +19,7 @@ const tocGroups = [
   {
     title: 'Staff Management',
     items: [
-      { id: 'workspace', label: 'Team Workspace' },
+      { id: 'workspace', label: 'Staff' },
       { id: 'availability', label: 'Availability Windows' },
       { id: 'employee-app', label: 'Employee App' },
     ],
@@ -27,7 +27,8 @@ const tocGroups = [
   {
     title: 'Operations',
     items: [
-      { id: 'reports', label: 'Reports & Payroll' },
+      { id: 'reports', label: 'Reports' },
+      { id: 'payroll', label: 'Payroll' },
       { id: 'inbox', label: 'Team Inbox' },
       { id: 'exports', label: 'CSV & PDF Export' },
     ],
@@ -304,6 +305,11 @@ export default function FeaturesPage() {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
     </svg>
   )
+  const pound = (
+    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  )
 
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: 'var(--font-figtree), system-ui, sans-serif' }}>
@@ -436,25 +442,25 @@ export default function FeaturesPage() {
             <div>
               <GroupHeader kicker="Group 02 · Staff Management" headline="Your team, one view." />
 
-              {/* Workspace */}
+              {/* Staff */}
               <section id="workspace" className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center mb-24 scroll-mt-24">
                 <RevealSection>
                   <div>
                     <Eyebrow icon={team}>Team Management</Eyebrow>
-                    <h3 className="font-cal text-3xl lg:text-4xl text-gray-900 mb-4 tracking-tight">Team Workspace</h3>
+                    <h3 className="font-cal text-3xl lg:text-4xl text-gray-900 mb-4 tracking-tight">Staff</h3>
                     <p className="text-lg text-gray-500 leading-relaxed mb-6">
                       Every staff member&apos;s contracted hours, role, and availability in one clean view. See whether your team can cover your shifts before you generate, not after.
                     </p>
                     <div className="space-y-3">
                       <Bullet>Contracted hours, max hours, and role per person</Bullet>
                       <Bullet>Real-time hours comparison: capacity vs demand</Bullet>
-                      <Bullet>Section tags (kitchen, bar, FoH) for filtering</Bullet>
+                      <Bullet>Team tags (kitchen, bar, FoH) for filtering</Bullet>
                       <Bullet>Add or archive staff in seconds</Bullet>
                     </div>
                   </div>
                 </RevealSection>
                 <RevealSection delay={0.15}>
-                  <ScreenshotPanel src="/screenshots/workspace.png" alt="Staff list view" />
+                  <ScreenshotPanel src="/screenshots/workspace.png" alt="The Staff page — team, contracts and availability" />
                 </RevealSection>
               </section>
 
@@ -512,29 +518,48 @@ export default function FeaturesPage() {
                 <RevealSection>
                   <div>
                     <Eyebrow icon={chart}>Costs &amp; Hours</Eyebrow>
-                    <h3 className="font-cal text-3xl lg:text-4xl text-gray-900 mb-4 tracking-tight">Reports &amp; Payroll</h3>
+                    <h3 className="font-cal text-3xl lg:text-4xl text-gray-900 mb-4 tracking-tight">Reports</h3>
                     <p className="text-lg text-gray-500 leading-relaxed mb-6">
-                      Total hours, regular vs overtime, and labour costs per week. Know what the rota costs before the week starts, not when payroll lands.
+                      Total hours and labour cost, computed straight from your rota. Know what the week costs before it starts — and what the month ahead will cost — not when payroll lands.
                     </p>
                     <div className="space-y-3">
-                      <Bullet>Weekly labour cost breakdown by staff and role</Bullet>
-                      <Bullet>Regular vs overtime hours, surfaced live</Bullet>
-                      <Bullet>Password-protected payroll section for security</Bullet>
+                      <Bullet>Weekly labour cost broken down by team and person</Bullet>
+                      <Bullet>Actual vs projected cost for the next four weeks</Bullet>
+                      <Bullet>Driven by the published rota, so it&apos;s always current</Bullet>
                       <Bullet>Compare week to week to spot drift</Bullet>
                     </div>
                   </div>
                 </RevealSection>
                 <RevealSection delay={0.15}>
-                  <ScreenshotPanel src="/screenshots/reports.png" alt="Reports and payroll view" />
+                  <ScreenshotPanel src="/screenshots/reports.png" alt="Reports — labour cost by week" />
+                </RevealSection>
+              </section>
+
+              {/* Payroll */}
+              <section id="payroll" className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center mb-24 scroll-mt-24">
+                <RevealSection className="order-2 lg:order-1">
+                  <ScreenshotPanel src="/screenshots/payroll.png" alt="Payroll — pay per staff member" />
+                </RevealSection>
+                <RevealSection delay={0.15} className="order-1 lg:order-2">
+                  <div>
+                    <Eyebrow icon={pound}>Pay, worked out for you</Eyebrow>
+                    <h3 className="font-cal text-3xl lg:text-4xl text-gray-900 mb-4 tracking-tight">Payroll</h3>
+                    <p className="text-lg text-gray-500 leading-relaxed mb-6">
+                      Every shift becomes pay automatically. Hourly, salaried, or annualised — Shiftly works out what each person is owed straight from the published rota.
+                    </p>
+                    <div className="space-y-3">
+                      <Bullet>Hourly, salary, and annualised pay per person</Bullet>
+                      <Bullet>Calculated from the rota — no manual tallying</Bullet>
+                      <Bullet>Projected cost for the month ahead, not just last week</Bullet>
+                      <Bullet>Password-protected, with one-click CSV for your accountant</Bullet>
+                    </div>
+                  </div>
                 </RevealSection>
               </section>
 
               {/* Inbox */}
               <section id="inbox" className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center mb-24 scroll-mt-24">
-                <RevealSection className="order-2 lg:order-1">
-                  <InboxCard />
-                </RevealSection>
-                <RevealSection delay={0.15} className="order-1 lg:order-2">
+                <RevealSection>
                   <div>
                     <Eyebrow icon={inbox}>Pre-Checked Requests</Eyebrow>
                     <h3 className="font-cal text-3xl lg:text-4xl text-gray-900 mb-4 tracking-tight">Team Inbox</h3>
@@ -549,11 +574,14 @@ export default function FeaturesPage() {
                     </div>
                   </div>
                 </RevealSection>
+                <RevealSection delay={0.15}>
+                  <ScreenshotPanel src="/screenshots/inbox.png" alt="Team inbox — swap and time-off requests" />
+                </RevealSection>
               </section>
 
               {/* Exports */}
               <section id="exports" className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center scroll-mt-24">
-                <RevealSection>
+                <RevealSection className="order-1 lg:order-2">
                   <div>
                     <Eyebrow icon={download}>One-Click Export</Eyebrow>
                     <h3 className="font-cal text-3xl lg:text-4xl text-gray-900 mb-4 tracking-tight">CSV &amp; PDF Export</h3>
@@ -568,7 +596,7 @@ export default function FeaturesPage() {
                     </div>
                   </div>
                 </RevealSection>
-                <RevealSection delay={0.15}>
+                <RevealSection delay={0.15} className="order-2 lg:order-1">
                   <ExportTiles />
                 </RevealSection>
               </section>
