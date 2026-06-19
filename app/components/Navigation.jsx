@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { UserButton } from '@clerk/nextjs'
@@ -55,7 +55,7 @@ export default function Navigation({ collapsed = false, onToggleCollapse }) {
   useEffect(() => { setSwitcherOpen(false) }, [collapsed])
   useEffect(() => { document.body.style.overflow = mobileMenuOpen ? 'hidden' : 'unset'; return () => { document.body.style.overflow = 'unset' } }, [mobileMenuOpen])
 
-  useEffect(() => {
+  const loadLocations = useCallback(() => {
     fetch('/api/locations').then((r) => r.ok ? r.json() : null).then((d) => {
       if (!d) return
       setOrgName(d.organization_name || 'My workspace')
@@ -63,6 +63,14 @@ export default function Navigation({ collapsed = false, onToggleCollapse }) {
       setActiveId(d.active)
     }).catch(() => {})
   }, [])
+
+  // Load on mount, and re-load whenever Settings edits the org/location names
+  // (the nav lives in the persistent layout, so it won't remount on its own).
+  useEffect(() => {
+    loadLocations()
+    window.addEventListener('shiftly:locations-updated', loadLocations)
+    return () => window.removeEventListener('shiftly:locations-updated', loadLocations)
+  }, [loadLocations])
 
   const switchLocation = async (id) => {
     if (id === activeId) { setSwitcherOpen(false); return }
