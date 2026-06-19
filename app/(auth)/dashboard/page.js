@@ -189,16 +189,17 @@ export default function DashboardPage() {
         </Card>
 
         {/* COVERAGE — can we cover the shifts? (middle) */}
-        <Card pad={22} style={{ order: 2 }}>
+        <Card pad={22} style={{ order: 2, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: T.faint, letterSpacing: 0.5, textTransform: 'uppercase' }}>Can we cover the shifts?</span>
             <Tag color={cov.color}>{cov.label}</Tag>
           </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
+          <div style={{ minHeight: 46, display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
             <span style={{ fontSize: 30, fontWeight: 800, color: T.ink }}>{Math.round(coverage.readiness * 100)}%</span>
-            <span style={{ fontSize: 13, color: T.muted }}>of shift hours covered by capacity</span>
+            <span style={{ fontSize: 13, color: T.muted, lineHeight: 1.3 }}>of shift hours covered by capacity</span>
           </div>
           <ProgressBar value={coverage.readiness} height={9} color={cov.color} radius={99} />
+          <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
             {coverage.teamRows.length === 0 && <p style={{ fontSize: 13, color: T.faint, margin: 0 }}>No teams yet.</p>}
             {coverage.teamRows.map(({ team, color, r, bottlenecks }) => {
@@ -219,20 +220,22 @@ export default function DashboardPage() {
               ? 'No keyholders set — mark someone as a keyholder so the location can open and close.'
               : `No keyholder available to ${coverage.khGaps.openMissing.length ? `open ${coverage.khGaps.openMissing.map((d) => DSHORT[d]).join(', ')}` : ''}${coverage.khGaps.openMissing.length && coverage.khGaps.closeMissing.length ? ' · ' : ''}${coverage.khGaps.closeMissing.length ? `close ${coverage.khGaps.closeMissing.map((d) => DSHORT[d]).join(', ')}` : ''} (one keyholder covers the whole location).`}</p>
           </div>}
-          <button onClick={() => router.push('/dashboard/staff')} style={{ marginTop: 14, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: T.font, fontSize: 12.5, fontWeight: 700, color: T.pink }}>Review staffing →</button>
+          </div>
+          <button onClick={() => router.push('/dashboard/staff')} style={{ marginTop: 14, alignSelf: 'flex-start', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: T.font, fontSize: 12.5, fontWeight: 700, color: T.pink }}>Review staffing →</button>
         </Card>
 
         {/* SCHEDULE COVERAGE — do the shifts cover the open hours? (left) */}
-        <Card pad={22} style={{ order: 1 }}>
+        <Card pad={22} style={{ order: 1, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: T.faint, letterSpacing: 0.5, textTransform: 'uppercase' }}>Do shifts cover your hours?</span>
             <Tag color={schedule.hasGaps ? T.red : schedule.hasKeyGaps ? T.amber : T.green}>{schedule.hasGaps ? 'Gaps' : schedule.hasKeyGaps ? 'No keyholder' : 'Complete'}</Tag>
           </div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
+          <div style={{ minHeight: 46, display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
             <span style={{ fontSize: 30, fontWeight: 800, color: T.ink }}>{Math.round(schedule.coveredPct * 100)}%</span>
-            <span style={{ fontSize: 13, color: T.muted }}>of open hours have a shift</span>
+            <span style={{ fontSize: 13, color: T.muted, lineHeight: 1.3 }}>of open hours have a shift</span>
           </div>
           <ProgressBar value={schedule.coveredPct} height={9} color={schedule.hasGaps ? T.red : T.green} radius={99} />
+          <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginTop: 16 }}>
             {!schedule.hasGaps && !schedule.hasKeyGaps && <p style={{ fontSize: 13, color: T.green, fontWeight: 600, margin: 0 }}>✓ Every open hour is scheduled, with a keyholder at open and close.</p>}
             {schedule.dayGaps.slice(0, 4).map((g, i) => (
@@ -251,7 +254,8 @@ export default function DashboardPage() {
             ))}
             {(schedule.dayGaps.length > 4 || schedule.keyGaps.length > 3) && <p style={{ fontSize: 12, color: T.faint, margin: 0 }}>+ more on the Shifts page</p>}
           </div>
-          <button onClick={() => router.push('/dashboard/shifts')} style={{ marginTop: 14, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: T.font, fontSize: 12.5, fontWeight: 700, color: T.pink }}>Review shifts →</button>
+          </div>
+          <button onClick={() => router.push('/dashboard/shifts')} style={{ marginTop: 14, alignSelf: 'flex-start', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: T.font, fontSize: 12.5, fontWeight: 700, color: T.pink }}>Review shifts →</button>
         </Card>
       </div>
 

@@ -208,17 +208,9 @@ export default function Navigation({ collapsed = false, onToggleCollapse }) {
       {/* ── Desktop sidebar (collapsible + hover-to-peek) ── */}
       <nav onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
         className={`hidden lg:flex fixed left-0 top-0 bottom-0 bg-[#FF1F7D] flex-col z-50 rounded-r-[2rem] transition-[width] duration-200 ${mini ? 'w-[4.75rem]' : 'w-52'} ${collapsed && hovered ? 'shadow-2xl' : ''}`}>
-        {/* brand — in its own rounded container (consistent with the app's cards),
-            with breathing room above so it doesn't float against the top edge */}
-        <div className={`pt-5 pb-2 ${mini ? 'px-2.5' : 'px-3'}`}>
-          <Link href="/dashboard" title="Shiftly" className={`flex items-center bg-white/[0.08] border border-white/15 rounded-2xl transition hover:bg-white/[0.14] ${mini ? 'justify-center p-2.5' : 'gap-2.5 px-3.5 py-3'}`}>
-            <Image src="/logo-white.svg" alt="Shiftly" width={26} height={26} className="flex-shrink-0" />
-            {!mini && <span className="text-white font-semibold text-xl" style={{ fontFamily: "'Cal Sans', sans-serif" }}>Shiftly</span>}
-          </Link>
-        </div>
-
-        {/* workspace / location switcher */}
-        <div className={mini ? 'px-2.5 pb-2' : 'px-3 pb-2'}><Switcher /></div>
+        {/* workspace / location switcher — sits at the very top of the rail. The logo
+            was decorative (users know they're in Shiftly), so it's gone to free space. */}
+        <div className={`pt-4 pb-2 ${mini ? 'px-2.5' : 'px-3'}`}><Switcher /></div>
 
         {/* main nav — scrollbar hidden (still scrolls by wheel/trackpad if ever needed) */}
         <div className={`flex-1 overflow-y-auto overflow-x-hidden py-1 space-y-0.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden ${mini ? 'px-2.5' : 'px-3'}`}>
