@@ -118,12 +118,26 @@ function Switch({ on, onClick, accent = PINK, size = 1 }) {
 function Label({ children }) {
   return <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase' }}>{children}</div>
 }
-function Stepper({ value, onChange, min, max, suffix = '' }) {
-  const btn = { width: 32, height: 32, border: '1px solid #E5E7EB', background: '#F9FAFB', cursor: 'pointer', fontSize: 17, color: '#6B7280' }
+function Stepper({ value, onChange, min, max, suffix = '', step = 1 }) {
+  // Typeable: type the number directly (no more 40 clicks). +/- nudge by `step`.
+  const [text, setText] = useState(String(value ?? 0))
+  useEffect(() => { setText(String(value ?? 0)) }, [value])
+  const clamp = (n) => Math.max(min, Math.min(max, n))
+  const commit = (raw) => { let n = parseFloat(raw); if (isNaN(n)) n = min; n = clamp(n); onChange(n); setText(String(n)) }
+  const nudge = (d) => { const n = clamp((parseFloat(text) || 0) + d); onChange(n); setText(String(n)) }
+  const btn = { width: 34, height: 36, border: '1px solid #E5E7EB', background: '#F9FAFB', cursor: 'pointer', fontSize: 18, color: '#6B7280', flexShrink: 0, fontFamily: 'inherit' }
   return <div style={{ display: 'flex', alignItems: 'center' }}>
-    <button onClick={() => onChange(Math.max(min, value - 1))} style={{ ...btn, borderRadius: '8px 0 0 8px' }}>−</button>
-    <div style={{ minWidth: 56, height: 32, borderTop: '1px solid #E5E7EB', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13.5, fontWeight: 700, color: '#111827', background: '#fff' }}>{value}{suffix}</div>
-    <button onClick={() => onChange(Math.min(max, value + 1))} style={{ ...btn, borderRadius: '0 8px 8px 0' }}>+</button>
+    <button type="button" onClick={() => nudge(-step)} style={{ ...btn, borderRadius: '8px 0 0 8px' }}>−</button>
+    <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+      <input type="text" inputMode="decimal" value={text}
+        onChange={(e) => setText(e.target.value.replace(/[^\d.]/g, ''))}
+        onFocus={(e) => e.target.select()}
+        onBlur={(e) => commit(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'ArrowUp') { e.preventDefault(); nudge(step) } if (e.key === 'ArrowDown') { e.preventDefault(); nudge(-step) } }}
+        style={{ width: '100%', height: 36, boxSizing: 'border-box', textAlign: 'center', border: '1px solid #E5E7EB', borderLeft: 'none', borderRight: 'none', fontFamily: 'inherit', fontSize: 13.5, fontWeight: 700, color: '#111827', background: '#fff', outline: 'none', padding: '0 14px 0 0' }} />
+      {suffix && <span style={{ position: 'absolute', right: 9, top: '50%', transform: 'translateY(-50%)', fontSize: 11.5, fontWeight: 600, color: '#9CA3AF', pointerEvents: 'none' }}>{suffix}</span>}
+    </div>
+    <button type="button" onClick={() => nudge(step)} style={{ ...btn, borderRadius: '0 8px 8px 0' }}>+</button>
   </div>
 }
 function MiniBtn({ children, onClick, accent = PINK, active = false }) {
@@ -441,7 +455,7 @@ export default function StaffPage() {
   const persist = useCallback(async (s) => { const res = await fetch('/api/staff', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: s.id, ...toApi(s) }) }); if (res.ok) { const saved = fromApi(await res.json()); setStaff((prev) => prev.map((x) => (x.id === s.id ? saved : x))) } }, [])
   const saveStaff = useCallback(async (s) => { setSaveState('saved'); await persist(s); setTimeout(() => setSaveState((x) => (x === 'saved' ? 'clean' : x)), 1500) }, [persist])
   const addStaff = useCallback(async (tId, over = {}) => {
-    const draft = { team_id: tId, name: over.name || 'New staff member', role: over.role || '', contracted: over.contracted ?? 0, max: over.max ?? 40, wage: over.wage ?? 11.44, pay_basis: over.pay_basis || 'hourly', annual_salary: over.annual_salary ?? 0, annualised_hours: over.annualised_hours ?? 0, keyholder: over.keyholder ?? false, avail: over.avail || Object.fromEntries(WEEKDAYS.filter((d) => cfg.openDays.includes(d)).map((d) => [d, true])) }
+    const draft = { team_id: tId, name: over.name || 'New staff member', role: over.role || '', contracted: over.contracted ?? 0, max: over.max ?? 40, wage: over.wage ?? 11.44, pay_basis: over.pay_basis || 'hourly', annual_salary: over.annual_salary ?? 0, annualised_hours: over.annualised_hours ?? 0, keyholder: over.keyholder ?? false, avail: over.avail || allDayAvail(cfg.openDays) }
     const res = await fetch('/api/staff', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(toApi(draft)) })
     if (!res.ok) return
     const created = fromApi(await res.json())
