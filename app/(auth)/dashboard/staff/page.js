@@ -120,21 +120,31 @@ function Label({ children }) {
 }
 function Stepper({ value, onChange, min, max, suffix = '', step = 1 }) {
   // Typeable: type the number directly (no more 40 clicks). +/- nudge by `step`.
+  // Styled to look like an editable field (recessed well, hover highlight, focus ring)
+  // so it's obvious you can click in and type, not just use the buttons.
   const [text, setText] = useState(String(value ?? 0))
+  const [focused, setFocused] = useState(false)
+  const [hover, setHover] = useState(false)
   useEffect(() => { setText(String(value ?? 0)) }, [value])
   const clamp = (n) => Math.max(min, Math.min(max, n))
   const commit = (raw) => { let n = parseFloat(raw); if (isNaN(n)) n = min; n = clamp(n); onChange(n); setText(String(n)) }
   const nudge = (d) => { const n = clamp((parseFloat(text) || 0) + d); onChange(n); setText(String(n)) }
-  const btn = { width: 34, height: 36, border: '1px solid #E5E7EB', background: '#F9FAFB', cursor: 'pointer', fontSize: 18, color: '#6B7280', flexShrink: 0, fontFamily: 'inherit' }
-  return <div style={{ display: 'flex', alignItems: 'center' }}>
+  const btn = { width: 34, height: 38, border: '1px solid #E5E7EB', background: '#F9FAFB', cursor: 'pointer', fontSize: 18, color: '#6B7280', flexShrink: 0, fontFamily: 'inherit', transition: 'background .12s' }
+  const fieldShadow = focused ? `inset 0 0 0 1.5px ${PINK}` : (hover ? 'inset 0 0 0 1px #C7C7CF' : 'inset 0 1px 2px rgba(17,24,39,.10)')
+  return <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} style={{ display: 'flex', alignItems: 'center' }}>
     <button type="button" onClick={() => nudge(-step)} style={{ ...btn, borderRadius: '8px 0 0 8px' }}>−</button>
     <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
-      <input type="text" inputMode="decimal" value={text}
+      <input type="text" inputMode="decimal" value={text} aria-label={suffix === 'h' ? 'hours' : undefined}
         onChange={(e) => setText(e.target.value.replace(/[^\d.]/g, ''))}
-        onFocus={(e) => e.target.select()}
-        onBlur={(e) => commit(e.target.value)}
+        onFocus={(e) => { setFocused(true); e.target.select() }}
+        onBlur={(e) => { setFocused(false); commit(e.target.value) }}
         onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'ArrowUp') { e.preventDefault(); nudge(step) } if (e.key === 'ArrowDown') { e.preventDefault(); nudge(-step) } }}
-        style={{ width: '100%', height: 36, boxSizing: 'border-box', textAlign: 'center', border: '1px solid #E5E7EB', borderLeft: 'none', borderRight: 'none', fontFamily: 'inherit', fontSize: 13.5, fontWeight: 700, color: '#111827', background: '#fff', outline: 'none', padding: '0 14px 0 0' }} />
+        style={{ width: '100%', height: 38, boxSizing: 'border-box', textAlign: 'center', border: '1px solid #E5E7EB', borderLeft: 'none', borderRight: 'none', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, color: focused ? PINK : '#111827', background: '#fff', outline: 'none', cursor: 'text', padding: '0 26px 0 14px', boxShadow: fieldShadow, transition: 'box-shadow .12s, color .12s' }} />
+      {/* pencil affordance — signals the value is editable */}
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={focused ? PINK : '#B6B6BE'} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: focused || hover ? 1 : 0.7, transition: 'opacity .12s, stroke .12s' }}>
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+      </svg>
       {suffix && <span style={{ position: 'absolute', right: 9, top: '50%', transform: 'translateY(-50%)', fontSize: 11.5, fontWeight: 600, color: '#9CA3AF', pointerEvents: 'none' }}>{suffix}</span>}
     </div>
     <button type="button" onClick={() => nudge(step)} style={{ ...btn, borderRadius: '0 8px 8px 0' }}>+</button>
