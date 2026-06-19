@@ -508,7 +508,7 @@ export default function StaffPage() {
   const khFlag = khGaps.noKeyholder || khGaps.openMissing.length > 0 || khGaps.closeMissing.length > 0
 
   return <div style={{ fontFamily: FONT, background: '#FAFAFB', minHeight: '100vh', color: '#111827' }}>
-    <div style={{ maxWidth: 1240, margin: '0 auto', padding: '26px 24px 0' }}>
+    <div style={{ maxWidth: 1240, margin: '0 auto', padding: '20px 24px 0' }}>
       <h1 style={{ fontSize: 26, fontWeight: 800, color: '#111827', margin: 0, letterSpacing: -0.3 }}>Staff</h1>
       <p style={{ fontSize: 13.5, color: '#6B7280', margin: '5px 0 0' }}>Your team members, their contracts and availability.</p>
     </div>

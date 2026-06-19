@@ -344,7 +344,7 @@ export default function RotaBuilder() {
   const card = { background: '#fff', border: '1px solid #ECECEF', borderRadius: 14, padding: 22, marginBottom: 18, boxShadow: T.shadow.md }
   const inner = { maxWidth: 1040, margin: '0 auto', padding: '0 24px' }
 
-  return <div style={{ fontFamily: FONT, background: '#FAFAFB', minHeight: '100vh', color: '#111827', paddingTop: 28, paddingBottom: 50 }}>
+  return <div style={{ fontFamily: FONT, background: '#FAFAFB', minHeight: '100vh', color: '#111827', paddingTop: 20, paddingBottom: 50 }}>
     <div style={inner}>
       <h1 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 4px' }}>Rota Builder</h1>
       <p style={{ fontSize: 13, color: '#6B7280', margin: '0 0 22px' }}>Generate a schedule that meets contracted hours and respects availability.</p>

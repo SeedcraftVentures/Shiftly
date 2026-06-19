@@ -208,12 +208,14 @@ export default function Navigation({ collapsed = false, onToggleCollapse }) {
       {/* ── Desktop sidebar (collapsible + hover-to-peek) ── */}
       <nav onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
         className={`hidden lg:flex fixed left-0 top-0 bottom-0 bg-[#FF1F7D] flex-col z-50 rounded-r-[2rem] transition-[width] duration-200 ${mini ? 'w-[4.75rem]' : 'w-52'} ${collapsed && hovered ? 'shadow-2xl' : ''}`}>
-        {/* brand — logo kept on the same vertical axis as the nav icons (≈38px),
-            so it doesn't shift when the rail collapses/expands */}
-        <Link href="/dashboard" className={`flex items-center pt-4 pb-2 ${mini ? 'justify-center px-0' : 'gap-2 pl-[25px] pr-4'}`}>
-          <Image src="/logo-white.svg" alt="Shiftly" width={26} height={26} className="flex-shrink-0" />
-          {!mini && <span className="text-white font-semibold text-xl" style={{ fontFamily: "'Cal Sans', sans-serif" }}>Shiftly</span>}
-        </Link>
+        {/* brand — in its own rounded container (consistent with the app's cards),
+            with breathing room above so it doesn't float against the top edge */}
+        <div className={`pt-5 pb-2 ${mini ? 'px-2.5' : 'px-3'}`}>
+          <Link href="/dashboard" title="Shiftly" className={`flex items-center bg-white/[0.08] border border-white/15 rounded-2xl transition hover:bg-white/[0.14] ${mini ? 'justify-center p-2.5' : 'gap-2.5 px-3.5 py-3'}`}>
+            <Image src="/logo-white.svg" alt="Shiftly" width={26} height={26} className="flex-shrink-0" />
+            {!mini && <span className="text-white font-semibold text-xl" style={{ fontFamily: "'Cal Sans', sans-serif" }}>Shiftly</span>}
+          </Link>
+        </div>
 
         {/* workspace / location switcher */}
         <div className={mini ? 'px-2.5 pb-2' : 'px-3 pb-2'}><Switcher /></div>

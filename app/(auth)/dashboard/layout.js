@@ -16,8 +16,10 @@ export default function DashboardLayout({ children }) {
     <OnboardingCheck>
       <div className={`min-h-screen bg-[#FF1F7D] p-3 transition-[padding] duration-200 ${collapsed ? 'lg:pl-[4.75rem]' : 'lg:pl-52'}`}>
         <Navigation collapsed={collapsed} onToggleCollapse={toggleCollapse} />
-        <div className="min-h-[calc(100vh-1.5rem)] bg-[#F8F9FA] rounded-[1.25rem] lg:ml-1 mt-14 lg:mt-0 flex flex-col">
-          <div className="hidden lg:block">
+        <div className="min-h-[calc(100vh-1.5rem)] bg-[#F8F9FA] rounded-[1.25rem] lg:ml-1 mt-14 lg:mt-0 flex flex-col relative">
+          {/* notifications overlay the top-right corner (in line with each page's title)
+              instead of consuming their own row, so pages start near the top */}
+          <div className="hidden lg:block absolute top-0 right-0 z-20">
             <DashboardTopBar />
           </div>
           <div className="flex-1">

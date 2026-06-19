@@ -125,7 +125,7 @@ export default function DashboardPage() {
   const cov = coverage.status === 'short' ? SHORT : COVERED
 
   return (
-    <div style={{ fontFamily: T.font, maxWidth: 1080, margin: '0 auto', padding: '28px 28px 56px' }}>
+    <div style={{ fontFamily: T.font, maxWidth: 1080, margin: '0 auto', padding: '20px 28px 56px' }}>
       {/* header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14, marginBottom: 24 }}>
         <div>
