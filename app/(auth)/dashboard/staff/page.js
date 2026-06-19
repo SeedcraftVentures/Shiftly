@@ -125,6 +125,7 @@ function Stepper({ value, onChange, min, max, suffix = '', step = 1 }) {
   const [text, setText] = useState(String(value ?? 0))
   const [focused, setFocused] = useState(false)
   const [hover, setHover] = useState(false)
+  const inputRef = useRef(null)
   useEffect(() => { setText(String(value ?? 0)) }, [value])
   const clamp = (n) => Math.max(min, Math.min(max, n))
   const commit = (raw) => { let n = parseFloat(raw); if (isNaN(n)) n = min; n = clamp(n); onChange(n); setText(String(n)) }
@@ -134,14 +135,15 @@ function Stepper({ value, onChange, min, max, suffix = '', step = 1 }) {
   const fieldShadow = focused ? `0 0 0 3px ${PINK}33` : (hover ? `0 0 0 3px ${PINK}1F` : 'inset 0 1px 2px rgba(17,24,39,.08)')
   return <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
     <button type="button" onClick={() => nudge(-step)} style={btn}>−</button>
-    <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
-      <input type="text" inputMode="decimal" value={text} aria-label={suffix === 'h' ? 'hours' : undefined}
+    <div onMouseDown={(e) => { if (e.target !== inputRef.current) { e.preventDefault(); inputRef.current?.focus() } }}
+      style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', height: 38, boxSizing: 'border-box', border: `1px solid ${lit ? PINK : '#E5E7EB'}`, borderRadius: 9, background: '#fff', boxShadow: fieldShadow, cursor: 'text', transition: 'box-shadow .12s, border-color .12s' }}>
+      <input ref={inputRef} type="text" inputMode="decimal" value={text} aria-label={suffix === 'h' ? 'hours' : undefined}
         onChange={(e) => setText(e.target.value.replace(/[^\d.]/g, ''))}
         onFocus={(e) => { setFocused(true); e.target.select() }}
         onBlur={(e) => { setFocused(false); commit(e.target.value) }}
         onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'ArrowUp') { e.preventDefault(); nudge(step) } if (e.key === 'ArrowDown') { e.preventDefault(); nudge(-step) } }}
-        style={{ width: '100%', height: 38, boxSizing: 'border-box', textAlign: 'center', border: `1px solid ${lit ? PINK : '#E5E7EB'}`, borderRadius: 9, fontFamily: 'inherit', fontSize: 14, fontWeight: 700, color: focused ? PINK : '#111827', background: '#fff', outline: 'none', cursor: 'text', padding: '0 22px', boxShadow: fieldShadow, transition: 'box-shadow .12s, border-color .12s, color .12s' }} />
-      {suffix && <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 11.5, fontWeight: 600, color: lit ? PINK : '#9CA3AF', pointerEvents: 'none', transition: 'color .12s' }}>{suffix}</span>}
+        style={{ flex: 1, minWidth: 0, width: '100%', height: '100%', textAlign: 'center', border: 'none', outline: 'none', background: 'transparent', fontFamily: 'inherit', fontSize: 14, fontWeight: 700, color: focused ? PINK : '#111827', cursor: 'text', padding: suffix ? '0 0 0 12px' : 0 }} />
+      {suffix && <span style={{ flexShrink: 0, paddingRight: 10, paddingLeft: 1, fontSize: 11.5, fontWeight: 600, color: lit ? PINK : '#9CA3AF', pointerEvents: 'none', transition: 'color .12s' }}>{suffix}</span>}
     </div>
     <button type="button" onClick={() => nudge(step)} style={btn}>+</button>
   </div>
