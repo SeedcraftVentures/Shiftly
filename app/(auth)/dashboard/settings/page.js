@@ -16,9 +16,9 @@ const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
 const CURRENCIES = [{ value: 'GBP', label: '£ GBP' }, { value: 'USD', label: '$ USD' }, { value: 'EUR', label: '€ EUR' }]
 const LOCATION_TYPES = ['Restaurant', 'Café', 'Bar', 'Takeaway', 'Hotel', 'Retail', 'Other']
 
-function Section({ title, desc, children, onSave, saving, saved }) {
+function Section({ title, desc, children, onSave, saving, saved, flush }) {
   return (
-    <Card pad={24} style={{ marginBottom: 18 }}>
+    <Card pad={24} style={{ marginBottom: flush ? 0 : 18, height: flush ? '100%' : undefined }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 18 }}>
         <div>
           <h2 style={{ fontSize: 16, fontWeight: 800, color: T.ink, margin: 0 }}>{title}</h2>
@@ -147,27 +147,37 @@ export default function SettingsPage() {
 
   const loc = s.location
   return (
-    <div style={{ fontFamily: T.font, maxWidth: 760, margin: '0 auto', padding: '28px 28px 56px' }}>
+    <div style={{ fontFamily: T.font, maxWidth: 880, margin: '0 auto', padding: '20px 28px 56px' }}>
       <h1 style={{ fontSize: 26, fontWeight: 800, color: T.ink, margin: '0 0 4px', letterSpacing: -0.3 }}>Settings</h1>
       <p style={{ fontSize: 13.5, color: T.muted, margin: '0 0 24px' }}>Configure your organisation and {loc?.name || 'this location'}.</p>
 
-      {/* ── Organisation ── */}
-      <Section title="Organisation" desc="Your business — the umbrella over every location." onSave={() => save('org', { organization: s.organization })} saving={saving === 'org'} saved={saved === 'org'}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+      {/* ── Organisation + This location (side by side) ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginBottom: 18 }}>
+        <Section flush title="Organisation" desc="Your business — the umbrella over every location." onSave={() => save('org', { organization: s.organization })} saving={saving === 'org'} saved={saved === 'org'}>
           <Field label="Organisation name"><Input value={s.organization.name} onChange={(e) => setOrg({ name: e.target.value })} /></Field>
-          <Field label="Industry"><Input value={s.organization.industry} onChange={(e) => setOrg({ industry: e.target.value })} placeholder="e.g. Hospitality" /></Field>
-        </div>
-        <Field label="Default currency" style={{ marginTop: 16 }}><Segmented options={CURRENCIES} value={s.organization.currency} onChange={(v) => setOrg({ currency: v })} accent={T.pink} /></Field>
-      </Section>
-
-      {/* ── Location details ── */}
-      {loc && (
-        <Section title="This location" desc="Details for the location you're currently working in." onSave={() => save('loc', { location: { name: loc.name, address: loc.address, currency: loc.currency } })} saving={saving === 'loc'} saved={saved === 'loc'}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+          <Field label="Industry" style={{ marginTop: 14 }}><Input value={s.organization.industry} onChange={(e) => setOrg({ industry: e.target.value })} placeholder="e.g. Hospitality" /></Field>
+          <Field label="Default currency" style={{ marginTop: 14 }}><Segmented options={CURRENCIES} value={s.organization.currency} onChange={(v) => setOrg({ currency: v })} accent={T.pink} /></Field>
+        </Section>
+        {loc && (
+          <Section flush title="This location" desc="Details for the location you're currently working in." onSave={() => save('loc', { location: { name: loc.name, address: loc.address, currency: loc.currency } })} saving={saving === 'loc'} saved={saved === 'loc'}>
             <Field label="Location name"><Input value={loc.name} onChange={(e) => setLoc({ name: e.target.value })} /></Field>
-            <Field label="Currency"><Segmented options={CURRENCIES} value={loc.currency} onChange={(v) => setLoc({ currency: v })} accent={T.pink} /></Field>
+            <Field label="Address" style={{ marginTop: 14 }}><Input value={loc.address} onChange={(e) => setLoc({ address: e.target.value })} placeholder="Street, city, postcode" /></Field>
+            <Field label="Currency" style={{ marginTop: 14 }}><Segmented options={CURRENCIES} value={loc.currency} onChange={(v) => setLoc({ currency: v })} accent={T.pink} /></Field>
+          </Section>
+        )}
+      </div>
+
+      {/* ── Teams (above hours) ── */}
+      {loc && (
+        <Section title="Teams" desc={`Teams within ${loc?.name || 'this location'} — e.g. kitchen, bar, front of house. Staff and shifts are organised by team.`}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {teams.length === 0 && <p style={{ fontSize: 13, color: T.faint, margin: '0 0 4px' }}>No teams yet — add your first below.</p>}
+            {teams.map((t, i) => <TeamRow key={t.id} team={t} color={TEAM_COLORS[i % TEAM_COLORS.length]} counts={teamCounts[t.id]} top={i > 0} onRename={renameTeam} onDelete={deleteTeam} />)}
           </div>
-          <Field label="Address" style={{ marginTop: 16 }}><Input value={loc.address} onChange={(e) => setLoc({ address: e.target.value })} placeholder="Street, city, postcode" /></Field>
+          <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+            <div style={{ flex: 1 }}><Input value={newTeam} onChange={(e) => setNewTeam(e.target.value)} placeholder="New team name (e.g. Kitchen)" onKeyDown={(e) => { if (e.key === 'Enter') addTeam() }} /></div>
+            <Button accent={T.pink} onClick={addTeam} disabled={teamBusy || !newTeam.trim()}>Add team</Button>
+          </div>
         </Section>
       )}
 
@@ -213,20 +223,6 @@ export default function SettingsPage() {
                 </div>
               )
             })}
-          </div>
-        </Section>
-      )}
-
-      {/* ── Teams ── */}
-      {loc && (
-        <Section title="Teams" desc={`Teams within ${loc?.name || 'this location'} — e.g. kitchen, bar, front of house. Staff and shifts are organised by team.`}>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {teams.length === 0 && <p style={{ fontSize: 13, color: T.faint, margin: '0 0 4px' }}>No teams yet — add your first below.</p>}
-            {teams.map((t, i) => <TeamRow key={t.id} team={t} color={TEAM_COLORS[i % TEAM_COLORS.length]} counts={teamCounts[t.id]} top={i > 0} onRename={renameTeam} onDelete={deleteTeam} />)}
-          </div>
-          <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-            <div style={{ flex: 1 }}><Input value={newTeam} onChange={(e) => setNewTeam(e.target.value)} placeholder="New team name (e.g. Kitchen)" onKeyDown={(e) => { if (e.key === 'Enter') addTeam() }} /></div>
-            <Button accent={T.pink} onClick={addTeam} disabled={teamBusy || !newTeam.trim()}>Add team</Button>
           </div>
         </Section>
       )}
