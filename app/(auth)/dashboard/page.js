@@ -237,7 +237,7 @@ export default function DashboardPage() {
           <ProgressBar value={schedule.coveredPct} height={9} color={schedule.hasGaps ? T.red : T.green} radius={99} />
           <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginTop: 16 }}>
-            {!schedule.hasGaps && !schedule.hasKeyGaps && <p style={{ fontSize: 13, color: T.green, fontWeight: 600, margin: 0 }}>✓ Every open hour is scheduled, with a keyholder at open and close.</p>}
+            {!schedule.hasGaps && !schedule.hasKeyGaps && <p style={{ fontSize: 13, color: T.body, fontWeight: 600, margin: 0 }}><span style={{ color: T.green }}>✓</span> Every open hour is scheduled, with a keyholder at open and close.</p>}
             {schedule.dayGaps.slice(0, 4).map((g, i) => (
               <div key={`g${i}`} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
                 <span style={{ width: 8, height: 8, borderRadius: 99, background: T.red, flexShrink: 0 }} />
@@ -295,7 +295,7 @@ function RotaRow({ r, top, onClick }) {
   const [h, setH] = useState(false)
   return <button onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
     style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px', background: h ? T.surface : 'none', border: 'none', borderTop: top ? `1px solid ${T.hair}` : 'none', cursor: 'pointer', fontFamily: T.font, textAlign: 'left', transition: 'background .12s' }}>
-    <span style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: (r.status === 'Published' ? T.green : T.amber) + '14', color: r.status === 'Published' ? T.green : T.amber, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <span style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: T.pink + '14', color: T.pink, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
     </span>
     <div style={{ flex: 1, minWidth: 0 }}>
