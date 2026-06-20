@@ -12,8 +12,16 @@ export const T = {
   ink: '#111827', body: '#374151', muted: '#6B7280', faint: '#9CA3AF',
   line: '#ECECEF', hair: '#F4F4F6', track: '#EFEFF2', surface: '#FAFAFB',
   font: "'Plus Jakarta Sans', sans-serif",
-  // ── shape & elevation scale — the cohesion backbone. Reach for these, not raw px. ──
-  r: { xs: 8, sm: 10, md: 12, lg: 16, xl: 22, pill: 999 },
+  // ── type scale — six named roles, reference by role not px. (~1.25 ratio off 16px
+  //    body.) Dense UI guidance: `small` (13) for metadata/labels/dense rows, `body`
+  //    (16) for real content; headings h3→display. Collapse ad-hoc sizes onto these. ──
+  fz: { display: 39, h1: 31, h2: 25, h3: 20, body: 16, small: 13 },
+  lh: { tight: 1.15, snug: 1.3, normal: 1.5 },
+  // ── spacing — 8-pt grid with a 4px sub-step. Every gap/padding/margin comes from here. ──
+  space: { xs: 4, sm: 8, snug: 12, md: 16, lg: 24, xl: 32, xxl: 48, huge: 64 },
+  // ── shape & elevation scale — the cohesion backbone. Reach for these, not raw px.
+  //    Radii are all multiples of 4 (4/8/12/16/20). ──
+  r: { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, pill: 999 },
   shadow: {
     sm: '0 1px 2px rgba(17,24,39,.06)',
     md: '0 3px 10px rgba(17,24,39,.06), 0 1px 2px rgba(17,24,39,.04)',
