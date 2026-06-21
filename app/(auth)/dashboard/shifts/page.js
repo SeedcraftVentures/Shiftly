@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback, Fragment } from 'react'
 import { TEAM_COLORS } from '../staff/utils/staffHelpers'
 import { rotaBlock } from '@/lib/rotaColors'
 
@@ -72,6 +72,44 @@ function dayCoverage(shifts, d, cfg) {
   const total = bh[1] - bh[0]
   const gap = dayGapsFor(shifts, d, cfg).reduce((s, [a, b]) => s + (b - a), 0)
   return total ? (total - gap) / total : 1
+}
+// default shift name = team + what it's pinned to; auto-updates until the user customises it
+const autoName = (team, anchor) => `${team} ${anchor === 'open' ? 'open' : anchor === 'close' ? 'close' : 'mid'}`
+const isAutoName = (name, team) => !name || name === 'New shift' || ['open', 'close', 'mid'].some((a) => name === autoName(team, a))
+const sameSet = (a, b) => [...a].sort((x, y) => x - y).join() === [...b].sort((x, y) => x - y).join()
+const scopeLabel = (days, cfg) => sameSet(days, cfg.openDays) ? 'Full-week' : sameSet(days, WEEKDAYS.filter((d) => cfg.openDays.includes(d))) ? 'Weekday' : sameSet(days, WEEKEND.filter((d) => cfg.openDays.includes(d))) ? 'Weekend' : days.map((d) => DAYS[d]).join(' ')
+// smart gaps — suggest structural shifts (full-week/weekday/weekend open or close) plus genuine
+// interior windows, instead of one giant per-day shift.
+function smartGaps(shifts, cfg) {
+  const EPS = 0.01, openMissing = [], closeMissing = [], mids = []
+  for (const d of cfg.openDays) {
+    const [open, close] = cfg.business[d]
+    const ds = shifts.filter((s) => s.days.includes(d))
+    if (!ds.some((s) => s.start <= open + EPS)) openMissing.push(d)
+    if (!ds.some((s) => s.end >= close - EPS)) closeMissing.push(d)
+    for (const [a, b] of dayGapsFor(shifts, d, cfg)) { if (a > open + EPS && b < close - EPS) mids.push({ kind: 'mid', day: d, from: a, to: b, label: `${DAYS[d]} ${fmt(a)}–${fmt(b)}` }) }
+  }
+  const out = []
+  if (openMissing.length) out.push({ kind: 'open', days: openMissing, label: `${scopeLabel(openMissing, cfg)} open` })
+  if (closeMissing.length) out.push({ kind: 'close', days: closeMissing, label: `${scopeLabel(closeMissing, cfg)} close` })
+  return out.concat(mids)
+}
+function GapChip({ sug, onApply, accent }) {
+  const [h, setH] = useState(false)
+  return <button onClick={() => onApply(sug)} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} title={`Add ${sug.label}`}
+    style={{ fontFamily: FONT, fontSize: 12, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 9, cursor: 'pointer', border: `1px solid ${h ? '#C7C7CF' : '#E5E7EB'}`, background: h ? '#FAFAFB' : '#fff', color: '#374151', transition: 'all .12s' }}>
+    <span style={{ width: 6, height: 6, borderRadius: 99, background: AMBER, flexShrink: 0 }} />
+    {sug.label}
+    <span style={{ color: accent, fontWeight: 700 }}>+ add</span>
+  </button>
+}
+function GapStrip({ shifts, onApply, accent, cfg }) {
+  const gaps = smartGaps(shifts, cfg)
+  if (!gaps.length) return <div style={{ fontSize: 12.5, fontWeight: 600, color: '#16A34A' }}>✓ Every open hour is covered.</div>
+  return <div>
+    <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 10 }}>{gaps.length} suggestion{gaps.length === 1 ? '' : 's'} to fill gaps</div>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>{gaps.map((g, i) => <GapChip key={i} sug={g} onApply={onApply} accent={accent} />)}</div>
+  </div>
 }
 function suggestFor(shifts, gap) {
   const before = shifts.find((s) => s.days.includes(gap.day) && Math.abs(s.end - gap.from) < 0.01)
@@ -194,26 +232,29 @@ function SaveStatus({ state }) {
   const c = state === 'saved' ? { c: '#16A34A', t: '✓ Saved' } : state === 'dirty' ? { c: AMBER, t: '• Unsaved changes' } : { c: '#9CA3AF', t: 'Up to date' }
   return <span style={{ fontSize: 11.5, fontWeight: 600, color: c.c }}>{c.t}</span>
 }
-function Inspector({ shift, patch, onDelete, saveState, onSave, accent, cfg }) {
+function Inspector({ shift, patch, onDelete, saveState, onSave, accent, cfg, teamName }) {
+  const curLen = shift ? Math.round((shift.end - shift.start) * 10) / 10 : 0
+  const [lenMode, setLenMode] = useState(() => ([4, 8, 12].includes(curLen) ? String(curLen) : 'custom'))
   if (!shift) return <div style={{ color: '#9CA3AF', fontSize: 13, textAlign: 'center', marginTop: 70, lineHeight: 1.6 }}>Select a shift to edit<br />its properties here.</div>
-  // anchor is derived from the times (open/close come from the location); the pin
-  // buttons snap the times, which keeps the saved anchor_type (designation) in sync.
+  // anchor is derived from the times; pins snap them, which keeps the saved anchor_type in sync.
   const L = shift.end - shift.start
   const anchor = shift.start <= cfg.open + 0.01 ? 'open' : shift.end >= cfg.close - 0.01 ? 'close' : 'mid'
+  const rename = (p, a) => { if (isAutoName(shift.name, teamName)) p.name = autoName(teamName, a); return p }
   const setAnchor = (a) => {
-    if (a === 'open') patch({ start: cfg.open, end: Math.min(cfg.close, cfg.open + L) })
-    else if (a === 'close') patch({ start: Math.max(cfg.open, cfg.close - L), end: cfg.close })
-    else if (anchor === 'open') patch({ start: Math.min(cfg.close - L, cfg.open + 1) })
-    else if (anchor === 'close') patch({ end: Math.max(cfg.open + L, cfg.close - 1) })
+    const p = {}
+    if (a === 'open') { p.start = cfg.open; p.end = Math.min(cfg.close, cfg.open + L) }
+    else if (a === 'close') { p.start = Math.max(cfg.open, cfg.close - L); p.end = cfg.close }
+    else if (anchor === 'open') { p.start = Math.min(cfg.close - L, cfg.open + 1) }
+    else if (anchor === 'close') { p.end = Math.max(cfg.open + L, cfg.close - 1) }
+    else return
+    patch(rename(p, a))
   }
   const setLen = (n) => {
+    setLenMode(String(n))
     if (anchor === 'open') patch({ start: cfg.open, end: Math.min(cfg.close, cfg.open + n) })
     else if (anchor === 'close') patch({ start: Math.max(cfg.open, cfg.close - n), end: cfg.close })
     else patch({ end: Math.min(cfg.close, shift.start + n) })
   }
-  const curLen = Math.round(L * 10) / 10
-  const presetActive = (n) => Math.abs(curLen - n) < 0.01
-  const isCustom = !presetActive(4) && !presetActive(8) && !presetActive(12)
   const segWrap = { display: 'flex', background: '#F1F1F4', borderRadius: 9, padding: 3, gap: 2, marginTop: 8 }
   return <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
     <div>
@@ -227,23 +268,24 @@ function Inspector({ shift, patch, onDelete, saveState, onSave, accent, cfg }) {
       <div>
         <Label>Pin to</Label>
         <div style={segWrap}>
-          <Seg active={anchor === 'open'} onClick={() => setAnchor('open')} accent={accent}>Opens</Seg>
-          <Seg active={anchor === 'mid'} onClick={() => setAnchor('mid')} accent={accent}>Mid</Seg>
-          <Seg active={anchor === 'close'} onClick={() => setAnchor('close')} accent={accent}>Closes</Seg>
+          <Seg active={anchor === 'open'} onClick={() => setAnchor('open')} accent={accent}>Open</Seg>
+          <Seg active={anchor === 'mid'} onClick={() => setAnchor('mid')} accent={accent}>None</Seg>
+          <Seg active={anchor === 'close'} onClick={() => setAnchor('close')} accent={accent}>Close</Seg>
         </div>
       </div>
       <div>
         <Label>Length</Label>
         <div style={segWrap}>
-          {[4, 8, 12].map((n) => <Seg key={n} active={presetActive(n)} onClick={() => setLen(n)} accent={accent}>{n}h</Seg>)}
-          <Seg active={isCustom} onClick={() => {}} accent={accent}>Custom</Seg>
+          {[4, 8, 12].map((n) => <Seg key={n} active={lenMode === String(n)} onClick={() => setLen(n)} accent={accent}>{n}h</Seg>)}
+          <Seg active={lenMode === 'custom'} onClick={() => setLenMode('custom')} accent={accent}>Custom</Seg>
         </div>
       </div>
     </div>
     <div>
       <Label>{fmt(shift.start)} – {fmt(shift.end)} · {curLen}h{anchor !== 'mid' && <span style={{ color: accent, fontWeight: 700 }}> · {anchor === 'open' ? 'opens' : 'closes'}</span>}</Label>
-      <div style={{ marginTop: 10 }}><TimeRange start={shift.start} end={shift.end} onChange={(start, end) => patch({ start, end })} accent={accent} domain={cfg.slider} /></div>
+      <div style={{ marginTop: 10 }}><TimeRange start={shift.start} end={shift.end} onChange={(start, end) => { setLenMode('custom'); patch({ start, end }) }} accent={accent} domain={cfg.slider} /></div>
     </div>
+    <div><Label>Runs on</Label><div style={{ marginTop: 8 }}><DayPicker days={shift.days} onChange={(days) => patch({ days })} openDays={cfg.openDays} accent={accent} /></div></div>
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
       <div><Label>Staff needed</Label><div style={{ marginTop: 8 }}><Stepper value={shift.staff} onChange={(staff) => patch({ staff })} min={1} max={20} /></div></div>
       <div><Label>Keyholder</Label>
@@ -253,7 +295,6 @@ function Inspector({ shift, patch, onDelete, saveState, onSave, accent, cfg }) {
         </div>
       </div>
     </div>
-    <div><Label>Runs on</Label><div style={{ marginTop: 8 }}><DayPicker days={shift.days} onChange={(days) => patch({ days })} openDays={cfg.openDays} accent={accent} /></div></div>
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
       <button onClick={onSave} disabled={saveState !== 'dirty'} style={{ flex: 1, fontFamily: 'inherit', fontSize: 13.5, fontWeight: 700, color: '#fff', background: saveState === 'dirty' ? accent : '#E5E7EB', border: 'none', borderRadius: 10, padding: '12px 0', cursor: saveState === 'dirty' ? 'pointer' : 'default' }}>Save shift</button>
       <SaveStatus state={saveState} />
@@ -407,34 +448,50 @@ const RTH = { fontSize: 11, fontWeight: 700, color: '#6B7280', padding: '6px 6px
 const RTH_STAFF = { ...RTH, textAlign: 'left', position: 'sticky', left: 0, background: '#fff', minWidth: 150 }
 const RTD = { padding: '4px 4px', verticalAlign: 'top' }
 const RTD_STAFF = { padding: '4px 4px', verticalAlign: 'top', position: 'sticky', left: 0, background: '#fff' }
-function TeamRotaGrid({ shifts, teamName, color }) {
+function TeamRotaGrid({ groups, selectedId, onSelect, selectMode, selectedIds, onToggle }) {
+  const [hoverId, setHoverId] = useState(null)
+  const interactive = !!onSelect || !!selectMode
+  const cell = { padding: '5px 6px', verticalAlign: 'middle' }
   return <div style={{ overflowX: 'auto' }}>
-    <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720, tableLayout: 'fixed' }}>
-      <colgroup><col style={{ width: 150 }} />{DAYS.map((d) => <col key={d} />)}</colgroup>
-      <thead><tr><th style={RTH_STAFF} />{DAYS.map((d) => <th key={d} style={RTH}><div style={{ fontWeight: 800, color: '#374151' }}>{d}</div></th>)}</tr></thead>
+    <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640, tableLayout: 'fixed' }}>
+      <colgroup><col style={{ width: 124 }} />{DAYS.map((d) => <col key={d} />)}</colgroup>
+      <thead><tr><th style={{ ...RTH_STAFF, minWidth: 124 }} />{DAYS.map((d) => <th key={d} style={RTH}><div style={{ fontWeight: 800, color: '#374151' }}>{d}</div></th>)}</tr></thead>
       <tbody>
-        <tr><td colSpan={8} style={{ padding: '4px 0 10px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ width: 8, height: 8, borderRadius: 99, background: color }} />
-            <span style={{ fontSize: 12, fontWeight: 800, color, letterSpacing: 0.4, textTransform: 'uppercase' }}>{teamName}</span>
-            <div style={{ flex: 1, height: 1, background: '#F0F0F2' }} />
-          </div>
-        </td></tr>
-        {shifts.length === 0 && <tr><td colSpan={8} style={{ textAlign: 'center', color: '#9CA3AF', fontSize: 13, padding: '24px 0' }}>No shifts yet — add one to see the week build up.</td></tr>}
-        {shifts.map((s, idx) => {
-          const blk = rotaBlock(color, idx)
-          return <tr key={s.id}>
-            <td style={RTD_STAFF}><span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 600, color: '#111827' }}><span style={{ width: 9, height: 9, borderRadius: 99, background: color, flexShrink: 0 }} />{s.name}</span></td>
-            {ALL.map((d) => <td key={d} style={RTD}>
-              {s.days.includes(d)
-                ? <div style={{ background: blk.background, borderRadius: 10, padding: '7px 10px', boxShadow: blk.shadow }}>
-                    <div style={{ color: blk.color, fontWeight: 700, fontSize: 11, lineHeight: 1.25 }}>{fmt(s.start)}–{fmt(s.end)}</div>
-                    <div style={{ color: blk.subColor, fontSize: 9.5 }}>{s.keyholder ? '🔑 keyholder' : `${s.staff} staff`}</div>
-                  </div>
-                : null}
-            </td>)}
-          </tr>
-        })}
+        {groups.map((g) => <Fragment key={g.name}>
+          <tr><td colSpan={8} style={{ padding: '6px 0 10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ width: 8, height: 8, borderRadius: 99, background: g.color }} />
+              <span style={{ fontSize: 12, fontWeight: 800, color: g.color, letterSpacing: 0.4, textTransform: 'uppercase' }}>{g.name}</span>
+              <div style={{ flex: 1, height: 1, background: '#F0F0F2' }} />
+            </div>
+          </td></tr>
+          {g.shifts.length === 0 && <tr><td colSpan={8} style={{ textAlign: 'center', color: '#9CA3AF', fontSize: 13, padding: '20px 0' }}>No shifts yet — add one to see the week build up.</td></tr>}
+          {g.shifts.map((s, idx) => {
+            const blk = rotaBlock(g.color, idx)
+            const sel = selectedId === s.id, checked = selectedIds?.has(s.id), hov = interactive && hoverId === s.id
+            const rowBg = sel && !selectMode ? g.color + '14' : (hov ? '#F4F5F8' : 'transparent')
+            const rounded = rowBg !== 'transparent'
+            const bar = sel && !selectMode ? g.color : (hov ? g.color + '66' : null)
+            return <tr key={s.id} onClick={() => (interactive ? (selectMode ? onToggle?.(s.id) : onSelect?.(s.id)) : null)} onMouseEnter={() => interactive && setHoverId(s.id)} onMouseLeave={() => interactive && setHoverId(null)} style={{ cursor: interactive ? 'pointer' : 'default', transition: 'background .1s' }}>
+              <td style={{ ...cell, position: 'sticky', left: 0, background: rounded ? rowBg : '#fff', borderTopLeftRadius: rounded ? 10 : 0, borderBottomLeftRadius: rounded ? 10 : 0, boxShadow: bar ? `inset 3px 0 0 ${bar}` : 'none' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: sel ? 800 : 600, color: '#111827' }}>
+                  {selectMode
+                    ? <span style={{ width: 18, height: 18, borderRadius: 5, flexShrink: 0, border: `1.5px solid ${checked ? g.color : '#D1D5DB'}`, background: checked ? g.color : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11, fontWeight: 800 }}>{checked ? '✓' : ''}</span>
+                    : <span style={{ width: 9, height: 9, borderRadius: 99, background: g.color, flexShrink: 0 }} />}
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
+                </span>
+              </td>
+              {ALL.map((d) => <td key={d} style={{ ...cell, background: rounded ? rowBg : 'transparent', borderTopRightRadius: rounded && d === 6 ? 10 : 0, borderBottomRightRadius: rounded && d === 6 ? 10 : 0 }}>
+                {s.days.includes(d)
+                  ? <div style={{ background: blk.background, borderRadius: 10, padding: '10px 10px', boxShadow: blk.shadow }}>
+                      <div style={{ color: blk.color, fontWeight: 700, fontSize: 11, lineHeight: 1.25, whiteSpace: 'nowrap' }}>{fmt(s.start)}–{fmt(s.end)}</div>
+                      <div style={{ color: blk.subColor, fontSize: 9.5 }}>{s.keyholder ? '🔑 keyholder' : `${s.staff} staff`}</div>
+                    </div>
+                  : null}
+              </td>)}
+            </tr>
+          })}
+        </Fragment>)}
       </tbody>
     </table>
   </div>
@@ -497,12 +554,21 @@ export default function ShiftsPage() {
     setTimeout(() => setSaveState((x) => (x === 'saved' ? 'clean' : x)), 1500)
   }, [toApi])
   const addShift = useCallback(async (tId, over = {}) => {
-    const draft = { team_id: tId, name: over.name || 'New shift', start: over.start ?? cfg.open, end: over.end ?? Math.min(cfg.open + 4, cfg.close), days: over.days || WEEKDAYS.filter((d) => cfg.openDays.includes(d)), staff: 1, keyholder: false }
+    const tName = teams.find((t) => t.id === tId)?.name || ''
+    const draft = { team_id: tId, name: over.name || autoName(tName, 'open'), start: over.start ?? cfg.open, end: over.end ?? Math.min(cfg.open + 8, cfg.close), days: over.days || WEEKDAYS.filter((d) => cfg.openDays.includes(d)), staff: 1, keyholder: false }
     const res = await fetch('/api/shifts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(toApi(draft)) })
     if (!res.ok) return
     const created = await res.json()
     setShifts((prev) => [...prev, created]); setTeamId(tId); setSelectedId(created.id)
-  }, [cfg, toApi])
+  }, [cfg, toApi, teams])
+  // smart-gap suggestions add a structural shift (open/close for a set of days, or a mid window)
+  const applyGap = useCallback((sug) => {
+    const tName = teams.find((t) => t.id === teamId)?.name || ''
+    if (sug.kind === 'mid') return addShift(teamId, { name: autoName(tName, 'mid'), start: sug.from, end: sug.to, days: [sug.day] })
+    const start = sug.kind === 'open' ? cfg.open : Math.max(cfg.open, cfg.close - 8)
+    const end = sug.kind === 'open' ? Math.min(cfg.close, cfg.open + 8) : cfg.close
+    return addShift(teamId, { name: autoName(tName, sug.kind), start, end, days: [...sug.days] })
+  }, [addShift, teamId, teams, cfg])
   const removeShift = useCallback(async (id) => { await fetch(`/api/shifts?id=${id}`, { method: 'DELETE' }); setShifts((prev) => prev.filter((s) => s.id !== id)); setSelectedId(null) }, [])
   const applySuggestion = useCallback(async (tId, s) => {
     if (s.kind === 'end' || s.kind === 'start') {
@@ -539,47 +605,53 @@ export default function ShiftsPage() {
     </div>
 
     {isAll ? (
-      <div style={{ maxWidth: 1080, margin: '0 auto', padding: '4px 24px 40px' }}>
+      <div style={{ maxWidth: 1240, margin: '0 auto', padding: '4px 24px 40px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 16 }}><AddPicker teams={teams} onPick={(tId) => addShift(tId)} /></div>
         <AllMatrix teams={teams} shifts={shifts} expanded={expanded} setExpanded={setExpanded} onApply={applySuggestion} cfg={cfg} />
-        <div style={{ fontSize: 11.5, color: '#9CA3AF', marginTop: 12, textAlign: 'center' }}>Click a team row to see its week and fill gaps.</div>
+        <div style={{ fontSize: 11.5, color: '#9CA3AF', margin: '12px 0 24px', textAlign: 'center' }}>Click a team row to see its week and fill gaps.</div>
+        {/* full rota — every team's shifts in one grid */}
+        <div style={panel}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: '#111827', marginBottom: 14 }}>Full rota <span style={{ color: '#9CA3AF', fontWeight: 600 }}>· all teams</span></div>
+          <TeamRotaGrid groups={teams.map((t) => ({ name: t.name, color: t.color, shifts: shifts.filter((s) => s.team_id === t.id) }))} />
+        </div>
       </div>
     ) : (
-      <div style={{ maxWidth: 1240, margin: '0 auto', padding: '2px 24px 40px', display: 'flex', flexDirection: 'column', gap: 18 }}>
-        {/* top row — inspector sets the height (always fully visible, never clipped);
-            the shifts + glance lists cap to it and scroll inside, so the grid never overlaps */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px 300px', gap: 18, alignItems: 'start' }}>
-          <div style={{ ...panel }}>
-            <Inspector shift={selected} patch={(p) => patch(selected.id, p)} onDelete={() => removeShift(selected.id)} saveState={saveState} onSave={() => saveShift(selected)} accent={accent} cfg={cfg} />
-          </div>
-          <div style={{ ...panel, maxHeight: 540, display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
-              {selectMode ? <>
-                <span style={{ fontSize: 13, fontWeight: 800, color: '#111827' }}>{selectedIds.size} selected</span>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => { setSelectMode(false); setSelectedIds(new Set()) }} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: '#6B7280', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 9, padding: '8px 14px', cursor: 'pointer' }}>Cancel</button>
-                  <button onClick={bulkDelete} disabled={selectedIds.size === 0} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: '#fff', background: selectedIds.size ? '#EF4444' : '#E5E7EB', border: 'none', borderRadius: 9, padding: '8px 14px', cursor: selectedIds.size ? 'pointer' : 'default' }}>Delete{selectedIds.size ? ` ${selectedIds.size}` : ''}</button>
-                </div>
-              </> : <>
-                <span style={{ fontSize: 13, fontWeight: 800, color: '#111827' }}>Shifts <span style={{ color: '#9CA3AF', fontWeight: 600 }}>· {teamShifts.length}</span></span>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {teamShifts.length > 0 && <button onClick={() => setSelectMode(true)} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: '#6B7280', background: '#fff', border: '1px solid #E5E7EB', borderRadius: 9, padding: '8px 14px', cursor: 'pointer' }}>Select</button>}
-                  <button onClick={() => addShift(teamId)} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: '#fff', background: accent, border: 'none', borderRadius: 9, padding: '8px 14px', cursor: 'pointer' }}>+ Add</button>
-                </div>
-              </>}
-            </div>
-            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, paddingRight: 4 }}>
-              {teamShifts.map((s) => <ShiftCard key={s.id} shift={s} selected={selectedId === s.id} onClick={() => (selectMode ? toggleSelect(s.id) : setSelectedId(s.id))} accent={accent} cfg={cfg} selectMode={selectMode} checked={selectedIds.has(s.id)} />)}
-              {teamShifts.length === 0 && <div style={{ textAlign: 'center', color: '#9CA3AF', fontSize: 13, padding: '40px 0' }}>No shifts yet. Add one to get started.</div>}
-            </div>
-          </div>
-          <div style={{ ...panel, maxHeight: 540, overflowY: 'auto' }}>
-            <WeekGlance shifts={teamShifts} teamName={teamName} teamId={teamId} onApply={applySuggestion} accent={accent} cfg={cfg} />
-          </div>
+      <div style={{ maxWidth: 1240, margin: '0 auto', padding: '2px 24px 40px', display: 'grid', gridTemplateColumns: '320px 1fr', gap: 18, alignItems: 'start' }}>
+        {/* inspector stays on the left; the rota grid is the list, with coverage + gaps under it */}
+        <div style={{ ...panel, position: 'sticky', top: 16 }}>
+          <Inspector key={selected?.id || 'none'} shift={selected} patch={(p) => patch(selected.id, p)} onDelete={() => removeShift(selected.id)} saveState={saveState} onSave={() => saveShift(selected)} accent={accent} cfg={cfg} teamName={teamName} />
         </div>
-        {/* the team's week builds up here as you add shifts (this grid is allowed to grow) */}
         <div style={panel}>
-          <TeamRotaGrid shifts={teamShifts} teamName={teamName} color={accent} />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+            {selectMode ? <>
+              <span style={{ fontSize: 14, fontWeight: 800, color: '#111827' }}>{selectedIds.size} selected</span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => { setSelectMode(false); setSelectedIds(new Set()) }} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: '#6B7280', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 9, padding: '8px 14px', cursor: 'pointer' }}>Cancel</button>
+                <button onClick={bulkDelete} disabled={selectedIds.size === 0} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: '#fff', background: selectedIds.size ? '#EF4444' : '#E5E7EB', border: 'none', borderRadius: 9, padding: '8px 14px', cursor: selectedIds.size ? 'pointer' : 'default' }}>Delete{selectedIds.size ? ` ${selectedIds.size}` : ''}</button>
+              </div>
+            </> : <>
+              <span style={{ fontSize: 14, fontWeight: 800, color: '#111827' }}>{teamName} shifts <span style={{ color: '#9CA3AF', fontWeight: 600 }}>· {teamShifts.length}</span></span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {teamShifts.length > 0 && <button onClick={() => setSelectMode(true)} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: '#6B7280', background: '#fff', border: '1px solid #E5E7EB', borderRadius: 9, padding: '8px 14px', cursor: 'pointer' }}>Select</button>}
+                <button onClick={() => addShift(teamId)} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: '#fff', background: accent, border: 'none', borderRadius: 9, padding: '8px 14px', cursor: 'pointer' }}>+ Add shift</button>
+              </div>
+            </>}
+          </div>
+          <TeamRotaGrid groups={[{ name: teamName, color: accent, shifts: teamShifts }]} selectedId={selectedId} onSelect={setSelectedId} selectMode={selectMode} selectedIds={selectedIds} onToggle={toggleSelect} />
+          {/* coverage + smart gaps, full-width under the grid */}
+          <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #ECECEF', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 10 }}>Week at a glance · <span style={{ color: coveragePct(teamShifts, cfg) === 100 ? '#16A34A' : accent }}>{coveragePct(teamShifts, cfg)}%</span></div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {ALL.map((d) => <div key={d} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ width: 28, fontSize: 11, fontWeight: 700, color: cfg.business[d] ? '#6B7280' : '#C4C4CC' }}>{DAYS[d]}</span>
+                  <DayTimeline dayIndex={d} shifts={teamShifts} color={accent} cfg={cfg} />
+                </div>)}
+              </div>
+              <AxisTicks cfg={cfg} />
+            </div>
+            <div><GapStrip shifts={teamShifts} onApply={applyGap} accent={accent} cfg={cfg} /></div>
+          </div>
         </div>
       </div>
     )}
