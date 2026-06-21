@@ -92,6 +92,19 @@ function Switch({ on, onClick, accent = PINK }) {
 function Label({ children }) {
   return <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 8 }}>{children}</div>
 }
+// segmented option (white pill when active) with a hover state
+function Seg({ active, onClick, accent = PINK, children }) {
+  const [h, setH] = useState(false)
+  return <button type="button" onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+    style={{ flex: 1, fontFamily: 'inherit', fontSize: 12, fontWeight: 700, padding: '8px 0', borderRadius: 7, border: 'none', cursor: 'pointer', background: active ? '#fff' : (h ? 'rgba(255,255,255,.55)' : 'transparent'), color: active ? accent : (h ? '#6B7280' : '#9CA3AF'), boxShadow: active ? '0 1px 2px rgba(0,0,0,.08)' : 'none', transition: 'all .12s' }}>{children}</button>
+}
+// day / preset pill — solid accent when active, accent outline on hover (matches day buttons)
+function DayBtn({ active, disabled, onClick, accent = PINK, style, children }) {
+  const [h, setH] = useState(false)
+  const lit = h && !disabled
+  return <button onClick={onClick} disabled={disabled} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+    style={{ fontFamily: 'inherit', fontWeight: active ? 700 : 600, cursor: disabled ? 'not-allowed' : 'pointer', borderRadius: 8, transition: 'all .12s', background: active ? accent : (disabled ? '#F7F7F9' : '#fff'), color: active ? '#fff' : (disabled ? '#D1D1D6' : (lit ? accent : '#9CA3AF')), border: `1px solid ${active ? accent : (disabled ? '#F0F0F2' : (lit ? accent : '#E5E7EB'))}`, ...style }}>{children}</button>
+}
 // Shared interactive convention: pink outline on hover OR focus, soft ring while focused.
 function Stepper({ value, onChange, min = 0, max = 99, step = 1, suffix = '', full = true }) {
   const [text, setText] = useState(String(value ?? 0))
@@ -127,14 +140,15 @@ function FieldInput({ style, onFocus, onBlur, ...rest }) {
 }
 function DayPicker({ days, onChange, openDays, accent = PINK }) {
   const preset = activePreset(days, openDays)
-  const toggle = (i) => { if (!openDays.includes(i)) return; onChange(days.includes(i) ? days.filter((d) => d !== i) : [...days, i].sort((a, b) => a - b)) }
-  const pbtn = (label, set, key) => <button onClick={() => onChange(set.filter((d) => openDays.includes(d)))} style={{ fontSize: 11, fontWeight: 600, padding: '5px 11px', borderRadius: 7, cursor: 'pointer', border: `1px solid ${preset === key ? accent : '#E5E7EB'}`, background: preset === key ? accent + '12' : '#fff', color: preset === key ? accent : '#6B7280' }}>{label}</button>
   return <div>
-    <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>{pbtn('All', ALL, 'all')}{pbtn('Weekdays', WEEKDAYS, 'weekdays')}{pbtn('Weekend', WEEKEND, 'weekend')}</div>
+    <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+      {[['All', ALL, 'all'], ['Weekdays', WEEKDAYS, 'weekdays'], ['Weekend', WEEKEND, 'weekend']].map(([label, set, key]) =>
+        <DayBtn key={key} active={preset === key} onClick={() => onChange(set.filter((d) => openDays.includes(d)))} accent={accent} style={{ fontSize: 11, padding: '6px 12px' }}>{label}</DayBtn>)}
+    </div>
     <div style={{ display: 'flex', gap: 5 }}>
       {DAYS.map((d, i) => {
         const closed = !openDays.includes(i), on = days.includes(i)
-        return <button key={i} onClick={() => toggle(i)} disabled={closed} style={{ flex: 1, fontSize: 12, fontWeight: 600, padding: '8px 0', borderRadius: 8, cursor: closed ? 'not-allowed' : 'pointer', border: `1px solid ${on ? accent : closed ? '#F0F0F2' : '#E5E7EB'}`, background: on ? accent : closed ? '#F7F7F9' : '#fff', color: on ? '#fff' : closed ? '#D1D1D6' : '#9CA3AF', textDecoration: closed ? 'line-through' : 'none' }}>{d}</button>
+        return <DayBtn key={i} active={on} disabled={closed} onClick={() => { if (!closed) onChange(on ? days.filter((x) => x !== i) : [...days, i].sort((a, b) => a - b)) }} accent={accent} style={{ flex: 1, fontSize: 12, padding: '8px 0', textDecoration: closed ? 'line-through' : 'none' }}>{d}</DayBtn>
       })}
     </div>
   </div>
@@ -199,7 +213,8 @@ function Inspector({ shift, patch, onDelete, saveState, onSave, accent, cfg }) {
   }
   const curLen = Math.round(L * 10) / 10
   const presetActive = (n) => Math.abs(curLen - n) < 0.01
-  const seg = (val, lbl) => { const on = anchor === val; return <button type="button" onClick={() => setAnchor(val)} style={{ flex: 1, fontFamily: 'inherit', fontSize: 12, fontWeight: 700, padding: '8px 0', borderRadius: 7, border: 'none', cursor: 'pointer', background: on ? '#fff' : 'transparent', color: on ? accent : '#9CA3AF', boxShadow: on ? '0 1px 2px rgba(0,0,0,.08)' : 'none', transition: 'all .12s' }}>{lbl}</button> }
+  const isCustom = !presetActive(4) && !presetActive(8) && !presetActive(12)
+  const segWrap = { display: 'flex', background: '#F1F1F4', borderRadius: 9, padding: 3, gap: 2, marginTop: 8 }
   return <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -209,10 +224,21 @@ function Inspector({ shift, patch, onDelete, saveState, onSave, accent, cfg }) {
       <FieldInput value={shift.name} onChange={(e) => patch({ name: e.target.value })} />
     </div>
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-      <div><Label>Pin to</Label><div style={{ display: 'flex', background: '#F1F1F4', borderRadius: 9, padding: 3, gap: 2, marginTop: 8 }}>{seg('open', 'Opens')}{seg('mid', 'Mid')}{seg('close', 'Closes')}</div></div>
-      <div><Label>Length</Label><div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-        {[4, 8, 12].map((n) => <button key={n} type="button" onClick={() => setLen(n)} style={{ flex: 1, fontFamily: 'inherit', fontSize: 12.5, fontWeight: 700, padding: '8px 0', borderRadius: 8, cursor: 'pointer', border: `1px solid ${presetActive(n) ? accent : '#E5E7EB'}`, background: presetActive(n) ? accent + '12' : '#fff', color: presetActive(n) ? accent : '#374151' }}>{n}h</button>)}
-      </div></div>
+      <div>
+        <Label>Pin to</Label>
+        <div style={segWrap}>
+          <Seg active={anchor === 'open'} onClick={() => setAnchor('open')} accent={accent}>Opens</Seg>
+          <Seg active={anchor === 'mid'} onClick={() => setAnchor('mid')} accent={accent}>Mid</Seg>
+          <Seg active={anchor === 'close'} onClick={() => setAnchor('close')} accent={accent}>Closes</Seg>
+        </div>
+      </div>
+      <div>
+        <Label>Length</Label>
+        <div style={segWrap}>
+          {[4, 8, 12].map((n) => <Seg key={n} active={presetActive(n)} onClick={() => setLen(n)} accent={accent}>{n}h</Seg>)}
+          <Seg active={isCustom} onClick={() => {}} accent={accent}>Custom</Seg>
+        </div>
+      </div>
     </div>
     <div>
       <Label>{fmt(shift.start)} – {fmt(shift.end)} · {curLen}h{anchor !== 'mid' && <span style={{ color: accent, fontWeight: 700 }}> · {anchor === 'open' ? 'opens' : 'closes'}</span>}</Label>
@@ -221,9 +247,9 @@ function Inspector({ shift, patch, onDelete, saveState, onSave, accent, cfg }) {
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
       <div><Label>Staff needed</Label><div style={{ marginTop: 8 }}><Stepper value={shift.staff} onChange={(staff) => patch({ staff })} min={1} max={20} /></div></div>
       <div><Label>Keyholder</Label>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9, height: 44, marginTop: 8, padding: '0 12px', borderRadius: 9, background: shift.keyholder ? accent + '0C' : '#fff', border: `1px solid ${shift.keyholder ? accent + '55' : '#E5E7EB'}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, height: 44, marginTop: 8, padding: '0 12px', borderRadius: 9, background: '#fff', border: '1px solid #E5E7EB' }}>
           <Switch on={shift.keyholder} onClick={() => patch({ keyholder: !shift.keyholder })} accent={accent} />
-          <span style={{ fontSize: 12.5, fontWeight: 600, color: shift.keyholder ? accent : '#9CA3AF' }}>🔑 {shift.keyholder ? 'Yes' : 'No'}</span>
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: shift.keyholder ? accent : '#9CA3AF' }}>{shift.keyholder ? '🔑 Keyholder' : 'Not a keyholder'}</span>
         </div>
       </div>
     </div>
@@ -510,17 +536,6 @@ export default function ShiftsPage() {
           return <button key={t.id} onClick={() => setTeamId(t.id)} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 700, padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', color: active ? '#111827' : '#9CA3AF', background: active ? '#fff' : 'transparent', boxShadow: active ? '0 1px 3px rgba(0,0,0,.1)' : 'none', transition: 'all .15s' }}>{t.id !== 'all' && <span style={{ width: 8, height: 8, borderRadius: 99, background: t.color }} />}{t.name}<span style={{ fontSize: 11, fontWeight: 700, color: active ? (t.color || PINK) : '#C4C4CC' }}>{count}</span></button>
         })}
       </div>
-      {!isAll && <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        {selectMode ? <>
-          <span style={{ fontSize: 13, fontWeight: 700, color: '#6B7280', marginRight: 2 }}>{selectedIds.size} selected</span>
-          <button onClick={() => { setSelectMode(false); setSelectedIds(new Set()) }} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: '#6B7280', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 9, padding: '9px 14px', cursor: 'pointer' }}>Cancel</button>
-          <button onClick={bulkDelete} disabled={selectedIds.size === 0} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: '#fff', background: selectedIds.size ? '#EF4444' : '#E5E7EB', border: 'none', borderRadius: 9, padding: '9px 16px', cursor: selectedIds.size ? 'pointer' : 'default' }}>Delete{selectedIds.size ? ` ${selectedIds.size}` : ''}</button>
-        </> : <>
-          <span style={{ fontSize: 13, fontWeight: 700, color: '#6B7280', marginRight: 2 }}>{teamShifts.length} shift{teamShifts.length === 1 ? '' : 's'}</span>
-          {teamShifts.length > 0 && <button onClick={() => setSelectMode(true)} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: '#6B7280', background: '#fff', border: '1px solid #E5E7EB', borderRadius: 9, padding: '9px 14px', cursor: 'pointer' }}>Select</button>}
-          <button onClick={() => addShift(teamId)} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: '#fff', background: accent, border: 'none', borderRadius: 9, padding: '9px 16px', cursor: 'pointer' }}>+ Add shift</button>
-        </>}
-      </div>}
     </div>
 
     {isAll ? (
@@ -532,13 +547,30 @@ export default function ShiftsPage() {
     ) : (
       <div style={{ maxWidth: 1240, margin: '0 auto', padding: '2px 24px 40px', display: 'flex', flexDirection: 'column', gap: 18 }}>
         {/* top row — three fixed-height columns; lists scroll inside so the grid stays put */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px 300px', gap: 18, height: 452 }}>
-          <div style={{ ...panel, height: '100%', overflowY: 'auto' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px 300px', gap: 18, height: 512 }}>
+          <div style={{ ...panel }}>
             <Inspector shift={selected} patch={(p) => patch(selected.id, p)} onDelete={() => removeShift(selected.id)} saveState={saveState} onSave={() => saveShift(selected)} accent={accent} cfg={cfg} />
           </div>
-          <div style={{ ...panel, height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {teamShifts.map((s) => <ShiftCard key={s.id} shift={s} selected={selectedId === s.id} onClick={() => (selectMode ? toggleSelect(s.id) : setSelectedId(s.id))} accent={accent} cfg={cfg} selectMode={selectMode} checked={selectedIds.has(s.id)} />)}
-            {teamShifts.length === 0 && <div style={{ textAlign: 'center', color: '#9CA3AF', fontSize: 13, padding: '40px 0' }}>No shifts yet. Add one to get started.</div>}
+          <div style={{ ...panel, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
+              {selectMode ? <>
+                <span style={{ fontSize: 13, fontWeight: 800, color: '#111827' }}>{selectedIds.size} selected</span>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => { setSelectMode(false); setSelectedIds(new Set()) }} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: '#6B7280', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 9, padding: '8px 14px', cursor: 'pointer' }}>Cancel</button>
+                  <button onClick={bulkDelete} disabled={selectedIds.size === 0} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: '#fff', background: selectedIds.size ? '#EF4444' : '#E5E7EB', border: 'none', borderRadius: 9, padding: '8px 14px', cursor: selectedIds.size ? 'pointer' : 'default' }}>Delete{selectedIds.size ? ` ${selectedIds.size}` : ''}</button>
+                </div>
+              </> : <>
+                <span style={{ fontSize: 13, fontWeight: 800, color: '#111827' }}>Shifts <span style={{ color: '#9CA3AF', fontWeight: 600 }}>· {teamShifts.length}</span></span>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {teamShifts.length > 0 && <button onClick={() => setSelectMode(true)} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 600, color: '#6B7280', background: '#fff', border: '1px solid #E5E7EB', borderRadius: 9, padding: '8px 14px', cursor: 'pointer' }}>Select</button>}
+                  <button onClick={() => addShift(teamId)} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: '#fff', background: accent, border: 'none', borderRadius: 9, padding: '8px 14px', cursor: 'pointer' }}>+ Add</button>
+                </div>
+              </>}
+            </div>
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10, paddingRight: 4 }}>
+              {teamShifts.map((s) => <ShiftCard key={s.id} shift={s} selected={selectedId === s.id} onClick={() => (selectMode ? toggleSelect(s.id) : setSelectedId(s.id))} accent={accent} cfg={cfg} selectMode={selectMode} checked={selectedIds.has(s.id)} />)}
+              {teamShifts.length === 0 && <div style={{ textAlign: 'center', color: '#9CA3AF', fontSize: 13, padding: '40px 0' }}>No shifts yet. Add one to get started.</div>}
+            </div>
           </div>
           <div style={{ ...panel, height: '100%', overflowY: 'auto' }}>
             <WeekGlance shifts={teamShifts} teamName={teamName} teamId={teamId} onApply={applySuggestion} accent={accent} cfg={cfg} />
