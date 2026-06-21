@@ -546,12 +546,13 @@ export default function ShiftsPage() {
       </div>
     ) : (
       <div style={{ maxWidth: 1240, margin: '0 auto', padding: '2px 24px 40px', display: 'flex', flexDirection: 'column', gap: 18 }}>
-        {/* top row — three fixed-height columns; lists scroll inside so the grid stays put */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px 300px', gap: 18, height: 512 }}>
+        {/* top row — inspector sets the height (always fully visible, never clipped);
+            the shifts + glance lists cap to it and scroll inside, so the grid never overlaps */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px 300px', gap: 18, alignItems: 'start' }}>
           <div style={{ ...panel }}>
             <Inspector shift={selected} patch={(p) => patch(selected.id, p)} onDelete={() => removeShift(selected.id)} saveState={saveState} onSave={() => saveShift(selected)} accent={accent} cfg={cfg} />
           </div>
-          <div style={{ ...panel, height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ ...panel, maxHeight: 540, display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
               {selectMode ? <>
                 <span style={{ fontSize: 13, fontWeight: 800, color: '#111827' }}>{selectedIds.size} selected</span>
@@ -572,7 +573,7 @@ export default function ShiftsPage() {
               {teamShifts.length === 0 && <div style={{ textAlign: 'center', color: '#9CA3AF', fontSize: 13, padding: '40px 0' }}>No shifts yet. Add one to get started.</div>}
             </div>
           </div>
-          <div style={{ ...panel, height: '100%', overflowY: 'auto' }}>
+          <div style={{ ...panel, maxHeight: 540, overflowY: 'auto' }}>
             <WeekGlance shifts={teamShifts} teamName={teamName} teamId={teamId} onApply={applySuggestion} accent={accent} cfg={cfg} />
           </div>
         </div>
