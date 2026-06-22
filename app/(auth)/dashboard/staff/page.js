@@ -264,16 +264,16 @@ function Money({ value, onChange, step = '0.25', suffix = '' }) {
     {suffix && <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, fontWeight: 600, color: lit ? PINK : '#9CA3AF', pointerEvents: 'none', transition: 'color .12s' }}>{suffix}</span>}
   </div>
 }
-export function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg, hidePay = false }) {
+export function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg, hidePay = false, readOnly = false }) {
   const [saveHover, setSaveHover] = useState(false)
   if (!s) return <div style={{ color: '#9CA3AF', fontSize: 13, textAlign: 'center', marginTop: 70, lineHeight: 1.6 }}>Select a staff member to<br />edit their details here.</div>
   return <>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-      <span style={{ fontSize: 15, fontWeight: 800 }}>Edit staff</span>
-      <button onClick={onDelete} style={{ fontSize: 12, fontWeight: 600, color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer' }}>Delete</button>
+      <span style={{ fontSize: 15, fontWeight: 800 }}>{readOnly ? 'Staff details' : 'Edit staff'}</span>
+      {!readOnly && <button onClick={onDelete} style={{ fontSize: 12, fontWeight: 600, color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer' }}>Delete</button>}
     </div>
-    <div style={{ marginBottom: 18 }}><SaveStatus state={saveState} /></div>
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+    {!readOnly && <div style={{ marginBottom: 18 }}><SaveStatus state={saveState} /></div>}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginTop: readOnly ? 14 : 0 }}>
       <div style={{ display: 'flex', gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0 }}><FieldLabel>Name</FieldLabel><FieldInput value={s.name} onChange={(e) => patch({ name: e.target.value })} /></div>
         <div style={{ flex: 1, minWidth: 0 }}><FieldLabel>Role</FieldLabel><FieldInput value={s.role || ''} onChange={(e) => patch({ role: e.target.value })} /></div>
@@ -311,7 +311,7 @@ export function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg, 
       {availableHours(s, cfg) < s.contracted && <div style={{ fontSize: 12, color: '#B91C1C', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 9, padding: '10px 12px', lineHeight: 1.45 }}>
         ⚠ Available <b>{availableHours(s, cfg)}h</b> but contracted <b>{s.contracted}h</b> — {first(s.name) || 'they'} can’t reach their contract. Widen availability or lower the contracted hours.
       </div>}
-      <button onClick={onSave} disabled={saveState !== 'dirty'} onMouseEnter={() => setSaveHover(true)} onMouseLeave={() => setSaveHover(false)} style={{ marginTop: 4, fontFamily: 'inherit', fontSize: 13.5, fontWeight: 700, color: '#fff', background: saveState === 'dirty' ? (saveHover ? '#E80E6C' : accent) : '#E5E7EB', border: 'none', borderRadius: 10, padding: '11px 0', cursor: saveState === 'dirty' ? 'pointer' : 'default', boxShadow: saveState === 'dirty' && saveHover ? `0 4px 14px ${accent}55` : 'none', transition: 'background .12s, box-shadow .12s' }}>Save staff</button>
+      {!readOnly && <button onClick={onSave} disabled={saveState !== 'dirty'} onMouseEnter={() => setSaveHover(true)} onMouseLeave={() => setSaveHover(false)} style={{ marginTop: 4, fontFamily: 'inherit', fontSize: 13.5, fontWeight: 700, color: '#fff', background: saveState === 'dirty' ? (saveHover ? '#E80E6C' : accent) : '#E5E7EB', border: 'none', borderRadius: 10, padding: '11px 0', cursor: saveState === 'dirty' ? 'pointer' : 'default', boxShadow: saveState === 'dirty' && saveHover ? `0 4px 14px ${accent}55` : 'none', transition: 'background .12s, box-shadow .12s' }}>Save staff</button>}
     </div>
   </>
 }

@@ -18,6 +18,7 @@ const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const DAY_INDEX = { Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4, Saturday: 5, Sunday: 6 }
 const ALL = [0, 1, 2, 3, 4, 5, 6]
 const uid = (() => { let n = 0; return () => `id${++n}` })()
+const NOOP = () => {}
 
 function fmt(h) {
   if (typeof h === 'string') { const [a, b] = h.split(':').map(Number); h = a + (b || 0) / 60 }
@@ -163,8 +164,8 @@ export default function TryMe() {
   if (!est) return <Picker onPick={pick} />
 
   const steps = [
-    { tab: 'shifts', title: `Here’s ${est.name}’s week`, body: `I’ve set up the shifts a typical ${est.short} runs across the week. Click any shift to tweak its hours, days or cover, or just carry on.` },
-    { tab: 'team', title: 'Meet the team', body: 'Each row shows when someone can work; pink means available. Click a name to change their hours, keyholder status or availability.' },
+    { tab: 'shifts', title: `Here’s ${est.name}’s week`, body: `These are the shifts a typical ${est.short} runs. Click a shift to open it on the left, and hover anything to see what it does. It’s a preview, so nothing breaks, hit Next when you’ve had a look.` },
+    { tab: 'team', title: 'Meet the team', body: 'Each row shows when someone can work; pink means available. Click a name to see their details, and hover the controls to explore how you’d set it.' },
     { tab: 'rota', title: 'Now the whole point: fairness', body: 'Anyone can fill a grid. Shiftly builds it fair: 11h rest between shifts, never more than 5 days in a row, a keyholder on every open and close, and hours shared evenly. Hit generate and see it prove it.', generate: true },
     { tab: 'rota', title: 'That’s the week, sorted', body: `Built in seconds, and fair by the rules below. This is exactly how it works for your place. Ready to finish?`, done: true },
   ]
@@ -197,22 +198,22 @@ export default function TryMe() {
         onRestart={() => setEst(null)} />
 
       {cur.tab === 'shifts' && <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 18, alignItems: 'start' }}>
-        <div style={{ ...panel, position: 'sticky', top: 16 }}><ShiftInspector key={selShift || 'none'} shift={shiftObj} patch={(p) => patchShift(selShift, p)} onDelete={() => removeShift(selShift)} saveState={shiftSave} onSave={saveShift} accent={PINK} cfg={cfg} tips /></div>
+        <div style={{ ...panel, position: 'sticky', top: 16 }}><ShiftInspector key={selShift || 'none'} shift={shiftObj} patch={NOOP} onDelete={NOOP} saveState="clean" onSave={NOOP} accent={PINK} cfg={cfg} tips readOnly /></div>
         <div style={panel}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
             <span style={{ fontSize: 14, fontWeight: 800 }}>Your shifts <span style={{ color: '#9CA3AF', fontWeight: 600 }}>· {shifts.length}</span></span>
-            <Tip text="Add another shift pattern, e.g. a weekend brunch shift"><button onClick={addShift} style={addBtn}>+ Add shift</button></Tip>
+            <span style={{ fontSize: 11.5, color: '#9CA3AF', fontWeight: 600 }}>Click a shift to see its details</span>
           </div>
           <TeamRotaGrid groups={groups} cfg={cfg} selectedId={selShift} onSelect={setSelShift} />
         </div>
       </div>}
 
       {cur.tab === 'team' && <div className="no-print" style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: 18, alignItems: 'start' }}>
-        <div style={{ ...panel, position: 'sticky', top: 16 }}><StaffInspector key={selStaff || 'none'} s={staffObj} patch={(p) => patchStaff(selStaff, p)} onDelete={() => removeStaff(selStaff)} saveState={staffSave} onSave={saveStaff} accent={PINK} cfg={cfg} hidePay /></div>
+        <div style={{ ...panel, position: 'sticky', top: 16 }}><StaffInspector key={selStaff || 'none'} s={staffObj} patch={NOOP} onDelete={NOOP} saveState="clean" onSave={NOOP} accent={PINK} cfg={cfg} hidePay readOnly /></div>
         <div style={panel}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
             <span style={{ fontSize: 14, fontWeight: 800 }}>Your team <span style={{ color: '#9CA3AF', fontWeight: 600 }}>· {staff.length}</span></span>
-            <Tip text="Add a team member and set when they’re available"><button onClick={addStaff} style={addBtn}>+ Add person</button></Tip>
+            <span style={{ fontSize: 11.5, color: '#9CA3AF', fontWeight: 600 }}>Click a person to see their details</span>
           </div>
           <AvailabilityGrid groups={staffGroups} cfg={cfg} selectedId={selStaff} onSelect={setSelStaff} />
           <AvailKey accent={PINK} />
