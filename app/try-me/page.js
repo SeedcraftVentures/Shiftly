@@ -32,38 +32,49 @@ const initials = (name) => (name || '?').split(' ').map((w) => w[0]).slice(0, 2)
 const panel = { background: '#fff', border: '1px solid #ECECEF', borderRadius: 16, padding: 20, boxShadow: '0 3px 10px rgba(17,24,39,.06), 0 1px 2px rgba(17,24,39,.04)' }
 const primaryBtn = (disabled) => ({ fontFamily: 'inherit', fontSize: 14, fontWeight: 700, color: '#fff', background: disabled ? '#F9A8D0' : PINK, border: 'none', borderRadius: 10, padding: '11px 22px', cursor: disabled ? 'default' : 'pointer' })
 const addBtn = { fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: '#fff', background: PINK, border: 'none', borderRadius: 9, padding: '8px 14px', cursor: 'pointer' }
+const TM_ANIM = `@keyframes tmUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}@keyframes tmPulse{0%,100%{box-shadow:0 0 0 0 ${PINK}55}50%{box-shadow:0 0 0 7px ${PINK}00}}@keyframes tmFall{to{transform:translateY(110vh) rotate(720deg);opacity:0}}.tmUp{animation:tmUp .4s ease both}`
+const RULES = [
+  { key: 'keyholder', label: 'A keyholder opens & closes, every day' },
+  { key: 'rest', label: 'At least 11 hours’ rest between shifts' },
+  { key: 'consecutive', label: 'Never more than 5 days in a row' },
+  { key: 'maxhours', label: 'Everyone within their max hours' },
+]
 function KeyMark({ size = 13, color = PINK }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, display: 'block' }}><title>Keyholder</title><circle cx="8" cy="15" r="5" /><path d="M11.6 11.4 21 2" /><path d="M16.5 6.5 19.5 9.5" /></svg>
 }
 
 // ── establishment scenarios (single team each) ───────────────────────────────
-// scenarios use realistic 8-hour shifts and staffing that comfortably covers the week
+// realistic scenarios: opener + a lunch/peak cover + closer, staffed to comfortably (and fairly)
+// cover the week. Everyone's a keyholder — small teams trust each other with the keys — so a
+// keyholder always opens & closes (the demo always builds a perfect, compliant rota).
 const ESTS = [
   {
     id: 'cafe', short: 'cafe', name: 'a cafe', tag: 'Coffee, brunch & the morning rush', team: 'Cafe team',
     openDays: [0, 1, 2, 3, 4, 5, 6], hours: [7, 16],
     shifts: [
       { name: 'Opener', start: 7, end: 15, days: [0, 1, 2, 3, 4, 5, 6], staff: 1, keyholder: true, pin: 'open' },
+      { name: 'Lunch cover', start: 11, end: 15, days: [0, 1, 2, 3, 4, 5, 6], staff: 1, keyholder: false, pin: 'none' },
       { name: 'Closer', start: 8, end: 16, days: [0, 1, 2, 3, 4, 5, 6], staff: 1, keyholder: true, pin: 'close' },
     ],
     staff: [
       { name: 'Sam Rivera', contracted: 32, keyholder: true, days: [0, 1, 2, 3, 4, 5, 6] },
-      { name: 'Alex Kim', contracted: 32, keyholder: true, days: [0, 1, 2, 3, 4, 5, 6] },
-      { name: 'Jess Doyle', contracted: 24, keyholder: false, days: [0, 1, 2, 3, 4] },
-      { name: 'Riley Quinn', contracted: 24, keyholder: false, days: [3, 4, 5, 6] },
+      { name: 'Alex Kim', contracted: 30, keyholder: true, days: [0, 1, 2, 3, 4, 5, 6] },
+      { name: 'Jess Doyle', contracted: 24, keyholder: true, days: [0, 1, 2, 3, 4] },
+      { name: 'Riley Quinn', contracted: 22, keyholder: true, days: [3, 4, 5, 6] },
     ],
   },
   {
     id: 'bar', short: 'bar', name: 'a bar', tag: 'Evenings, weekends & late closes', team: 'Bar team',
     openDays: [2, 3, 4, 5, 6], hours: [15, 23],
     shifts: [
-      { name: 'Bar shift', start: 15, end: 23, days: [2, 3, 4, 5, 6], staff: 2, keyholder: true, pin: 'open' },
+      { name: 'Bar open', start: 15, end: 23, days: [2, 3, 4, 5, 6], staff: 1, keyholder: true, pin: 'open' },
+      { name: 'Evening', start: 18, end: 23, days: [2, 3, 4, 5, 6], staff: 1, keyholder: false, pin: 'none' },
     ],
     staff: [
       { name: 'Charlie Fox', contracted: 32, keyholder: true, days: [2, 3, 4, 5, 6] },
-      { name: 'Robin Shah', contracted: 32, keyholder: true, days: [2, 3, 4, 5, 6] },
-      { name: 'Drew Ellis', contracted: 24, keyholder: false, days: [2, 3, 4, 5, 6] },
-      { name: 'Sam Page', contracted: 16, keyholder: false, days: [4, 5, 6] },
+      { name: 'Robin Shah', contracted: 30, keyholder: true, days: [2, 3, 4, 5, 6] },
+      { name: 'Drew Ellis', contracted: 24, keyholder: true, days: [2, 3, 4, 5, 6] },
+      { name: 'Sam Page', contracted: 18, keyholder: true, days: [4, 5, 6] },
     ],
   },
   {
@@ -71,13 +82,14 @@ const ESTS = [
     openDays: [0, 1, 2, 3, 4, 5], hours: [9, 18],
     shifts: [
       { name: 'Open', start: 9, end: 17, days: [0, 1, 2, 3, 4, 5], staff: 1, keyholder: true, pin: 'open' },
+      { name: 'Midday cover', start: 12, end: 16, days: [0, 1, 2, 3, 4, 5], staff: 1, keyholder: false, pin: 'none' },
       { name: 'Close', start: 10, end: 18, days: [0, 1, 2, 3, 4, 5], staff: 1, keyholder: true, pin: 'close' },
     ],
     staff: [
       { name: 'Pat Owens', contracted: 32, keyholder: true, days: [0, 1, 2, 3, 4, 5] },
-      { name: 'Jordan Lee', contracted: 32, keyholder: true, days: [0, 1, 2, 3, 4, 5] },
-      { name: 'Morgan Tate', contracted: 24, keyholder: false, days: [0, 1, 2, 3, 4] },
-      { name: 'Sky Adams', contracted: 16, keyholder: false, days: [3, 4, 5] },
+      { name: 'Jordan Lee', contracted: 30, keyholder: true, days: [0, 1, 2, 3, 4, 5] },
+      { name: 'Morgan Tate', contracted: 24, keyholder: true, days: [0, 1, 2, 3, 4] },
+      { name: 'Sky Adams', contracted: 18, keyholder: true, days: [3, 4, 5] },
     ],
   },
 ]
@@ -101,7 +113,7 @@ export default function TryMe() {
   const [generating, setGenerating] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
-  const [gateOpen, setGateOpen] = useState(false)
+  const [finished, setFinished] = useState(false)
 
   const cfg = useMemo(() => (est ? buildCfg(est.openDays, est.hours) : buildCfg([0, 1, 2, 3, 4], [9, 17])), [est])
 
@@ -135,7 +147,7 @@ export default function TryMe() {
   if (!est) return <Picker onPick={pick} />
 
   const steps = [
-    { tab: 'shifts', title: `Here’s ${est.name}’s week`, body: `I’ve set up the shifts a typical ${est.short} runs — an opener and a closer every open day. Click any shift to tweak its hours or days, or just carry on.` },
+    { tab: 'shifts', title: `Here’s ${est.name}’s week`, body: `I’ve set up the shifts a typical ${est.short} runs across the week. Click any shift to tweak its hours, days or cover, or just carry on.` },
     { tab: 'team', title: 'Meet the team', body: 'Each row shows when someone can work — pink means available. Click a name to change their hours, keyholder status or availability.' },
     { tab: 'rota', title: 'Now the whole point — fairness', body: 'Anyone can fill a grid. Shiftly builds it fair: 11h rest between shifts, never more than 5 days in a row, a keyholder on every open & close, and hours shared evenly. Hit generate and see it prove it.', generate: true },
     { tab: 'rota', title: 'That’s the week, sorted', body: `Built in seconds — and fair by the rules below. This is exactly how it works for your place. Want to make it yours?`, done: true },
@@ -146,7 +158,10 @@ export default function TryMe() {
   const groups = [{ name: est.team, color: PINK, shifts }]
   const staffGroups = [{ name: est.team, color: PINK, staff }]
 
+  if (finished) return <Finish est={est} onRestart={() => { setEst(null); setFinished(false); setResult(null); setStep(0) }} />
+
   return <div style={{ fontFamily: FONT, background: '#FAFAFB', minHeight: '100vh', color: '#111827', paddingBottom: 60 }}>
+    <style>{TM_ANIM}</style>
     {/* header / progress */}
     <div style={{ borderBottom: '1px solid #ECECEF', background: '#fff' }}>
       <div style={{ maxWidth: 1080, margin: '0 auto', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
@@ -162,7 +177,7 @@ export default function TryMe() {
       {/* coach — in the flow, right above the content, at eye height */}
       <Coach step={step} cur={cur} generating={generating}
         onBack={() => step > 0 && setStep(step - 1)}
-        onNext={() => { if (cur.generate) generate(); else if (cur.done) setGateOpen(true); else setStep(step + 1) }}
+        onNext={() => { if (cur.generate) generate(); else if (cur.done) setFinished(true); else setStep(step + 1) }}
         onRestart={() => setEst(null)} />
 
       {cur.tab === 'shifts' && <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 18, alignItems: 'start' }}>
@@ -191,12 +206,10 @@ export default function TryMe() {
       {cur.tab === 'rota' && <div>
         {generating && <div style={{ ...panel, textAlign: 'center', padding: '48px 24px', color: '#6B7280', fontSize: 14 }}>Building your rota… <span style={{ color: '#9CA3AF' }}>(the scheduler may take a few seconds to wake up)</span></div>}
         {error && <div style={{ ...panel, padding: '16px 18px', background: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C', fontSize: 13.5 }}>{error} <button onClick={generate} style={{ marginLeft: 8, fontFamily: 'inherit', fontWeight: 700, color: '#B91C1C', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Try again</button></div>}
-        {!generating && !error && !result && <div style={{ ...panel, textAlign: 'center', padding: '48px 24px', color: '#6B7280', fontSize: 14 }}>Ready when you are — use the button above to generate the rota.</div>}
-        {result && <Result result={result} staff={staff} team={est.team} short={est.short} onJoin={() => setGateOpen(true)} />}
+        {!generating && !error && !result && <RulesPanel />}
+        {result && <Result result={result} staff={staff} team={est.team} />}
       </div>}
     </div>
-
-    {gateOpen && <WaitlistModal short={est.short} onClose={() => setGateOpen(false)} />}
   </div>
 }
 
@@ -217,16 +230,72 @@ function Progress({ steps, step }) {
 
 function Coach({ step, cur, generating, onBack, onNext, onRestart }) {
   const nextLabel = cur.generate ? (generating ? 'Building…' : 'Generate the rota →') : cur.done ? 'Join the waitlist →' : 'Next →'
-  return <div style={{ background: '#fff', border: '1px solid #ECECEF', borderLeft: `4px solid ${PINK}`, borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18, flexWrap: 'wrap' }}>
-    <div style={{ width: 32, height: 32, borderRadius: 99, flexShrink: 0, background: PINK + '16', color: PINK, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800 }}>S</div>
+  return <div key={step} className="tmUp" style={{ background: '#FFF4F8', border: `1px solid ${PINK}33`, borderLeft: `5px solid ${PINK}`, borderRadius: 14, padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18, flexWrap: 'wrap', boxShadow: `0 6px 20px ${PINK}1A` }}>
+    <div style={{ width: 38, height: 38, borderRadius: 99, flexShrink: 0, background: PINK, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 800, animation: 'tmPulse 2.4s ease-in-out infinite' }}>S</div>
     <div style={{ flex: 1, minWidth: 220 }}>
-      <div style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 2, color: '#111827' }}>{cur.title}</div>
-      <div style={{ fontSize: 13, color: '#6B7280', lineHeight: 1.5 }}>{cur.body}</div>
+      <div style={{ fontSize: 11, fontWeight: 800, color: PINK, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 3 }}>Your guide</div>
+      <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 2, color: '#111827' }}>{cur.title}</div>
+      <div style={{ fontSize: 13.5, color: '#4B5563', lineHeight: 1.5 }}>{cur.body}</div>
     </div>
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-      {step > 0 && !cur.done && <button onClick={onBack} style={{ fontFamily: 'inherit', fontSize: 13.5, fontWeight: 700, color: '#6B7280', background: '#fff', border: '1px solid #E5E7EB', borderRadius: 9, padding: '10px 16px', cursor: 'pointer' }}>Back</button>}
-      {cur.done && <button onClick={onRestart} style={{ fontFamily: 'inherit', fontSize: 13.5, fontWeight: 700, color: '#6B7280', background: '#fff', border: '1px solid #E5E7EB', borderRadius: 9, padding: '10px 16px', cursor: 'pointer' }}>Try another</button>}
-      <button onClick={onNext} disabled={generating} style={{ ...primaryBtn(generating), fontSize: 14, padding: '11px 20px' }}>{nextLabel}</button>
+      {step > 0 && !cur.done && <button onClick={onBack} style={{ fontFamily: 'inherit', fontSize: 13.5, fontWeight: 700, color: '#6B7280', background: '#fff', border: '1px solid #E5E7EB', borderRadius: 10, padding: '11px 16px', cursor: 'pointer' }}>Back</button>}
+      {cur.done && <button onClick={onRestart} style={{ fontFamily: 'inherit', fontSize: 13.5, fontWeight: 700, color: '#6B7280', background: '#fff', border: '1px solid #E5E7EB', borderRadius: 10, padding: '11px 16px', cursor: 'pointer' }}>Try another</button>}
+      <button onClick={onNext} disabled={generating} style={{ ...primaryBtn(generating), fontSize: 14.5, padding: '12px 22px' }}>{nextLabel}</button>
+    </div>
+  </div>
+}
+function RulesPanel() {
+  return <div className="tmUp" style={panel}>
+    <div style={{ fontSize: 15, fontWeight: 800 }}>The rules Shiftly always builds to</div>
+    <div style={{ fontSize: 12.5, color: '#6B7280', margin: '3px 0 16px' }}>Anyone can fill a grid. Shiftly fills it <b style={{ color: '#111827' }}>fairly</b> — every single time:</div>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10 }}>
+      {RULES.map((r) => <div key={r.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px', borderRadius: 10, background: '#FAFAFB', border: '1px solid #ECECEF' }}>
+        <span style={{ width: 18, height: 18, borderRadius: 99, flexShrink: 0, background: PINK + '18', color: PINK, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800 }}>•</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>{r.label}</span>
+      </div>)}
+    </div>
+    <div style={{ marginTop: 14, fontSize: 12.5, color: '#9CA3AF' }}>Hit <b style={{ color: PINK }}>Generate the rota</b> above and we’ll prove every one.</div>
+  </div>
+}
+function Confetti() {
+  const cols = [PINK, '#6366F1', '#14B8A6', '#F59E0B', '#FFD1E3', '#fff']
+  const pieces = Array.from({ length: 70 }, (_, i) => ({ left: Math.random() * 100, delay: Math.random() * 1.2, dur: 2.8 + Math.random() * 2.2, c: cols[i % cols.length], w: 6 + Math.random() * 7, rot: Math.random() * 360 }))
+  return <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+    {pieces.map((p, i) => <span key={i} style={{ position: 'absolute', top: -24, left: `${p.left}%`, width: p.w, height: p.w * 0.55, background: p.c, borderRadius: 2, transform: `rotate(${p.rot}deg)`, animation: `tmFall ${p.dur}s linear ${p.delay}s infinite` }} />)}
+  </div>
+}
+function Finish({ est, onRestart }) {
+  const [email, setEmail] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState(null)
+  const [sent, setSent] = useState(false)
+  const submit = async () => {
+    setBusy(true); setErr(null)
+    try {
+      const res = await fetch('/api/try-me/waitlist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) })
+      const data = await res.json()
+      if (!res.ok || data.error) { setErr(data.error || 'Try again.'); setBusy(false); return }
+      setSent(true); setBusy(false)
+    } catch { setErr('Network error — try again.'); setBusy(false) }
+  }
+  return <div style={{ fontFamily: FONT, minHeight: '100vh', background: '#0E1424', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, position: 'relative', overflow: 'hidden' }}>
+    <style>{TM_ANIM}</style>
+    <Confetti />
+    <div className="tmUp" style={{ position: 'relative', zIndex: 1, maxWidth: 460, width: '100%', background: '#fff', color: '#111827', borderRadius: 22, padding: '40px 34px', textAlign: 'center', boxShadow: '0 30px 70px rgba(0,0,0,.45)' }}>
+      {sent ? <>
+        <div style={{ width: 56, height: 56, borderRadius: 99, background: '#16A34A', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, fontWeight: 800, margin: '0 auto 16px' }}>✓</div>
+        <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.4, margin: '0 0 10px' }}>You’re on the list</h1>
+        <p style={{ fontSize: 14.5, color: '#6B7280', margin: '0 0 22px', lineHeight: 1.55 }}>We’ll email you the moment Shiftly opens up — and set it up for your {est.short} from day one.</p>
+        <button onClick={onRestart} style={{ ...primaryBtn(false), width: '100%' }}>Try another type</button>
+      </> : <>
+        <div style={{ fontSize: 12, fontWeight: 800, color: PINK, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>That’s the whole loop</div>
+        <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.5, margin: '0 0 12px', lineHeight: 1.12 }}>Fair shifts, in a couple of clicks.</h1>
+        <p style={{ fontSize: 14.5, color: '#6B7280', margin: '0 0 22px', lineHeight: 1.55 }}>That’s exactly how Shiftly builds your real rota — fair, covered and compliant. Join the waitlist and we’ll set you up for your {est.short} the moment we go live.</p>
+        <input value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} type="email" placeholder="you@business.com" autoFocus style={{ width: '100%', boxSizing: 'border-box', fontSize: 15, fontWeight: 600, fontFamily: 'inherit', padding: '13px 15px', borderRadius: 11, border: '1px solid #E5E7EB', outline: 'none', textAlign: 'center' }} />
+        {err && <div style={{ fontSize: 12.5, color: '#B91C1C', marginTop: 8 }}>{err}</div>}
+        <button onClick={submit} disabled={busy} style={{ ...primaryBtn(busy), width: '100%', fontSize: 15, marginTop: 12 }}>{busy ? 'Saving…' : 'Join the waitlist →'}</button>
+        <button onClick={onRestart} style={{ width: '100%', marginTop: 10, background: 'none', border: 'none', color: '#9CA3AF', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 6 }}>Try another type of place</button>
+      </>}
     </div>
   </div>
 }
@@ -251,10 +320,10 @@ function Picker({ onPick }) {
   </div>
 }
 
-function Result({ result, staff, team, short, onJoin }) {
+function Result({ result, staff, team }) {
   const blocksFor = (s) => (result.assignments || []).filter((a) => String(a.staff_id) === String(s.id) || a.staff_name === s.name)
   const total = (result.assignments || []).length
-  return <div>
+  return <div className="tmUp">
     <div style={{ marginBottom: 14 }}>
       <div style={{ fontSize: 18, fontWeight: 800 }}>✓ The rota is ready</div>
       <div style={{ fontSize: 13, color: '#6B7280', marginTop: 2 }}>{total} shifts assigned{result.stats?.wall_time ? ` · built in ${result.stats.wall_time}s` : ''} — fair, covered, keyholder on every open and close.</div>
@@ -295,45 +364,5 @@ function Result({ result, staff, team, short, onJoin }) {
         </div>)}
       </div>
     </div>}
-    <div style={{ ...panel, marginTop: 16, background: '#111827', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-      <div>
-        <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>Want this for your {short}?</div>
-        <div style={{ fontSize: 13.5, color: '#D1D5DB', marginTop: 3, lineHeight: 1.5, maxWidth: 520 }}>Shiftly builds your real rota in seconds — across teams, with payroll and compliance built in. Join the waitlist for early access.</div>
-      </div>
-      <button onClick={onJoin} style={{ ...primaryBtn(false), fontSize: 15, padding: '13px 26px', flexShrink: 0 }}>Join the waitlist →</button>
-    </div>
-  </div>
-}
-
-function WaitlistModal({ short, onClose }) {
-  const [email, setEmail] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState(null)
-  const [sent, setSent] = useState(false)
-  const submit = async () => {
-    setBusy(true); setErr(null)
-    try {
-      const res = await fetch('/api/try-me/waitlist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) })
-      const data = await res.json()
-      if (!res.ok || data.error) { setErr(data.error || 'Try again.'); setBusy(false); return }
-      setSent(true); setBusy(false)
-    } catch { setErr('Network error — try again.'); setBusy(false) }
-  }
-  return <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(17,24,39,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 60, fontFamily: FONT }}>
-    <div onClick={(e) => e.stopPropagation()} style={{ ...panel, maxWidth: 420, width: '100%', padding: 28 }}>
-      {sent ? <>
-        <div style={{ width: 46, height: 46, borderRadius: 99, background: '#16A34A', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 800, marginBottom: 14 }}>✓</div>
-        <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.3 }}>You’re on the list</div>
-        <p style={{ fontSize: 13.5, color: '#6B7280', margin: '8px 0 18px', lineHeight: 1.5 }}>Thanks — we’ll email you the moment your early-access spot is ready. You can keep exploring in the meantime.</p>
-        <button onClick={onClose} style={{ ...primaryBtn(false), width: '100%' }}>Keep exploring</button>
-      </> : <>
-        <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.3 }}>Get early access</div>
-        <p style={{ fontSize: 13.5, color: '#6B7280', margin: '8px 0 18px', lineHeight: 1.5 }}>Like what you saw? Join the waitlist and we’ll set Shiftly up for your {short || 'business'} when your spot opens. No spam, ever.</p>
-        <input value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} type="email" placeholder="you@business.com" autoFocus style={{ width: '100%', boxSizing: 'border-box', fontSize: 15, fontWeight: 600, fontFamily: 'inherit', padding: '12px 14px', borderRadius: 9, border: '1px solid #E5E7EB', outline: 'none' }} />
-        {err && <div style={{ fontSize: 12.5, color: '#B91C1C', marginTop: 8 }}>{err}</div>}
-        <button onClick={submit} disabled={busy} style={{ ...primaryBtn(busy), width: '100%', marginTop: 14 }}>{busy ? 'Saving…' : 'Join the waitlist →'}</button>
-        <button onClick={onClose} style={{ width: '100%', marginTop: 8, background: 'none', border: 'none', color: '#9CA3AF', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 6 }}>Maybe later</button>
-      </>}
-    </div>
   </div>
 }
