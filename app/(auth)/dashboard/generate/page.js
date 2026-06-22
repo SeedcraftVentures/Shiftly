@@ -244,7 +244,7 @@ export default function RotaBuilder() {
         const td = await tr.json(), sd = await sr.json(), std = await str.json(), shd = await shr.json()
         setTeams((Array.isArray(td) ? td : []).map((t, i) => ({ id: t.id, name: t.name, color: TEAM_COLORS[i % TEAM_COLORS.length] })))
         setSaved(Array.isArray(sd) ? sd : [])
-        setStaff((Array.isArray(std) ? std : []).map((s) => ({ id: s.id, name: s.name, team_id: s.team_id, contracted_hours: s.contracted_hours || 0 })))
+        setStaff((Array.isArray(std) ? std : []).map((s) => ({ id: s.id, name: s.name, team_id: s.team_id, contracted_hours: s.contracted_hours || 0, is_keyholder: !!s.is_keyholder })))
         setShifts(Array.isArray(shd) ? shd : [])
       } catch (e) { console.error(e) } finally { setLoading(false) }
     })()
@@ -333,6 +333,37 @@ export default function RotaBuilder() {
     }
     return out
   }, [result, staff, teams, weekCount])
+
+  // Keyholder compliance recomputed LIVE from the current grid. The server value freezes at
+  // generation (and is empty for saved rotas), so editing the grid left it stale — exactly the
+  // "the grid shows a keyholder but the banner disagrees" bug. Judged on ACTUAL TIMES: a keyholder
+  // present when the first person arrives and the last leaves counts, with no Open/Close pin needed.
+  const liveCompliance = useMemo(() => {
+    if (!result) return []
+    const tMin = (t) => { const [h, m] = String(t || '0:0').split(':').map(Number); return (h || 0) * 60 + (m || 0) }
+    const khSet = new Set(staff.filter((s) => s.is_keyholder).map((s) => s.id))
+    const DAY_ORDER = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    const dayName = (a) => (typeof a.day === 'number' ? DAY_ORDER[a.day] : a.day)
+    const fmtDays = (arr) => [...new Set(arr)].sort((x, y) => DAY_ORDER.indexOf(x) - DAY_ORDER.indexOf(y)).map((d) => String(d).slice(0, 3)).join(', ')
+    const byDay = {}
+    for (const a of result.assignments) (byDay[`${a.week}__${dayName(a)}`] ||= []).push(a)
+    const openMiss = [], closeMiss = []
+    for (const [key, list] of Object.entries(byDay)) {
+      const day = key.split('__')[1]
+      const spans = list.map((a) => { let s = tMin(a.start_time), e = tMin(a.end_time); if (e <= s) e += 1440; return { s, e, kh: khSet.has(a.staff_id) } })
+      if (!spans.length) continue
+      const openT = Math.min(...spans.map((x) => x.s)), closeT = Math.max(...spans.map((x) => x.e))
+      if (!spans.some((x) => x.kh && x.s <= openT + 1)) openMiss.push(day)
+      if (!spans.some((x) => x.kh && x.e >= closeT - 1)) closeMiss.push(day)
+    }
+    const parts = []
+    if (openMiss.length) parts.push(`no keyholder at open on ${fmtDays(openMiss)}`)
+    if (closeMiss.length) parts.push(`no keyholder at close on ${fmtDays(closeMiss)}`)
+    const keyholder = { key: 'keyholder', label: 'Keyholder on open & close', ok: parts.length === 0, detail: parts.join('; ') }
+    const others = (result.rule_compliance || []).filter((r) => r.key !== 'keyholder')
+    return [keyholder, ...others]
+  }, [result, staff])
+
   const teamsInResult = useMemo(() => {
     const ids = [...new Set(weekAssignments.map((a) => a.team_id))]
     return ids.map((id) => ({ id, name: teams.find((t) => t.id === id)?.name || weekAssignments.find((a) => a.team_id === id)?.team_name || 'Team', color: teamColor(id) }))
@@ -402,10 +433,10 @@ export default function RotaBuilder() {
           {Array.from({ length: weekCount }, (_, i) => i + 1).map((w) => <button key={w} onClick={() => setSelectedWeek(w)} style={{ fontFamily: 'inherit', fontSize: 12.5, fontWeight: 700, padding: '6px 14px', borderRadius: 8, cursor: 'pointer', border: `1px solid ${selectedWeek === w ? PINK : '#E5E7EB'}`, background: selectedWeek === w ? PINK + '12' : '#fff', color: selectedWeek === w ? PINK : '#6B7280' }}>Week {w}</button>)}
         </div>}
 
-        {result.rule_compliance?.length > 0 && <div style={card}>
+        {liveCompliance.length > 0 && <div style={card}>
           <div style={{ fontSize: 12, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 12 }}>Rule compliance</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-            {result.rule_compliance.map((r, i) => <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 9, fontSize: 13 }}>
+            {liveCompliance.map((r, i) => <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 9, fontSize: 13 }}>
               <span style={{ color: r.ok ? '#16A34A' : AMBER, fontWeight: 800, flexShrink: 0 }}>{r.ok ? '✓' : '⚠'}</span>
               <span style={{ color: '#374151' }}><b>{r.label}</b>{r.ok ? '' : <span style={{ color: '#92660B' }}> — {r.detail}</span>}</span>
             </div>)}
