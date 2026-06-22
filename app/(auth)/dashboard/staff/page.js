@@ -202,7 +202,7 @@ function AvailabilityEditor({ s, patch, accent, cfg }) {
   const [editDay, setEditDay] = useState(null)
   const setDay = (d, val) => { const a = { ...(s.avail || {}) }; if (val === false) delete a[d]; else a[d] = val; patch({ avail: a }) }
   const allWeekOn = cfg.openDays.every((d) => s.avail?.[d] === true)
-  const seg = (act, lbl, onClick) => <button onClick={onClick} style={{ fontSize: 11, fontWeight: act ? 700 : 600, padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', background: act ? '#fff' : 'transparent', color: act ? accent : '#9CA3AF', boxShadow: act ? '0 1px 2px rgba(0,0,0,.08)' : 'none', transition: 'all .12s' }}>{lbl}</button>
+  const seg = (act, lbl, onClick) => <button onClick={onClick} title={lbl === 'Set hours' ? 'Set custom hours for this day' : lbl === 'All day' ? 'Available the whole day' : undefined} style={{ fontSize: 11, fontWeight: act ? 700 : 600, padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', background: act ? '#fff' : 'transparent', color: act ? accent : '#9CA3AF', boxShadow: act ? '0 1px 2px rgba(0,0,0,.08)' : 'none', transition: 'all .12s' }}>{lbl}</button>
   return <div style={{ borderTop: '1px solid #F0F0F2', paddingTop: 16 }}>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
       <Label>Availability</Label>
@@ -233,7 +233,7 @@ function AvailabilityEditor({ s, patch, accent, cfg }) {
           {on && !allDay && editing && <div style={{ marginTop: 10, paddingLeft: 46, display: 'flex', alignItems: 'flex-end', gap: 12 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}><span style={{ fontSize: 12.5, fontWeight: 700 }}>{fmt(w[0])}</span><span style={{ fontSize: 12.5, fontWeight: 700 }}>{fmt(w[1])}</span></div>
-              <TimeRange start={w[0]} end={w[1]} onChange={(x, y) => setDay(d, [x, y])} accent={accent} domain={cfg.slider} />
+              <div title="Drag the handles to set the hours, then Save"><TimeRange start={w[0]} end={w[1]} onChange={(x, y) => setDay(d, [x, y])} accent={accent} domain={cfg.slider} /></div>
             </div>
             <button onClick={() => setEditDay(null)} style={{ fontFamily: 'inherit', fontSize: 12, fontWeight: 700, color: '#fff', background: accent, border: 'none', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', flexShrink: 0 }}>Save</button>
           </div>}
@@ -265,6 +265,7 @@ function Money({ value, onChange, step = '0.25', suffix = '' }) {
   </div>
 }
 export function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg, hidePay = false }) {
+  const [saveHover, setSaveHover] = useState(false)
   if (!s) return <div style={{ color: '#9CA3AF', fontSize: 13, textAlign: 'center', marginTop: 70, lineHeight: 1.6 }}>Select a staff member to<br />edit their details here.</div>
   return <>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -310,7 +311,7 @@ export function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg, 
       {availableHours(s, cfg) < s.contracted && <div style={{ fontSize: 12, color: '#B91C1C', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 9, padding: '10px 12px', lineHeight: 1.45 }}>
         ⚠ Available <b>{availableHours(s, cfg)}h</b> but contracted <b>{s.contracted}h</b> — {first(s.name) || 'they'} can’t reach their contract. Widen availability or lower the contracted hours.
       </div>}
-      <button onClick={onSave} disabled={saveState !== 'dirty'} style={{ marginTop: 4, fontFamily: 'inherit', fontSize: 13.5, fontWeight: 700, color: '#fff', background: saveState === 'dirty' ? accent : '#E5E7EB', border: 'none', borderRadius: 10, padding: '11px 0', cursor: saveState === 'dirty' ? 'pointer' : 'default' }}>Save staff</button>
+      <button onClick={onSave} disabled={saveState !== 'dirty'} onMouseEnter={() => setSaveHover(true)} onMouseLeave={() => setSaveHover(false)} style={{ marginTop: 4, fontFamily: 'inherit', fontSize: 13.5, fontWeight: 700, color: '#fff', background: saveState === 'dirty' ? (saveHover ? '#E80E6C' : accent) : '#E5E7EB', border: 'none', borderRadius: 10, padding: '11px 0', cursor: saveState === 'dirty' ? 'pointer' : 'default', boxShadow: saveState === 'dirty' && saveHover ? `0 4px 14px ${accent}55` : 'none', transition: 'background .12s, box-shadow .12s' }}>Save staff</button>
     </div>
   </>
 }

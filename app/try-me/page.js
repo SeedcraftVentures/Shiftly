@@ -42,8 +42,8 @@ const RULES = [
 ]
 const TIP = Object.fromEntries(RULES.map((r) => [r.key, r.tip]))
 function RuleRow({ marker, color, label, detail, tip }) {
-  const row = <span style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 13.5, cursor: tip ? 'help' : 'default' }}>
-    <span style={{ width: 20, height: 20, borderRadius: 99, flexShrink: 0, background: color + '18', color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800 }}>{marker}</span>
+  const row = <span style={{ display: 'flex', alignItems: 'center', gap: 11, fontSize: 13.5, cursor: tip ? 'help' : 'default' }}>
+    <span style={{ width: 22, height: 22, borderRadius: 7, flexShrink: 0, background: color, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12.5, fontWeight: 800 }}>{marker}</span>
     <span style={{ color: '#374151', lineHeight: 1.4 }}><b style={{ color: '#111827', borderBottom: tip ? '1px dotted #C4C4CC' : 'none' }}>{label}</b>{detail ? <span style={{ color: '#92660B' }}> · {detail}</span> : ''}</span>
   </span>
   return tip ? <Tip text={tip} style={{ display: 'flex' }}>{row}</Tip> : row
@@ -197,7 +197,7 @@ export default function TryMe() {
         onRestart={() => setEst(null)} />
 
       {cur.tab === 'shifts' && <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 18, alignItems: 'start' }}>
-        <div style={{ ...panel, position: 'sticky', top: 16 }}><ShiftInspector key={selShift || 'none'} shift={shiftObj} patch={(p) => patchShift(selShift, p)} onDelete={() => removeShift(selShift)} saveState={shiftSave} onSave={saveShift} accent={PINK} cfg={cfg} /></div>
+        <div style={{ ...panel, position: 'sticky', top: 16 }}><ShiftInspector key={selShift || 'none'} shift={shiftObj} patch={(p) => patchShift(selShift, p)} onDelete={() => removeShift(selShift)} saveState={shiftSave} onSave={saveShift} accent={PINK} cfg={cfg} tips /></div>
         <div style={panel}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
             <span style={{ fontSize: 14, fontWeight: 800 }}>Your shifts <span style={{ color: '#9CA3AF', fontWeight: 600 }}>· {shifts.length}</span></span>
@@ -266,7 +266,7 @@ function RulesPanel() {
     <div style={{ fontSize: 15, fontWeight: 800 }}>Every Shiftly rota is built fair</div>
     <div style={{ fontSize: 13, color: '#6B7280', margin: '3px 0 16px' }}>Anyone can fill a grid. Shiftly fills it fairly, every time <span style={{ color: '#9CA3AF' }}>(hover a rule to see what it means)</span>:</div>
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {RULES.map((r) => <RuleRow key={r.key} marker="•" color={PINK} label={r.label} tip={r.tip} />)}
+      {RULES.map((r) => <RuleRow key={r.key} marker="✓" color={PINK} label={r.label} tip={r.tip} />)}
     </div>
     <div style={{ marginTop: 16, fontSize: 12.5, color: '#9CA3AF' }}>Generate the rota above and we’ll prove every one.</div>
   </div>
@@ -319,10 +319,10 @@ function Finish({ est, onRestart }) {
 
 function Picker({ onPick }) {
   return <HeatGlow as="div" palette={SHIFTLY_PALETTE} style={{ fontFamily: FONT, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-    <div className="tmUp" style={{ maxWidth: 600, width: '100%', background: '#fff', color: '#111827', borderRadius: 24, padding: '40px 36px', textAlign: 'center', boxShadow: '0 30px 80px rgba(17,24,39,.30)' }}>
-      <div style={{ fontSize: 12, fontWeight: 800, color: PINK, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>Try it free · no sign-up</div>
-      <h1 style={{ fontSize: 31, fontWeight: 800, letterSpacing: -0.6, margin: '0 0 12px', lineHeight: 1.12 }}>See Shiftly build a rota, in under a minute.</h1>
-      <p style={{ fontSize: 15, color: '#6B7280', maxWidth: 460, margin: '0 auto 26px', lineHeight: 1.55 }}>Pick a kind of place and we’ll walk you through building a real week’s rota, the same way you would for your own business.</p>
+    <div className="tmUp" style={{ maxWidth: 660, width: '100%', background: '#fff', color: '#111827', borderRadius: 26, padding: '52px 48px', textAlign: 'center', boxShadow: '0 30px 80px rgba(17,24,39,.30)' }}>
+      <div style={{ fontSize: 12.5, fontWeight: 800, color: PINK, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 14 }}>Try it free · no sign-up</div>
+      <h1 style={{ fontFamily: "'Cal Sans', system-ui, sans-serif", fontSize: 44, fontWeight: 600, letterSpacing: -0.5, margin: '0 0 14px', lineHeight: 1.08 }}>See Shiftly build a rota, in under a minute.</h1>
+      <p style={{ fontSize: 16, color: '#6B7280', maxWidth: 480, margin: '0 auto 30px', lineHeight: 1.55 }}>Pick a kind of place and we’ll walk you through building a real week’s rota, the same way you would for your own business.</p>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
         {ESTS.map((e) => <button key={e.id} onClick={() => onPick(e)} style={{ fontFamily: 'inherit', background: '#FAFAFB', borderRadius: 14, textAlign: 'left', cursor: 'pointer', border: '1px solid #ECECEF', padding: 16, transition: 'transform .12s, box-shadow .12s, border-color .12s' }}
           onMouseEnter={(ev) => { ev.currentTarget.style.transform = 'translateY(-3px)'; ev.currentTarget.style.boxShadow = `0 10px 24px ${PINK}22`; ev.currentTarget.style.borderColor = PINK }}

@@ -33,6 +33,17 @@ export const T = {
   ring: (hex) => `0 0 0 3px ${hex}33`,
 }
 
+// ── Tip (hover tooltip) ─────────────────────────────────────────────────────────
+// Wrap any element; pass `text`. `on` lets callers gate it (e.g. demo only).
+export function Tip({ text, children, on = true, style }) {
+  const [show, setShow] = useState(false)
+  if (!on || !text) return children
+  return <span onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)} style={{ position: 'relative', display: 'inline-flex', ...style }}>
+    {children}
+    {show && <span style={{ position: 'absolute', bottom: 'calc(100% + 9px)', left: '50%', transform: 'translateX(-50%)', background: '#111827', color: '#fff', fontSize: 11.5, fontWeight: 600, lineHeight: 1.4, padding: '7px 10px', borderRadius: 8, width: 'max-content', maxWidth: 230, textAlign: 'center', zIndex: 80, boxShadow: '0 6px 18px rgba(0,0,0,.22)', pointerEvents: 'none' }}>{text}<span style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', borderWidth: '5px 5px 0', borderStyle: 'solid', borderColor: '#111827 transparent transparent' }} /></span>}
+  </span>
+}
+
 // ── Card ──────────────────────────────────────────────────────────────────────
 export function Card({ children, pad = 20, raised, style, ...props }) {
   return <div {...props} style={{ background: '#fff', border: `1px solid ${T.line}`, borderRadius: T.r.lg, padding: pad, boxShadow: raised ? T.shadow.lg : T.shadow.md, ...style }}>{children}</div>
