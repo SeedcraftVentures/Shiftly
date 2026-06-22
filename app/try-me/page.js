@@ -137,8 +137,8 @@ export default function TryMe() {
   const steps = [
     { tab: 'shifts', title: `Here’s ${est.name}’s week`, body: `I’ve set up the shifts a typical ${est.short} runs — an opener and a closer every open day. Click any shift to tweak its hours or days, or just carry on.` },
     { tab: 'team', title: 'Meet the team', body: 'Each row shows when someone can work — pink means available. Click a name to change their hours, keyholder status or availability.' },
-    { tab: 'rota', title: 'Now the clever bit', body: 'Hit generate and Shiftly builds a fair week that covers every shift — with a keyholder on every open and close.', generate: true },
-    { tab: 'rota', title: 'That’s the week, sorted', body: `Built in seconds. This is exactly how it works for your place — want to make it yours?`, done: true },
+    { tab: 'rota', title: 'Now the whole point — fairness', body: 'Anyone can fill a grid. Shiftly builds it fair: 11h rest between shifts, never more than 5 days in a row, a keyholder on every open & close, and hours shared evenly. Hit generate and see it prove it.', generate: true },
+    { tab: 'rota', title: 'That’s the week, sorted', body: `Built in seconds — and fair by the rules below. This is exactly how it works for your place. Want to make it yours?`, done: true },
   ]
   const cur = steps[step]
   const shiftObj = shifts.find((s) => s.id === selShift)
@@ -217,16 +217,16 @@ function Progress({ steps, step }) {
 
 function Coach({ step, cur, generating, onBack, onNext, onRestart }) {
   const nextLabel = cur.generate ? (generating ? 'Building…' : 'Generate the rota →') : cur.done ? 'Join the waitlist →' : 'Next →'
-  return <div style={{ background: '#111827', color: '#fff', borderRadius: 16, padding: '20px 22px', boxShadow: '0 8px 28px rgba(17,24,39,.18)', display: 'flex', alignItems: 'center', gap: 18, marginBottom: 20, flexWrap: 'wrap' }}>
-    <div style={{ width: 44, height: 44, borderRadius: 99, flexShrink: 0, background: PINK, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800 }}>S</div>
+  return <div style={{ background: '#fff', border: '1px solid #ECECEF', borderLeft: `4px solid ${PINK}`, borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18, flexWrap: 'wrap' }}>
+    <div style={{ width: 32, height: 32, borderRadius: 99, flexShrink: 0, background: PINK + '16', color: PINK, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800 }}>S</div>
     <div style={{ flex: 1, minWidth: 220 }}>
-      <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 3 }}>{cur.title}</div>
-      <div style={{ fontSize: 14, color: '#D1D5DB', lineHeight: 1.5 }}>{cur.body}</div>
+      <div style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 2, color: '#111827' }}>{cur.title}</div>
+      <div style={{ fontSize: 13, color: '#6B7280', lineHeight: 1.5 }}>{cur.body}</div>
     </div>
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-      {step > 0 && !cur.done && <button onClick={onBack} style={{ fontFamily: 'inherit', fontSize: 14, fontWeight: 700, color: '#D1D5DB', background: 'transparent', border: '1px solid #374151', borderRadius: 10, padding: '12px 18px', cursor: 'pointer' }}>Back</button>}
-      {cur.done && <button onClick={onRestart} style={{ fontFamily: 'inherit', fontSize: 14, fontWeight: 700, color: '#D1D5DB', background: 'transparent', border: '1px solid #374151', borderRadius: 10, padding: '12px 18px', cursor: 'pointer' }}>Try another</button>}
-      <button onClick={onNext} disabled={generating} style={{ ...primaryBtn(generating), fontSize: 15, padding: '12px 24px' }}>{nextLabel}</button>
+      {step > 0 && !cur.done && <button onClick={onBack} style={{ fontFamily: 'inherit', fontSize: 13.5, fontWeight: 700, color: '#6B7280', background: '#fff', border: '1px solid #E5E7EB', borderRadius: 9, padding: '10px 16px', cursor: 'pointer' }}>Back</button>}
+      {cur.done && <button onClick={onRestart} style={{ fontFamily: 'inherit', fontSize: 13.5, fontWeight: 700, color: '#6B7280', background: '#fff', border: '1px solid #E5E7EB', borderRadius: 9, padding: '10px 16px', cursor: 'pointer' }}>Try another</button>}
+      <button onClick={onNext} disabled={generating} style={{ ...primaryBtn(generating), fontSize: 14, padding: '11px 20px' }}>{nextLabel}</button>
     </div>
   </div>
 }
@@ -282,6 +282,19 @@ function Result({ result, staff, team, short, onJoin }) {
         </table>
       </div>
     </div>
+    {result.compliance?.length > 0 && <div style={{ ...panel, marginTop: 16 }}>
+      <div style={{ fontSize: 15, fontWeight: 800 }}>Built fair — automatically</div>
+      <div style={{ fontSize: 12.5, color: '#6B7280', margin: '3px 0 14px' }}>Anyone can fill a grid. Every Shiftly rota is built to the rules — here’s how this one did:</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10 }}>
+        {result.compliance.map((r) => <div key={r.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '11px 13px', borderRadius: 10, background: r.ok ? '#F0FDF4' : '#FFFBEB', border: `1px solid ${r.ok ? '#BBF7D0' : '#FDE68A'}` }}>
+          <span style={{ width: 20, height: 20, borderRadius: 99, flexShrink: 0, background: r.ok ? '#16A34A' : '#F59E0B', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800 }}>{r.ok ? '✓' : '!'}</span>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#111827', lineHeight: 1.35 }}>{r.label}</div>
+            {!r.ok && r.detail && <div style={{ fontSize: 11.5, color: '#92660B', marginTop: 2 }}>{r.detail}</div>}
+          </div>
+        </div>)}
+      </div>
+    </div>}
     <div style={{ ...panel, marginTop: 16, background: '#111827', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
       <div>
         <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>Want this for your {short}?</div>
