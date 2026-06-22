@@ -244,7 +244,7 @@ export default function RotaBuilder() {
         const td = await tr.json(), sd = await sr.json(), std = await str.json(), shd = await shr.json()
         setTeams((Array.isArray(td) ? td : []).map((t, i) => ({ id: t.id, name: t.name, color: TEAM_COLORS[i % TEAM_COLORS.length] })))
         setSaved(Array.isArray(sd) ? sd : [])
-        setStaff((Array.isArray(std) ? std : []).map((s) => ({ id: s.id, name: s.name, team_id: s.team_id, contracted_hours: s.contracted_hours || 0, is_keyholder: !!s.is_keyholder })))
+        setStaff((Array.isArray(std) ? std : []).map((s) => ({ id: s.id, name: s.name, team_id: s.team_id, contracted_hours: s.contracted_hours || 0, is_keyholder: !!s.keyholder })))
         setShifts(Array.isArray(shd) ? shd : [])
       } catch (e) { console.error(e) } finally { setLoading(false) }
     })()
