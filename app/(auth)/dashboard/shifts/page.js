@@ -394,15 +394,20 @@ function MatrixCell({ shifts, dayIndex, color, cfg }) {
   if (cov === null) return <div style={{ height: 8, borderRadius: 99, background: '#F4F4F6' }} />
   return <div style={{ height: 8, borderRadius: 99, background: color + '20', overflow: 'hidden' }}><div style={{ width: `${Math.round(cov * 100)}%`, height: '100%', background: color, borderRadius: 99 }} /></div>
 }
-function RowFragment({ team, ts, pct, open, toggle, onApply, cfg }) {
+function RowFragment({ team, ts, pct, ok, onToggleOk, open, toggle, onApply, cfg }) {
+  const low = pct < 100, calm = !low || ok
   return <>
     <button onClick={toggle} style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: '#111827', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0 }}>
       <span style={{ width: 9, height: 9, borderRadius: 99, background: team.color, flexShrink: 0 }} />{team.name}
       <span style={{ color: '#C4C4CC', fontSize: 15, transform: open ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}>›</span>
     </button>
     {ALL.map((d) => <div key={d}><MatrixCell shifts={ts} dayIndex={d} color={team.color} cfg={cfg} /></div>)}
-    <span style={{ fontSize: 12.5, fontWeight: 800, color: pct === 100 ? '#16A34A' : team.color, textAlign: 'right' }}>{pct}%</span>
+    <span title={ok ? 'Marked as intentional' : undefined} style={{ fontSize: 12.5, fontWeight: 800, color: pct === 100 ? '#16A34A' : ok ? '#9CA3AF' : team.color, textAlign: 'right' }}>{ok && low ? '✓ ' : ''}{pct}%</span>
     {open && <div style={{ gridColumn: '1 / -1', background: '#FAFAFB', border: '1px solid #ECECEF', borderRadius: 12, padding: 16, margin: '4px 0 8px', display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+      {low && <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: ok ? '#F0FDF4' : '#fff', border: `1px solid ${ok ? '#BBF7D0' : '#ECECEF'}`, borderRadius: 10, padding: '10px 14px' }}>
+        <span style={{ fontSize: 12.5, fontWeight: 500, color: ok ? '#15803D' : '#6B7280' }}>{ok ? '✓ Marked as intentional — the gaps below are expected.' : `${team.name} covers ${pct}% of opening hours. If that's deliberate (e.g. this team doesn't work mornings), mark it as fine.`}</span>
+        <button onClick={onToggleOk} style={{ flexShrink: 0, fontFamily: 'inherit', fontSize: 12.5, fontWeight: 700, color: ok ? '#6B7280' : '#fff', background: ok ? '#fff' : team.color, border: ok ? '1px solid #E5E7EB' : 'none', borderRadius: 8, padding: '7px 14px', cursor: 'pointer' }}>{ok ? 'Undo' : 'Looks right'}</button>
+      </div>}
       <div style={{ flex: 1, minWidth: 240 }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 10 }}>{team.name} this week</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -414,12 +419,19 @@ function RowFragment({ team, ts, pct, open, toggle, onApply, cfg }) {
         <AxisTicks cfg={cfg} />
       </div>
       <div style={{ width: 260, flexShrink: 0, borderLeft: '1px solid #ECECEF', paddingLeft: 20 }}>
-        <GapList shifts={ts} teamId={team.id} onApply={onApply} cfg={cfg} />
+        {ok
+          ? <div style={{ fontSize: 12.5, color: '#9CA3AF', lineHeight: 1.6, paddingTop: 4 }}>Nothing to fill — this week is set up the way you want.<br /><button onClick={onToggleOk} style={{ fontFamily: 'inherit', fontSize: 12, fontWeight: 600, color: team.color, background: 'none', border: 'none', padding: '8px 0 0', cursor: 'pointer' }}>Show suggestions anyway</button></div>
+          : <GapList shifts={ts} teamId={team.id} onApply={onApply} cfg={cfg} />}
       </div>
     </div>}
   </>
 }
 function AllMatrix({ teams, shifts, expanded, setExpanded, onApply, cfg }) {
+  // a manager can mark a deliberately-partial week (e.g. the bar opens at midday) as intentional,
+  // which calms the coverage % and silences the gap nags. Stored locally — no schema/scheduler change.
+  const [okTeams, setOkTeams] = useState(() => new Set())
+  useEffect(() => { try { setOkTeams(new Set(JSON.parse(localStorage.getItem('shiftly_coverage_ok') || '[]'))) } catch { } }, [])
+  const toggleOk = (id) => setOkTeams((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); try { localStorage.setItem('shiftly_coverage_ok', JSON.stringify([...n])) } catch { } return n })
   return <div style={{ background: '#fff', border: '1px solid #ECECEF', borderRadius: 14, padding: 18 }}>
     <div style={{ display: 'grid', gridTemplateColumns: '150px repeat(7, 1fr) 56px', gap: 9, alignItems: 'center' }}>
       <span />
@@ -427,7 +439,7 @@ function AllMatrix({ teams, shifts, expanded, setExpanded, onApply, cfg }) {
       <span style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', textAlign: 'right' }}>COVER</span>
       {teams.map((t) => {
         const ts = shifts.filter((s) => s.team_id === t.id)
-        return <RowFragment key={t.id} team={t} ts={ts} pct={coveragePct(ts, cfg)} open={expanded === t.id} toggle={() => setExpanded(expanded === t.id ? null : t.id)} onApply={onApply} cfg={cfg} />
+        return <RowFragment key={t.id} team={t} ts={ts} pct={coveragePct(ts, cfg)} ok={okTeams.has(t.id)} onToggleOk={() => toggleOk(t.id)} open={expanded === t.id} toggle={() => setExpanded(expanded === t.id ? null : t.id)} onApply={onApply} cfg={cfg} />
       })}
     </div>
     <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid #F0F0F2' }}><AxisTicks cfg={cfg} ml={159} /></div>
