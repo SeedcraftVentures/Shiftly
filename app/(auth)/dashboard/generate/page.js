@@ -483,6 +483,11 @@ export default function RotaBuilder() {
           </div>
         </div>}
 
+        {result.relaxed_teams?.length > 0 && <div style={{ ...card, background: '#FFFBEB', border: '1px solid #FDE68A' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#92660B', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 6 }}>Some rules relaxed to build</div>
+          <div style={{ fontSize: 12.5, color: '#374151', lineHeight: 1.5 }}><b>{result.relaxed_teams.join(', ')}</b> couldn’t be scheduled within every rule, so limits were eased (e.g. allowing up to 7 days in a row) to still produce a rota. That’s why a max-consecutive or rest flag may appear above. Adding availability or staff to {result.relaxed_teams.length > 1 ? 'these teams' : 'this team'} usually removes the need.</div>
+        </div>}
+
         {result.skipped?.length > 0 && <div style={{ ...card, background: '#FEF2F2', border: '1px solid #FECACA' }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: '#B91C1C', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 8 }}>Couldn’t schedule {result.skipped.length} team{result.skipped.length > 1 ? 's' : ''}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
