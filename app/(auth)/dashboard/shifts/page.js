@@ -110,11 +110,17 @@ function GapChip({ sug, onApply, accent }) {
     <span style={{ color: accent, fontWeight: 700 }}>+ add</span>
   </button>
 }
-function GapStrip({ shifts, onApply, accent, cfg }) {
+function GapStrip({ shifts, onApply, accent, cfg, ok, onToggleOk }) {
   const gaps = smartGaps(shifts, cfg)
   if (!gaps.length) return <div style={{ fontSize: 12.5, fontWeight: 600, color: '#16A34A' }}>✓ Every open hour is covered.</div>
+  // a deliberately-partial week (e.g. a team that doesn't work mornings) can be marked intentional —
+  // it calms the coverage % and quietens these suggestions, with an escape hatch to show them again.
+  if (ok) return <div style={{ fontSize: 12.5, color: '#9CA3AF', lineHeight: 1.6 }}>✓ Marked as intentional — nothing to fill.{onToggleOk && <><br /><button onClick={onToggleOk} style={{ fontFamily: FONT, fontSize: 12, fontWeight: 600, color: accent, background: 'none', border: 'none', padding: '8px 0 0', cursor: 'pointer' }}>Show suggestions anyway</button></>}</div>
   return <div>
-    <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 10 }}>{gaps.length} suggestion{gaps.length === 1 ? '' : 's'} to fill gaps</div>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10 }}>
+      <span style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase' }}>{gaps.length} suggestion{gaps.length === 1 ? '' : 's'} to fill gaps</span>
+      {onToggleOk && <button onClick={onToggleOk} title="This team's week is partial on purpose" style={{ fontFamily: FONT, fontSize: 11.5, fontWeight: 700, color: accent, background: 'none', border: 'none', padding: 0, cursor: 'pointer', whiteSpace: 'nowrap' }}>This looks right</button>}
+    </div>
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>{gaps.map((g, i) => <GapChip key={i} sug={g} onApply={onApply} accent={accent} />)}</div>
   </div>
 }
@@ -426,12 +432,7 @@ function RowFragment({ team, ts, pct, ok, onToggleOk, open, toggle, onApply, cfg
     </div>}
   </>
 }
-function AllMatrix({ teams, shifts, expanded, setExpanded, onApply, cfg }) {
-  // a manager can mark a deliberately-partial week (e.g. the bar opens at midday) as intentional,
-  // which calms the coverage % and silences the gap nags. Stored locally — no schema/scheduler change.
-  const [okTeams, setOkTeams] = useState(() => new Set())
-  useEffect(() => { try { setOkTeams(new Set(JSON.parse(localStorage.getItem('shiftly_coverage_ok') || '[]'))) } catch { } }, [])
-  const toggleOk = (id) => setOkTeams((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); try { localStorage.setItem('shiftly_coverage_ok', JSON.stringify([...n])) } catch { } return n })
+function AllMatrix({ teams, shifts, expanded, setExpanded, onApply, cfg, okTeams, onToggleOk }) {
   return <div style={{ background: '#fff', border: '1px solid #ECECEF', borderRadius: 14, padding: 18 }}>
     <div style={{ display: 'grid', gridTemplateColumns: '150px repeat(7, 1fr) 56px', gap: 9, alignItems: 'center' }}>
       <span />
@@ -439,7 +440,7 @@ function AllMatrix({ teams, shifts, expanded, setExpanded, onApply, cfg }) {
       <span style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', textAlign: 'right' }}>COVER</span>
       {teams.map((t) => {
         const ts = shifts.filter((s) => s.team_id === t.id)
-        return <RowFragment key={t.id} team={t} ts={ts} pct={coveragePct(ts, cfg)} ok={okTeams.has(t.id)} onToggleOk={() => toggleOk(t.id)} open={expanded === t.id} toggle={() => setExpanded(expanded === t.id ? null : t.id)} onApply={onApply} cfg={cfg} />
+        return <RowFragment key={t.id} team={t} ts={ts} pct={coveragePct(ts, cfg)} ok={okTeams.has(t.id)} onToggleOk={() => onToggleOk(t.id)} open={expanded === t.id} toggle={() => setExpanded(expanded === t.id ? null : t.id)} onApply={onApply} cfg={cfg} />
       })}
     </div>
     <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid #F0F0F2' }}><AxisTicks cfg={cfg} ml={159} /></div>
@@ -458,17 +459,18 @@ function AddPicker({ teams, onPick }) {
 
 // ── team rota-grid preview (same look as the rota builder; one row per shift pattern) ──
 const RTH = { fontSize: 11, fontWeight: 700, color: '#6B7280', padding: '6px 6px 10px', textAlign: 'center' }
-const RTH_STAFF = { ...RTH, textAlign: 'left', position: 'sticky', left: 0, background: '#fff', minWidth: 150 }
+const RTH_STAFF = { ...RTH, textAlign: 'left', position: 'sticky', left: 0, background: '#fff', minWidth: 160 }
 const RTD = { padding: '4px 4px', verticalAlign: 'top' }
 const RTD_STAFF = { padding: '4px 4px', verticalAlign: 'top', position: 'sticky', left: 0, background: '#fff' }
 function TeamRotaGrid({ groups, cfg, selectedId, onSelect, selectMode, selectedIds, onToggle }) {
   const [hoverId, setHoverId] = useState(null)
   const interactive = !!onSelect || !!selectMode
-  const cell = { padding: '5px 6px', verticalAlign: 'middle' }
+  // match the rota builder grid exactly: name col 160, table minWidth 800, cell padding 4px.
+  const cell = { padding: '4px 4px', verticalAlign: 'middle' }
   return <div style={{ overflowX: 'auto' }}>
-    <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640, tableLayout: 'fixed' }}>
-      <colgroup><col style={{ width: 124 }} />{DAYS.map((d) => <col key={d} />)}</colgroup>
-      <thead><tr><th style={{ ...RTH_STAFF, minWidth: 124 }} />{DAYS.map((d) => <th key={d} style={RTH}><div style={{ fontWeight: 800, color: '#374151' }}>{d}</div></th>)}</tr></thead>
+    <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 800, tableLayout: 'fixed' }}>
+      <colgroup><col style={{ width: 160 }} />{DAYS.map((d) => <col key={d} />)}</colgroup>
+      <thead><tr><th style={{ ...RTH_STAFF, minWidth: 160 }} />{DAYS.map((d) => <th key={d} style={RTH}><div style={{ fontWeight: 800, color: '#374151' }}>{d}</div></th>)}</tr></thead>
       <tbody>
         {groups.map((g) => <Fragment key={g.name}>
           {groups.length > 1 && <tr><td colSpan={8} style={{ padding: '6px 0 10px' }}>
@@ -507,9 +509,9 @@ function TeamRotaGrid({ groups, cfg, selectedId, onSelect, selectMode, selectedI
                 </td>
                 {ALL.map((d) => <td key={d} style={{ ...cell, background: active ? rowBg : 'transparent', borderTopRightRadius: active && first && d === 6 ? 10 : 0, borderBottomRightRadius: active && last && d === 6 ? 10 : 0 }}>
                   {s.days.includes(d)
-                    ? <div style={{ background: blk.background, borderRadius: 10, padding: '9px 8px', boxShadow: blk.shadow, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, minHeight: 30 }}>
-                        <div style={{ color: blk.color, fontWeight: 700, fontSize: 11, lineHeight: 1.2, whiteSpace: 'nowrap' }}>{fmt(s.start)}–{fmt(s.end)}</div>
-                        {first && s.keyholder && <div style={{ color: blk.subColor, fontSize: 10 }}>🔑</div>}
+                    ? <div style={{ background: blk.background, borderRadius: 10, padding: '7px 10px', boxShadow: blk.shadow, height: 38, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                        <div style={{ color: blk.color, fontWeight: 700, fontSize: 11, lineHeight: 1.25, whiteSpace: 'nowrap' }}>{fmt(s.start)}–{fmt(s.end)}</div>
+                        {first && s.keyholder && <div style={{ color: blk.subColor, fontSize: 9.5 }}>🔑 keyholder</div>}
                       </div>
                     : null}
                 </td>)}
@@ -534,6 +536,11 @@ export default function ShiftsPage() {
   const [expanded, setExpanded] = useState(null)
   const [selectMode, setSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState(() => new Set())
+  // teams whose deliberately-partial coverage the manager has marked intentional (shared by the
+  // all-teams matrix and the single-team view). Stored locally — no schema/scheduler change.
+  const [okTeams, setOkTeams] = useState(() => new Set())
+  useEffect(() => { try { setOkTeams(new Set(JSON.parse(localStorage.getItem('shiftly_coverage_ok') || '[]'))) } catch { } }, [])
+  const toggleOk = useCallback((id) => setOkTeams((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); try { localStorage.setItem('shiftly_coverage_ok', JSON.stringify([...n])) } catch { } return n }), [])
 
   useEffect(() => {
     (async () => {
@@ -614,6 +621,8 @@ export default function ShiftsPage() {
   const tabs = [{ id: 'all', name: 'All teams' }, ...teams]
   const panel = { background: '#fff', border: '1px solid #ECECEF', borderRadius: 14, padding: 20, boxShadow: '0 3px 10px rgba(17,24,39,.06), 0 1px 2px rgba(17,24,39,.04)' }
   const teamName = teams.find((t) => t.id === teamId)?.name || ''
+  const teamOk = okTeams.has(teamId)
+  const teamPct = coveragePct(teamShifts, cfg)
 
   return <div style={{ fontFamily: FONT, background: '#FAFAFB', minHeight: '100vh', color: '#111827' }}>
     <div style={{ maxWidth: 1240, margin: '0 auto', padding: '20px 24px 0' }}>
@@ -633,7 +642,7 @@ export default function ShiftsPage() {
     {isAll ? (
       <div style={{ maxWidth: 1240, margin: '0 auto', padding: '4px 24px 40px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 16 }}><AddPicker teams={teams} onPick={(tId) => addShift(tId)} /></div>
-        <AllMatrix teams={teams} shifts={shifts} expanded={expanded} setExpanded={setExpanded} onApply={applySuggestion} cfg={cfg} />
+        <AllMatrix teams={teams} shifts={shifts} expanded={expanded} setExpanded={setExpanded} onApply={applySuggestion} cfg={cfg} okTeams={okTeams} onToggleOk={toggleOk} />
         <div style={{ fontSize: 11.5, color: '#9CA3AF', margin: '12px 0 24px', textAlign: 'center' }}>Click a team row to see its week and fill gaps.</div>
         {/* full rota — every team's shifts in one grid */}
         <div style={panel}>
@@ -668,7 +677,7 @@ export default function ShiftsPage() {
           {/* coverage + smart gaps, full-width under the grid */}
           <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #ECECEF', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 10 }}>Week at a glance · <span style={{ color: coveragePct(teamShifts, cfg) === 100 ? '#16A34A' : accent }}>{coveragePct(teamShifts, cfg)}%</span></div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 10 }}>Week at a glance · <span style={{ color: teamPct === 100 ? '#16A34A' : teamOk ? '#9CA3AF' : accent }}>{teamOk && teamPct < 100 ? '✓ ' : ''}{teamPct}%</span></div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {ALL.map((d) => <div key={d} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ width: 28, fontSize: 11, fontWeight: 700, color: cfg.business[d] ? '#6B7280' : '#C4C4CC' }}>{DAYS[d]}</span>
@@ -677,7 +686,7 @@ export default function ShiftsPage() {
               </div>
               <AxisTicks cfg={cfg} />
             </div>
-            <div><GapStrip shifts={teamShifts} onApply={applyGap} accent={accent} cfg={cfg} /></div>
+            <div><GapStrip shifts={teamShifts} onApply={applyGap} accent={accent} cfg={cfg} ok={teamOk} onToggleOk={() => toggleOk(teamId)} /></div>
           </div>
         </div>
       </div>
