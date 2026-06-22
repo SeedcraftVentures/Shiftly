@@ -202,7 +202,7 @@ function AvailabilityEditor({ s, patch, accent, cfg }) {
   const [editDay, setEditDay] = useState(null)
   const setDay = (d, val) => { const a = { ...(s.avail || {}) }; if (val === false) delete a[d]; else a[d] = val; patch({ avail: a }) }
   const allWeekOn = cfg.openDays.every((d) => s.avail?.[d] === true)
-  const seg = (act, lbl, onClick) => <button onClick={onClick} style={{ fontSize: 11, fontWeight: act ? 700 : 600, padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', background: act ? '#fff' : 'transparent', color: act ? accent : '#9CA3AF', boxShadow: act ? '0 1px 2px rgba(0,0,0,.08)' : 'none', transition: 'all .12s' }}>{lbl}</button>
+  const seg = (act, lbl, onClick) => <button onClick={onClick} title={lbl === 'Set hours' ? 'Set custom hours for this day' : lbl === 'All day' ? 'Available the whole day' : undefined} style={{ fontSize: 11, fontWeight: act ? 700 : 600, padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', background: act ? '#fff' : 'transparent', color: act ? accent : '#9CA3AF', boxShadow: act ? '0 1px 2px rgba(0,0,0,.08)' : 'none', transition: 'all .12s' }}>{lbl}</button>
   return <div style={{ borderTop: '1px solid #F0F0F2', paddingTop: 16 }}>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
       <Label>Availability</Label>
@@ -233,7 +233,7 @@ function AvailabilityEditor({ s, patch, accent, cfg }) {
           {on && !allDay && editing && <div style={{ marginTop: 10, paddingLeft: 46, display: 'flex', alignItems: 'flex-end', gap: 12 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}><span style={{ fontSize: 12.5, fontWeight: 700 }}>{fmt(w[0])}</span><span style={{ fontSize: 12.5, fontWeight: 700 }}>{fmt(w[1])}</span></div>
-              <TimeRange start={w[0]} end={w[1]} onChange={(x, y) => setDay(d, [x, y])} accent={accent} domain={cfg.slider} />
+              <div title="Drag the handles to set the hours, then Save"><TimeRange start={w[0]} end={w[1]} onChange={(x, y) => setDay(d, [x, y])} accent={accent} domain={cfg.slider} /></div>
             </div>
             <button onClick={() => setEditDay(null)} style={{ fontFamily: 'inherit', fontSize: 12, fontWeight: 700, color: '#fff', background: accent, border: 'none', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', flexShrink: 0 }}>Save</button>
           </div>}
@@ -264,15 +264,16 @@ function Money({ value, onChange, step = '0.25', suffix = '' }) {
     {suffix && <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, fontWeight: 600, color: lit ? PINK : '#9CA3AF', pointerEvents: 'none', transition: 'color .12s' }}>{suffix}</span>}
   </div>
 }
-export function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg }) {
+export function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg, hidePay = false, readOnly = false }) {
+  const [saveHover, setSaveHover] = useState(false)
   if (!s) return <div style={{ color: '#9CA3AF', fontSize: 13, textAlign: 'center', marginTop: 70, lineHeight: 1.6 }}>Select a staff member to<br />edit their details here.</div>
   return <>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-      <span style={{ fontSize: 15, fontWeight: 800 }}>Edit staff</span>
-      <button onClick={onDelete} style={{ fontSize: 12, fontWeight: 600, color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer' }}>Delete</button>
+      <span style={{ fontSize: 15, fontWeight: 800 }}>{readOnly ? 'Staff details' : 'Edit staff'}</span>
+      {!readOnly && <button onClick={onDelete} style={{ fontSize: 12, fontWeight: 600, color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer' }}>Delete</button>}
     </div>
-    <div style={{ marginBottom: 18 }}><SaveStatus state={saveState} /></div>
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+    {!readOnly && <div style={{ marginBottom: 18 }}><SaveStatus state={saveState} /></div>}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginTop: readOnly ? 14 : 0 }}>
       <div style={{ display: 'flex', gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0 }}><FieldLabel>Name</FieldLabel><FieldInput value={s.name} onChange={(e) => patch({ name: e.target.value })} /></div>
         <div style={{ flex: 1, minWidth: 0 }}><FieldLabel>Role</FieldLabel><FieldInput value={s.role || ''} onChange={(e) => patch({ role: e.target.value })} /></div>
@@ -281,7 +282,7 @@ export function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg }
         <div style={{ flex: 1 }}><FieldLabel>Contracted</FieldLabel><Stepper value={s.contracted} onChange={(v) => patch({ contracted: v })} min={0} max={60} suffix="h" /></div>
         <div style={{ flex: 1 }}><FieldLabel>Max / week</FieldLabel><Stepper value={s.max} onChange={(v) => patch({ max: v })} min={0} max={60} suffix="h" /></div>
       </div>
-      <div>
+      {!hidePay && <div>
         <FieldLabel>Pay basis</FieldLabel>
         <div style={{ display: 'inline-flex', background: '#F1F1F4', borderRadius: 9, padding: 3, gap: 2, marginBottom: 14, marginTop: 2 }}>
           {[['hourly', 'Hourly'], ['salary', 'Salary'], ['annualised', 'Annualised']].map(([k, lbl]) => {
@@ -301,7 +302,7 @@ export function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg }
             <div style={{ flex: 1 }}><FieldLabel>Hours / year</FieldLabel><input value={s.annualised_hours || ''} onChange={(e) => patch({ annualised_hours: parseFloat(e.target.value) || 0 })} type="number" step="20" placeholder="1820" style={inputStyle()} /></div>
           </div>
         )}
-      </div>
+      </div>}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div><div style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>Keyholder</div><div style={{ fontSize: 11, color: '#9CA3AF' }}>Can open & close</div></div>
         <Switch on={s.keyholder} onClick={() => patch({ keyholder: !s.keyholder })} accent={accent} />
@@ -310,7 +311,7 @@ export function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg }
       {availableHours(s, cfg) < s.contracted && <div style={{ fontSize: 12, color: '#B91C1C', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 9, padding: '10px 12px', lineHeight: 1.45 }}>
         ⚠ Available <b>{availableHours(s, cfg)}h</b> but contracted <b>{s.contracted}h</b> — {first(s.name) || 'they'} can’t reach their contract. Widen availability or lower the contracted hours.
       </div>}
-      <button onClick={onSave} disabled={saveState !== 'dirty'} style={{ marginTop: 4, fontFamily: 'inherit', fontSize: 13.5, fontWeight: 700, color: '#fff', background: saveState === 'dirty' ? accent : '#E5E7EB', border: 'none', borderRadius: 10, padding: '11px 0', cursor: saveState === 'dirty' ? 'pointer' : 'default' }}>Save staff</button>
+      {!readOnly && <button onClick={onSave} disabled={saveState !== 'dirty'} onMouseEnter={() => setSaveHover(true)} onMouseLeave={() => setSaveHover(false)} style={{ marginTop: 4, fontFamily: 'inherit', fontSize: 13.5, fontWeight: 700, color: '#fff', background: saveState === 'dirty' ? (saveHover ? '#E80E6C' : accent) : '#E5E7EB', border: 'none', borderRadius: 10, padding: '11px 0', cursor: saveState === 'dirty' ? 'pointer' : 'default', boxShadow: saveState === 'dirty' && saveHover ? `0 4px 14px ${accent}55` : 'none', transition: 'background .12s, box-shadow .12s' }}>Save staff</button>}
     </div>
   </>
 }

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback, Fragment } from 'react'
 import { TEAM_COLORS } from '../staff/utils/staffHelpers'
 import { rotaBlock } from '@/lib/rotaColors'
+import { Tip } from '@/app/components/ui/kit'
 
 // ════════════════════════════════════════════════════════════════════════════
 //  SHIFTS PAGE (live) — locked lab design wired to /api/teams + /api/location + /api/shifts
@@ -249,9 +250,10 @@ function SaveStatus({ state }) {
   const c = state === 'saved' ? { c: '#16A34A', t: '✓ Saved' } : state === 'dirty' ? { c: AMBER, t: '• Unsaved changes' } : { c: '#9CA3AF', t: 'Up to date' }
   return <span style={{ fontSize: 11.5, fontWeight: 600, color: c.c }}>{c.t}</span>
 }
-export function Inspector({ shift, patch, onDelete, saveState, onSave, accent, cfg }) {
+export function Inspector({ shift, patch, onDelete, saveState, onSave, accent, cfg, tips = false, readOnly = false }) {
   const curLen = shift ? Math.round((shift.end - shift.start) * 10) / 10 : 0
   const [lenMode, setLenMode] = useState(() => ([4, 8, 12].includes(curLen) ? String(curLen) : 'custom'))
+  const [saveHover, setSaveHover] = useState(false)
   if (!shift) return <div style={{ color: '#9CA3AF', fontSize: 13, textAlign: 'center', marginTop: 70, lineHeight: 1.6 }}>Select a shift to edit<br />its properties here.</div>
   // the pin is an explicit choice; Open/Close snap the times, "No pin" just relabels (no time change).
   const L = shift.end - shift.start
@@ -274,17 +276,17 @@ export function Inspector({ shift, patch, onDelete, saveState, onSave, accent, c
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9 }}>
         <Label>Shift name</Label>
-        <button onClick={onDelete} style={{ fontSize: 12, fontWeight: 600, color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Delete</button>
+        {!readOnly && <button onClick={onDelete} style={{ fontSize: 12, fontWeight: 600, color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Delete</button>}
       </div>
-      <FieldInput value={shift.name} onChange={(e) => patch({ name: e.target.value })} />
+      <Tip text="Rename your shift, or keep the auto name" on={tips} style={{ display: 'block' }}><FieldInput value={shift.name} onChange={(e) => patch({ name: e.target.value })} /></Tip>
     </div>
     <div>
       <Label>Pin to</Label>
-      <div style={segWrap}>
+      <Tip text="Pin it to your opening time, your closing time, or leave it free" on={tips} style={{ display: 'block' }}><div style={segWrap}>
         <Seg active={anchor === 'open'} onClick={() => setAnchor('open')} accent={accent}>Open</Seg>
         <Seg active={anchor === 'none'} onClick={() => setAnchor('none')} accent={accent}>No pin</Seg>
         <Seg active={anchor === 'close'} onClick={() => setAnchor('close')} accent={accent}>Close</Seg>
-      </div>
+      </div></Tip>
     </div>
     <div>
       <Label>Length</Label>
@@ -301,15 +303,15 @@ export function Inspector({ shift, patch, onDelete, saveState, onSave, accent, c
     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12, alignItems: 'end' }}>
       <div><Label>Staff needed</Label><div style={{ marginTop: 9 }}><Stepper value={shift.staff} onChange={(staff) => patch({ staff })} min={1} max={20} /></div></div>
       <div><Label>Keyholder</Label>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 44, marginTop: 9, borderRadius: 9, background: '#fff', border: '1px solid #E5E7EB' }}>
+        <Tip text="Whether this shift must be covered by someone who can lock up" on={tips} style={{ display: 'block' }}><div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 44, marginTop: 9, borderRadius: 9, background: '#fff', border: '1px solid #E5E7EB' }}>
           <Switch on={shift.keyholder} onClick={() => patch({ keyholder: !shift.keyholder })} accent={accent} />
-        </div>
+        </div></Tip>
       </div>
     </div>
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
-      <button onClick={onSave} disabled={saveState !== 'dirty'} style={{ flex: 1, fontFamily: 'inherit', fontSize: 13.5, fontWeight: 700, color: '#fff', background: saveState === 'dirty' ? accent : '#E5E7EB', border: 'none', borderRadius: 10, padding: '12px 0', cursor: saveState === 'dirty' ? 'pointer' : 'default' }}>Save shift</button>
+    {!readOnly && <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
+      <button onClick={onSave} disabled={saveState !== 'dirty'} onMouseEnter={() => setSaveHover(true)} onMouseLeave={() => setSaveHover(false)} style={{ flex: 1, fontFamily: 'inherit', fontSize: 13.5, fontWeight: 700, color: '#fff', background: saveState === 'dirty' ? (saveHover ? '#E80E6C' : accent) : '#E5E7EB', border: 'none', borderRadius: 10, padding: '12px 0', cursor: saveState === 'dirty' ? 'pointer' : 'default', boxShadow: saveState === 'dirty' && saveHover ? `0 4px 14px ${accent}55` : 'none', transition: 'background .12s, box-shadow .12s' }}>Save shift</button>
       <SaveStatus state={saveState} />
-    </div>
+    </div>}
   </div>
 }
 
@@ -495,7 +497,7 @@ export function TeamRotaGrid({ groups, cfg, selectedId, onSelect, selectMode, se
             const n = Math.max(1, s.staff || 1)
             return Array.from({ length: n }, (_, i) => {
               const first = i === 0, last = i === n - 1
-              return <tr key={`${s.id}-${i}`} onClick={() => (interactive ? (selectMode ? onToggle?.(s.id) : onSelect?.(s.id)) : null)} onMouseEnter={() => interactive && setHoverId(s.id)} onMouseLeave={() => interactive && setHoverId(null)} style={{ cursor: interactive ? 'pointer' : 'default', transition: 'background .1s' }}>
+              return <tr key={`${s.id}-${i}`} title={interactive && first && !selectMode ? 'Click to edit this shift in the inspector' : undefined} onClick={() => (interactive ? (selectMode ? onToggle?.(s.id) : onSelect?.(s.id)) : null)} onMouseEnter={() => interactive && setHoverId(s.id)} onMouseLeave={() => interactive && setHoverId(null)} style={{ cursor: interactive ? 'pointer' : 'default', transition: 'background .1s' }}>
                 <td style={{ ...cell, position: 'sticky', left: 0, background: active ? rowBg : '#fff', borderTopLeftRadius: active && first ? 10 : 0, borderBottomLeftRadius: active && last ? 10 : 0, boxShadow: bar ? `inset 3px 0 0 ${bar}` : 'none' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: sel ? 800 : 600 }}>
                     {selectMode

@@ -21,6 +21,56 @@ function availabilityGrid(avail) {
   return grid
 }
 
+// post-hoc fairness/compliance check on the built rota — this is the product's whole point
+function computeCompliance(assignments, staffList) {
+  if (!assignments.length) return []
+  const DI = { Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4, Saturday: 5, Sunday: 6 }
+  const di = (d) => (typeof d === 'number' ? d : (DI[d] ?? 0))
+  const toMin = (t) => { const [h, m] = String(t || '0:0').split(':').map(Number); return (h || 0) * 60 + (m || 0) }
+  const endMin = (a) => { const s = toMin(a.start_time); let e = toMin(a.end_time); if (e <= s) e += 1440; return e }
+  const khSet = new Set(staffList.filter((s) => s.keyholder).map((s) => s.id))
+  const maxOf = Object.fromEntries(staffList.map((s) => [s.id, Number(s.max) || 48]))
+  const sliceDays = (arr) => [...new Set(arr)].map((d) => String(d).slice(0, 3)).join(', ')
+
+  // keyholder present at open & close, each day, across the whole location
+  const byDay = {}
+  for (const a of assignments) (byDay[a.day] ||= []).push(a)
+  const openMiss = [], closeMiss = []
+  for (const [day, list] of Object.entries(byDay)) {
+    const spans = list.map((a) => ({ s: toMin(a.start_time), e: endMin(a), kh: khSet.has(a.staff_id) }))
+    const openT = Math.min(...spans.map((x) => x.s)), closeT = Math.max(...spans.map((x) => x.e))
+    if (!spans.some((x) => x.kh && x.s <= openT + 1)) openMiss.push(day)
+    if (!spans.some((x) => x.kh && x.e >= closeT - 1)) closeMiss.push(day)
+  }
+  const khOk = openMiss.length === 0 && closeMiss.length === 0
+
+  // per-person: rest, consecutive days, within max hours
+  const byStaff = {}
+  for (const a of assignments) (byStaff[a.staff_id] ||= []).push(a)
+  let restViol = 0, consecViol = 0, overMax = 0
+  for (const [sid, list] of Object.entries(byStaff)) {
+    const sorted = [...list].sort((a, b) => (di(a.day) * 1440 + toMin(a.start_time)) - (di(b.day) * 1440 + toMin(b.start_time)))
+    for (let i = 1; i < sorted.length; i++) {
+      const prevEnd = di(sorted[i - 1].day) * 1440 + endMin(sorted[i - 1])
+      const nextStart = di(sorted[i].day) * 1440 + toMin(sorted[i].start_time)
+      if ((nextStart - prevEnd) / 60 < 11 - 0.01) restViol++
+    }
+    const days = [...new Set(list.map((a) => di(a.day)))].sort((a, b) => a - b)
+    let run = 1, maxRun = 1
+    for (let i = 1; i < days.length; i++) { run = days[i] - days[i - 1] === 1 ? run + 1 : 1; maxRun = Math.max(maxRun, run) }
+    if (maxRun > 5) consecViol++
+    const hrs = list.reduce((acc, a) => acc + (endMin(a) - toMin(a.start_time)) / 60, 0)
+    if (hrs > (maxOf[sid] || 48) + 0.01) overMax++
+  }
+
+  return [
+    { key: 'keyholder', label: 'A keyholder opens & closes, every day', ok: khOk, detail: khOk ? '' : `missing ${openMiss.length ? `open (${sliceDays(openMiss)})` : ''}${openMiss.length && closeMiss.length ? '; ' : ''}${closeMiss.length ? `close (${sliceDays(closeMiss)})` : ''}` },
+    { key: 'rest', label: 'At least 11 hours’ rest between shifts', ok: restViol === 0, detail: restViol ? `${restViol} short gap${restViol > 1 ? 's' : ''}` : '' },
+    { key: 'consecutive', label: 'Never more than 5 days in a row', ok: consecViol === 0, detail: consecViol ? `${consecViol} over the limit` : '' },
+    { key: 'maxhours', label: 'Everyone within their max hours', ok: overMax === 0, detail: overMax ? `${overMax} over max` : '' },
+  ]
+}
+
 // Best-effort IP rate limit (per serverless instance — a light guard, not bulletproof).
 const HITS = new Map() // ip -> [timestamps]
 const WINDOW_MS = 60_000, MAX_PER_WINDOW = 12
@@ -77,7 +127,13 @@ export async function POST(request) {
       return out
     }
 
-    // solve each team separately (its staff cover its shifts), then merge — mirrors the real app
+    const solve = async (st, sh, rls) => {
+      const resp = await fetch(`${pythonUrl}/schedule`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ staff: st, shifts: sh, rules: rls, weeks: 1 }) })
+      if (!resp.ok) return { http502: true }
+      const r = await resp.json().catch(() => null)
+      return { ok: !!(r && r.success !== false), assignments: r?.assignments || [], wall: r?.stats?.wall_time || 0 }
+    }
+    // solve each team separately, with a relaxation ladder so a demo never hard-fails (mirrors the real app)
     const teamIds = [...new Set([...inShifts, ...inStaff].map(tid))]
     const all = []
     let wall = 0, scheduler502 = false
@@ -85,16 +141,18 @@ export async function POST(request) {
       const teamStaff = toSchedulerStaff(inStaff.filter((s) => tid(s) === t))
       const teamShifts = toSchedulerShifts(inShifts.filter((p) => tid(p) === t))
       if (!teamStaff.length || !teamShifts.length) continue
-      const resp = await fetch(`${pythonUrl}/schedule`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ staff: teamStaff, shifts: teamShifts, rules, weeks: 1 }) })
-      if (!resp.ok) { scheduler502 = true; continue }
-      const r = await resp.json().catch(() => null)
-      if (r && r.success !== false) { all.push(...(r.assignments || [])); wall += r.stats?.wall_time || 0 }
+      const relaxed = { ...rules, fair_distribution: true, max_consecutive_days: 7, min_rest_hours: 0 }
+      let r = await solve(teamStaff, teamShifts, rules)
+      if (!r.http502 && !r.ok) r = await solve(teamStaff, teamShifts, relaxed)
+      if (!r.http502 && !r.ok) r = await solve(teamStaff.map((s) => ({ ...s, contracted_hours: 0 })), teamShifts, relaxed)
+      if (r.http502) { scheduler502 = true; continue }
+      if (r.ok) { all.push(...r.assignments); wall += r.wall }
     }
     if (all.length === 0) {
       if (scheduler502) return NextResponse.json({ error: 'The scheduler is waking up — try again in a few seconds.' }, { status: 502 })
       return NextResponse.json({ error: 'Couldn’t build a rota from those inputs. Make sure each team has staff with enough availability for its shifts.' }, { status: 200 })
     }
-    return NextResponse.json({ success: true, assignments: all, stats: { wall_time: Math.round(wall * 100) / 100 } })
+    return NextResponse.json({ success: true, assignments: all, stats: { wall_time: Math.round(wall * 100) / 100 }, compliance: computeCompliance(all, inStaff) })
   } catch (e) {
     return NextResponse.json({ error: 'Something went wrong generating the rota.', detail: String(e).slice(0, 200) }, { status: 500 })
   }
