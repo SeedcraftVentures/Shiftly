@@ -36,6 +36,10 @@ function activePreset(days, openDays) {
   if (s === norm(WEEKEND.filter((d) => openDays.includes(d)))) return 'weekend'
   return null
 }
+// keyholder mark — clean line key, no emoji
+function KeyMark({ size = 13, color = PINK }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, display: 'block' }}><title>Keyholder</title><circle cx="8" cy="15" r="5" /><path d="M11.6 11.4 21 2" /><path d="M16.5 6.5 19.5 9.5" /></svg>
+}
 function designation(s, cfg) {
   if (s.start <= cfg.open + 0.01) return 'Opening'
   if (s.end >= cfg.close - 0.01) return 'Closing'
@@ -322,7 +326,7 @@ function ShiftCard({ shift, selected, onClick, accent, cfg, selectMode = false, 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>{shift.name}</span>
           <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: '#F3F4F6', color: '#9CA3AF', letterSpacing: 0.3 }}>{designation(shift, cfg).toUpperCase()}</span>
-          {shift.keyholder && <span title="Keyholder" style={{ color: accent, fontSize: 12 }}>🔑</span>}
+          {shift.keyholder && <KeyMark size={13} color={accent} />}
         </div>
         <div style={{ fontSize: 12.5, color: '#6B7280', marginTop: 3 }}>{fmt(shift.start)}–{fmt(shift.end)} · {dayLabel} · {shift.staff} staff</div>
       </div>
@@ -511,7 +515,7 @@ function TeamRotaGrid({ groups, cfg, selectedId, onSelect, selectMode, selectedI
                   {s.days.includes(d)
                     ? <div style={{ background: blk.background, borderRadius: 10, padding: '7px 10px', boxShadow: blk.shadow, height: 38, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
                         <div style={{ color: blk.color, fontWeight: 700, fontSize: 11, lineHeight: 1.25, whiteSpace: 'nowrap' }}>{fmt(s.start)}–{fmt(s.end)}</div>
-                        {first && s.keyholder && <div style={{ color: blk.subColor, fontSize: 9.5 }}>🔑 keyholder</div>}
+                        {first && s.keyholder && <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: blk.subColor, fontSize: 9.5 }}><KeyMark size={10} color={blk.subColor} />keyholder</div>}
                       </div>
                     : null}
                 </td>)}
