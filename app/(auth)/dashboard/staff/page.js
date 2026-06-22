@@ -420,39 +420,36 @@ function TeamGlance({ staff, shifts, teamName, teamId, accent, onFix, cfg, wide 
 function AllTeams({ teams, staff, shifts, onFix, cfg }) {
   const [open, setOpen] = useState(null)
   const everyTeamReady = teams.every((t) => readiness(staff.filter((s) => s.team_id === t.id), shifts.filter((s) => s.team_id === t.id), cfg).ready)
+  const panel = { background: '#fff', border: '1px solid #ECECEF', borderRadius: 14, padding: '4px 18px', boxShadow: '0 3px 10px rgba(17,24,39,.06), 0 1px 2px rgba(17,24,39,.04)' }
   return <div>
-    <div style={{ background: everyTeamReady ? '#16A34A12' : AMBER + '12', borderRadius: 12, padding: '12px 16px', marginBottom: 16, fontSize: 13, fontWeight: 600, color: everyTeamReady ? '#16A34A' : '#92660B' }}>
+    <div style={{ background: everyTeamReady ? '#16A34A12' : AMBER + '12', borderRadius: 12, padding: '12px 16px', marginBottom: 14, fontSize: 13, fontWeight: 600, color: everyTeamReady ? '#16A34A' : '#92660B' }}>
       {everyTeamReady ? '✓ Every team can cover its shifts. You’re ready to generate a rota.' : '⚠ Some teams can’t fully cover their shifts. Expand a team to fix the shortfalls.'}
     </div>
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {teams.map((t) => {
+    {/* one container, thin collapsible rows — same treatment as the Shifts all-teams matrix */}
+    <div style={panel}>
+      {teams.map((t, idx) => {
         const ts = staff.filter((s) => s.team_id === t.id), tsh = shifts.filter((s) => s.team_id === t.id)
         const r = readiness(ts, tsh, cfg), isOpen = open === t.id
         const ng = groupShortfalls(r.short).length
         const notReady = []
         if (!r.coverableAtMax) notReady.push(`short ${r.shortAtMaxH}h even at max`)
         if (ng) notReady.push(`${ng} coverage gap${ng === 1 ? '' : 's'}`)
-        return <div key={t.id} style={{ background: '#fff', border: '1px solid #ECECEF', borderRadius: 14, padding: '16px 18px' }}>
-          <div onClick={() => setOpen(isOpen ? null : t.id)} style={{ cursor: 'pointer' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ color: '#C4C4CC', fontSize: 15, transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}>›</span>
-                <span style={{ width: 9, height: 9, borderRadius: 99, background: t.color }} /><span style={{ fontSize: 14, fontWeight: 800 }}>{t.name}</span><span style={{ fontSize: 11.5, color: '#9CA3AF', fontWeight: 600 }}>· {ts.length} staff · {r.contracted}/{r.req}h</span>
-              </div>
-              <span style={{ fontSize: 13, fontWeight: 800, color: r.ready ? '#16A34A' : t.color }}>{r.overallPct}%</span>
-            </div>
-            <ClampBar value={r.overallPct / 100} color={t.color} />
-            <div style={{ fontSize: 12, fontWeight: 600, marginTop: 8 }}>
-              {!r.ready ? <span style={{ color: '#92660B' }}>{notReady.join(' · ')}</span>
-                : r.withinContract ? <span style={{ color: '#16A34A' }}>✓ Fully staffed</span>
-                  : <span style={{ color: '#16A34A' }}>✓ Coverable · <span style={{ color: AMBER }}>{r.overContractH}h over contract</span></span>}
-            </div>
+        const status = !r.ready ? { c: '#92660B', t: notReady.join(' · ') } : r.withinContract ? { c: '#16A34A', t: '✓ Fully staffed' } : { c: '#16A34A', t: `✓ Coverable · ${r.overContractH}h over` }
+        return <Fragment key={t.id}>
+          <div onClick={() => setOpen(isOpen ? null : t.id)} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '13px 0', borderTop: idx ? '1px solid #F0F0F2' : 'none', cursor: 'pointer' }}>
+            <span style={{ color: '#C4C4CC', fontSize: 15, transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform .15s', flexShrink: 0 }}>›</span>
+            <span style={{ width: 9, height: 9, borderRadius: 99, background: t.color, flexShrink: 0 }} />
+            <span style={{ fontSize: 14, fontWeight: 800, flexShrink: 0 }}>{t.name}</span>
+            <span style={{ fontSize: 11.5, color: '#9CA3AF', fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap' }}>· {ts.length} staff · {r.contracted}/{r.req}h</span>
+            <div style={{ flex: 1, minWidth: 30, maxWidth: 220 }}><ClampBar value={r.overallPct / 100} color={t.color} /></div>
+            <span style={{ fontSize: 12, fontWeight: 600, color: status.c, flexShrink: 0, textAlign: 'right' }}>{status.t}</span>
+            <span style={{ fontSize: 13, fontWeight: 800, color: r.ready ? '#16A34A' : t.color, flexShrink: 0, width: 42, textAlign: 'right' }}>{r.overallPct}%</span>
           </div>
-          {isOpen && <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #F0F0F2', display: 'flex', gap: 28, flexWrap: 'wrap' }}>
-            <div style={{ flex: 1, minWidth: 220 }}><CapacityLine r={r} accent={t.color} teamId={t.id} onFix={onFix} /></div>
-            <div style={{ flex: 1, minWidth: 240 }}><ShortfallList staff={ts} shifts={tsh} teamId={t.id} onFix={onFix} cfg={cfg} /></div>
+          {isOpen && <div style={{ padding: '6px 0 18px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 28, alignItems: 'start' }}>
+            <div><CapacityLine r={r} accent={t.color} teamId={t.id} onFix={onFix} /></div>
+            <div style={{ borderLeft: '1px solid #ECECEF', paddingLeft: 24 }}><ShortfallList staff={ts} shifts={tsh} teamId={t.id} onFix={onFix} cfg={cfg} /></div>
           </div>}
-        </div>
+        </Fragment>
       })}
     </div>
   </div>
