@@ -407,7 +407,7 @@ function AllMatrix({ teams, shifts, expanded, setExpanded, onApply, cfg, okTeams
       const pct = coveragePct(ts, cfg)
       const ok = okTeams.has(t.id), low = pct < 100, isOpen = expanded === t.id
       const sg = low && !ok ? smartGaps(ts, cfg).length : 0
-      const barColor = pct === 100 ? '#16A34A' : ok ? '#9CA3AF' : t.color
+      const barColor = t.color // follow team colour (matches Staff), not green at 100%
       const status = pct === 100 ? { c: '#16A34A', t: '✓ Fully covered' }
         : ok ? { c: '#9CA3AF', t: '✓ Marked intentional' }
           : { c: '#92660B', t: sg ? `${sg} suggestion${sg === 1 ? '' : 's'} to fill` : 'Has gaps' }
