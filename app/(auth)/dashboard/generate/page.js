@@ -233,6 +233,7 @@ export default function RotaBuilder() {
   const [saved, setSaved] = useState([])
   const [staff, setStaff] = useState([])
   const [shifts, setShifts] = useState([])
+  const [rules, setRules] = useState({ min_rest_hours: 11, max_consecutive_days: 5 })
   const [rotaName, setRotaName] = useState('')
   const [editCell, setEditCell] = useState(null) // { staff, day } → opens the add-shift inspector
   const dragRef = useRef(null)
@@ -240,12 +241,13 @@ export default function RotaBuilder() {
   useEffect(() => {
     (async () => {
       try {
-        const [tr, sr, str, shr] = await Promise.all([fetch('/api/teams'), fetch('/api/rotas'), fetch('/api/staff'), fetch('/api/shifts')])
-        const td = await tr.json(), sd = await sr.json(), std = await str.json(), shd = await shr.json()
+        const [tr, sr, str, shr, rr] = await Promise.all([fetch('/api/teams'), fetch('/api/rotas'), fetch('/api/staff'), fetch('/api/shifts'), fetch('/api/rules')])
+        const td = await tr.json(), sd = await sr.json(), std = await str.json(), shd = await shr.json(), rd = await rr.json()
         setTeams((Array.isArray(td) ? td : []).map((t, i) => ({ id: t.id, name: t.name, color: TEAM_COLORS[i % TEAM_COLORS.length] })))
         setSaved(Array.isArray(sd) ? sd : [])
         setStaff((Array.isArray(std) ? std : []).map((s) => ({ id: s.id, name: s.name, team_id: s.team_id, contracted_hours: s.contracted_hours || 0, is_keyholder: !!s.keyholder })))
         setShifts(Array.isArray(shd) ? shd : [])
+        if (Array.isArray(rd) && rd[0]?.rules) setRules(rd[0].rules)
       } catch (e) { console.error(e) } finally { setLoading(false) }
     })()
   }, [])
@@ -360,9 +362,47 @@ export default function RotaBuilder() {
     if (openMiss.length) parts.push(`no keyholder at open on ${fmtDays(openMiss)}`)
     if (closeMiss.length) parts.push(`no keyholder at close on ${fmtDays(closeMiss)}`)
     const keyholder = { key: 'keyholder', label: 'Keyholder on open & close', ok: parts.length === 0, detail: parts.join('; ') }
-    const others = (result.rule_compliance || []).filter((r) => r.key !== 'keyholder')
-    return [keyholder, ...others]
-  }, [result, staff])
+
+    const nameOf = (id) => staff.find((s) => s.id === id)?.name || 'Someone'
+    const dms = (d) => new Date(d + 'T00:00:00Z').getTime()
+    const fmtDate = (d) => new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })
+    const byStaff = {}
+    for (const a of result.assignments) (byStaff[a.staff_id] ||= []).push(a)
+
+    // Max consecutive days — across ALL weeks (a run that crosses the week boundary still counts).
+    const maxConsec = Number(rules.max_consecutive_days ?? 5)
+    const consec = []
+    for (const [sid, list] of Object.entries(byStaff)) {
+      const dates = [...new Set(list.map((a) => a.work_date))].sort()
+      let runStart = dates[0], prev = dates[0], best = null
+      const close = (end) => { const len = Math.round((dms(end) - dms(runStart)) / 864e5) + 1; if (len > maxConsec && (!best || len > best.len)) best = { len, start: runStart, end } }
+      for (let i = 1; i < dates.length; i++) {
+        if (Math.round((dms(dates[i]) - dms(prev)) / 864e5) === 1) { prev = dates[i]; continue }
+        close(prev); runStart = dates[i]; prev = dates[i]
+      }
+      close(prev)
+      if (best) consec.push(`${nameOf(sid)} — ${best.len} days in a row (${fmtDate(best.start)} → ${fmtDate(best.end)})`)
+    }
+    const consecutive = { key: 'max_consecutive_days', label: `Max ${maxConsec} consecutive days`, ok: consec.length === 0, detail: consec.join('; ') }
+
+    // Minimum rest between shifts.
+    const minRest = Number(rules.min_rest_hours ?? 11)
+    const rest = []
+    for (const [sid, list] of Object.entries(byStaff)) {
+      const sorted = [...list].sort((a, b) => (dms(a.work_date) + tMin(a.start_time) * 6e4) - (dms(b.work_date) + tMin(b.start_time) * 6e4))
+      let worst = null
+      for (let i = 1; i < sorted.length; i++) {
+        const prevEnd = dms(sorted[i - 1].work_date) + tMin(sorted[i - 1].end_time) * 6e4
+        const nextStart = dms(sorted[i].work_date) + tMin(sorted[i].start_time) * 6e4
+        const gap = (nextStart - prevEnd) / 36e5
+        if (gap < minRest - 0.01 && (worst === null || gap < worst)) worst = gap
+      }
+      if (worst !== null) rest.push(`${nameOf(sid)} (${Math.round(worst)}h gap)`)
+    }
+    const restRule = { key: 'min_rest_hours', label: `Minimum ${minRest}h rest between shifts`, ok: rest.length === 0, detail: rest.join('; ') }
+
+    return [keyholder, consecutive, restRule]
+  }, [result, staff, rules])
 
   const teamsInResult = useMemo(() => {
     const ids = [...new Set(weekAssignments.map((a) => a.team_id))]
