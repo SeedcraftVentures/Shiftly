@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback, Fragment } from 'react'
 import { TEAM_COLORS, coverageBottlenecks, availableHours, locationKeyholderGaps } from './utils/staffHelpers'
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -178,38 +178,64 @@ function TimeRange({ start, end, onChange, accent = PINK, domain }) {
   </div>
 }
 
+// ── icons (no emoji) ─────────────────────────────────────────────────────────────
+// keyholder mark — a clean line key, replacing the 🔑 emoji everywhere
+function KeyMark({ size = 13, color = PINK, title = 'Keyholder' }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, display: 'block' }}><title>{title}</title><circle cx="8" cy="15" r="5" /><path d="M11.6 11.4 21 2" /><path d="M16.5 6.5 19.5 9.5" /></svg>
+}
+function Pencil({ size = 11, color = '#9CA3AF' }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" /></svg>
+}
+// collapsed "set hours" summary — neutral, with a pencil so it's clearly editable
+function HoursChip({ w, accent, onClick }) {
+  const [h, setH] = useState(false)
+  return <button onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} title="Edit hours" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'inherit', fontSize: 11.5, fontWeight: 700, color: h ? '#111827' : '#4B5563', background: h ? '#fff' : '#F1F1F4', border: `1px solid ${h ? '#D1D5DB' : 'transparent'}`, borderRadius: 7, padding: '4px 9px', cursor: 'pointer', transition: 'all .12s', whiteSpace: 'nowrap' }}>
+    {fmt(w[0])}–{fmt(w[1])}
+    <Pencil size={10.5} color={h ? accent : '#B5B5BD'} />
+  </button>
+}
+
 // ── availability editor (one per-day control) ─────────────────────────────────────
+// "Set hours" opens an inline editor with Save; collapsed days show a compact time chip
+// instead of an always-open dragger, so the panel stays short.
 function AvailabilityEditor({ s, patch, accent, cfg }) {
+  const [editDay, setEditDay] = useState(null)
   const setDay = (d, val) => { const a = { ...(s.avail || {}) }; if (val === false) delete a[d]; else a[d] = val; patch({ avail: a }) }
   const allWeekOn = cfg.openDays.every((d) => s.avail?.[d] === true)
+  const seg = (act, lbl, onClick) => <button onClick={onClick} style={{ fontSize: 11, fontWeight: act ? 700 : 600, padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', background: act ? '#fff' : 'transparent', color: act ? accent : '#9CA3AF', boxShadow: act ? '0 1px 2px rgba(0,0,0,.08)' : 'none', transition: 'all .12s' }}>{lbl}</button>
   return <div style={{ borderTop: '1px solid #F0F0F2', paddingTop: 16 }}>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
       <Label>Availability</Label>
       <div style={{ display: 'flex', gap: 8 }}>
-        <MiniBtn active={allWeekOn} onClick={() => patch({ avail: allDayAvail(cfg.openDays) })} accent={accent}>All week</MiniBtn>
-        <MiniBtn onClick={() => patch({ avail: {} })} accent={accent}>Clear</MiniBtn>
+        <MiniBtn active={allWeekOn} onClick={() => { patch({ avail: allDayAvail(cfg.openDays) }); setEditDay(null) }} accent={accent}>All week</MiniBtn>
+        <MiniBtn onClick={() => { patch({ avail: {} }); setEditDay(null) }} accent={accent}>Clear</MiniBtn>
       </div>
     </div>
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       {cfg.openDays.map((d) => {
         const a = s.avail?.[d], on = !!a, allDay = a === true
-        const w = allDay ? cfg.business[d] : (Array.isArray(a) ? a : cfg.business[d])
-        return <div key={d} style={{ padding: '10px 0', borderBottom: '1px solid #F4F4F6' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-            <Switch on={on} onClick={() => setDay(d, on ? false : true)} accent={accent} size={0.82} />
-            <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: on ? '#111827' : '#C4C4CC' }}>{DAY_FULL[d]}</span>
+        const w = Array.isArray(a) ? a : cfg.business[d]
+        const editing = editDay === d
+        return <div key={d} style={{ padding: '9px 0', borderBottom: '1px solid #F4F4F6' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 11, minHeight: 30 }}>
+            <Switch on={on} onClick={() => { setDay(d, on ? false : true); if (on) setEditDay(null) }} accent={accent} size={0.82} />
+            <span style={{ flex: 1, minWidth: 0, fontSize: 13, fontWeight: 700, color: on ? '#111827' : '#C4C4CC', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{DAY_FULL[d]}</span>
             {on
-              ? <div style={{ display: 'inline-flex', background: '#F1F1F4', borderRadius: 8, padding: 2, gap: 2 }}>
-                  {[['all', 'All day'], ['set', 'Set hours']].map(([k, lbl]) => {
-                    const act = (k === 'all') === allDay
-                    return <button key={k} onClick={() => setDay(d, k === 'all' ? true : (Array.isArray(a) ? a : cfg.business[d]))} style={{ fontSize: 11, fontWeight: act ? 700 : 600, padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', background: act ? '#fff' : 'transparent', color: act ? accent : '#9CA3AF', boxShadow: act ? '0 1px 2px rgba(0,0,0,.08)' : 'none', transition: 'all .12s' }}>{lbl}</button>
-                  })}
+              ? <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {!allDay && !editing && <HoursChip w={w} accent={accent} onClick={() => setEditDay(d)} />}
+                  <div style={{ display: 'inline-flex', background: '#F1F1F4', borderRadius: 8, padding: 2, gap: 2 }}>
+                    {seg(allDay, 'All day', () => { setDay(d, true); setEditDay(null) })}
+                    {seg(!allDay, 'Set hours', () => { if (!Array.isArray(a)) setDay(d, cfg.business[d]); setEditDay(d) })}
+                  </div>
                 </div>
               : <span style={{ fontSize: 11.5, color: '#C4C4CC' }}>Off</span>}
           </div>
-          {on && !allDay && <div style={{ marginTop: 10, paddingLeft: 46 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}><span style={{ fontSize: 12.5, fontWeight: 700 }}>{fmt(w[0])}</span><span style={{ fontSize: 12.5, fontWeight: 700 }}>{fmt(w[1])}</span></div>
-            <TimeRange start={w[0]} end={w[1]} onChange={(x, y) => setDay(d, [x, y])} accent={accent} domain={cfg.slider} />
+          {on && !allDay && editing && <div style={{ marginTop: 10, paddingLeft: 46, display: 'flex', alignItems: 'flex-end', gap: 12 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}><span style={{ fontSize: 12.5, fontWeight: 700 }}>{fmt(w[0])}</span><span style={{ fontSize: 12.5, fontWeight: 700 }}>{fmt(w[1])}</span></div>
+              <TimeRange start={w[0]} end={w[1]} onChange={(x, y) => setDay(d, [x, y])} accent={accent} domain={cfg.slider} />
+            </div>
+            <button onClick={() => setEditDay(null)} style={{ fontFamily: 'inherit', fontSize: 12, fontWeight: 700, color: '#fff', background: accent, border: 'none', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', flexShrink: 0 }}>Save</button>
           </div>}
         </div>
       })}
@@ -247,8 +273,10 @@ function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg }) {
     </div>
     <div style={{ marginBottom: 18 }}><SaveStatus state={saveState} /></div>
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div><FieldLabel>Name</FieldLabel><FieldInput value={s.name} onChange={(e) => patch({ name: e.target.value })} /></div>
-      <div><FieldLabel>Role</FieldLabel><FieldInput value={s.role || ''} onChange={(e) => patch({ role: e.target.value })} /></div>
+      <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{ flex: 1, minWidth: 0 }}><FieldLabel>Name</FieldLabel><FieldInput value={s.name} onChange={(e) => patch({ name: e.target.value })} /></div>
+        <div style={{ flex: 1, minWidth: 0 }}><FieldLabel>Role</FieldLabel><FieldInput value={s.role || ''} onChange={(e) => patch({ role: e.target.value })} /></div>
+      </div>
       <div style={{ display: 'flex', gap: 12 }}>
         <div style={{ flex: 1 }}><FieldLabel>Contracted</FieldLabel><Stepper value={s.contracted} onChange={(v) => patch({ contracted: v })} min={0} max={60} suffix="h" /></div>
         <div style={{ flex: 1 }}><FieldLabel>Max / week</FieldLabel><Stepper value={s.max} onChange={(v) => patch({ max: v })} min={0} max={60} suffix="h" /></div>
@@ -301,7 +329,7 @@ function StaffCard({ s, selected, onClick, accent, cfg, selectMode = false, chec
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>{s.name}</span>
-          {s.keyholder && <span title="Keyholder" style={{ color: accent, fontSize: 12 }}>🔑</span>}
+          {s.keyholder && <KeyMark size={13} color={accent} />}
           {availableHours(s, cfg) < s.contracted && <span title={`Available ${availableHours(s, cfg)}h but contracted ${s.contracted}h`} style={{ color: '#EF4444', fontSize: 12 }}>⚠</span>}
         </div>
         <div style={{ fontSize: 12.5, color: '#6B7280', marginTop: 3 }}>{s.role || 'No role'} · {s.contracted}/{s.max}h · £{(s.wage || 0).toFixed(2)} · {availTxt}</div>
@@ -355,16 +383,16 @@ function ShortfallList({ staff, shifts, teamId, onFix, cfg }) {
     )}
   </>
 }
-function TeamGlance({ staff, shifts, teamName, teamId, accent, onFix, cfg }) {
+function TeamGlance({ staff, shifts, teamName, teamId, accent, onFix, cfg, wide = false }) {
   const r = readiness(staff, shifts, cfg)
   const bottlenecks = coverageBottlenecks(staff, shifts, cfg)
   const ok = r.ready && bottlenecks.length === 0
   return <div>
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-      <span style={{ fontSize: 13, fontWeight: 800 }}>Can we cover the shifts?</span>
-      <span style={{ fontSize: 13, fontWeight: 800, color: ok ? '#16A34A' : (bottlenecks.length ? '#EF4444' : accent) }}>{r.overallPct}%</span>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: wide ? 16 : 2 }}>
+      <span style={{ fontSize: wide ? 14 : 13, fontWeight: 800 }}>Can we cover the shifts?</span>
+      <span style={{ fontSize: wide ? 14 : 13, fontWeight: 800, color: ok ? '#16A34A' : (bottlenecks.length ? '#EF4444' : accent) }}>{r.overallPct}%</span>
     </div>
-    <div style={{ fontSize: 11, color: accent, fontWeight: 600, marginBottom: 16 }}>{teamName}</div>
+    {!wide && <div style={{ fontSize: 11, color: accent, fontWeight: 600, marginBottom: 16 }}>{teamName}</div>}
     {bottlenecks.length > 0 && <div style={{ marginBottom: 16, padding: '11px 13px', borderRadius: 9, background: '#FEF2F2', border: '1px solid #FECACA' }}>
       {bottlenecks.map((b, i) => {
         const lim = staff.filter((s) => s.id !== b.id).map((s) => ({ s, days: cfg.openDays.filter((d) => s.avail?.[d]).length })).sort((a, z) => a.days - z.days)[0]
@@ -377,9 +405,16 @@ function TeamGlance({ staff, shifts, teamName, teamId, accent, onFix, cfg }) {
         </div>
       })}
     </div>}
-    <CapacityLine r={r} accent={accent} teamId={teamId} onFix={onFix} />
-    <div style={{ borderTop: '1px solid #ECECEF', margin: '16px 0 14px' }} />
-    <ShortfallList staff={staff} shifts={shifts} teamId={teamId} onFix={onFix} cfg={cfg} />
+    {wide
+      ? <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, alignItems: 'start' }}>
+          <div><CapacityLine r={r} accent={accent} teamId={teamId} onFix={onFix} /></div>
+          <div style={{ borderLeft: '1px solid #ECECEF', paddingLeft: 24 }}><ShortfallList staff={staff} shifts={shifts} teamId={teamId} onFix={onFix} cfg={cfg} /></div>
+        </div>
+      : <>
+          <CapacityLine r={r} accent={accent} teamId={teamId} onFix={onFix} />
+          <div style={{ borderTop: '1px solid #ECECEF', margin: '16px 0 14px' }} />
+          <ShortfallList staff={staff} shifts={shifts} teamId={teamId} onFix={onFix} cfg={cfg} />
+        </>}
   </div>
 }
 function AllTeams({ teams, staff, shifts, onFix, cfg }) {
@@ -423,6 +458,76 @@ function AllTeams({ teams, staff, shifts, onFix, cfg }) {
   </div>
 }
 
+// ── availability grid — one row per person, days across, cell = their availability that day ──
+const GRID_TH = { fontSize: 11, fontWeight: 700, padding: '6px 6px 10px', textAlign: 'center' }
+function AvailabilityGrid({ groups, cfg, selectedId, onSelect, selectMode, selectedIds, onToggle }) {
+  const [hoverId, setHoverId] = useState(null)
+  const interactive = !!onSelect || !!selectMode
+  const grouped = groups.length > 1
+  const cell = { padding: '4px 4px', verticalAlign: 'middle' }
+  const block = { height: 34, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10.5, fontWeight: 700, whiteSpace: 'nowrap' }
+  const total = groups.reduce((n, g) => n + g.staff.length, 0)
+  return <div style={{ overflowX: 'auto' }}>
+    <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760, tableLayout: 'fixed' }}>
+      <colgroup><col style={{ width: 170 }} />{DAYS.map((d) => <col key={d} />)}</colgroup>
+      <thead><tr><th style={{ ...GRID_TH, textAlign: 'left', position: 'sticky', left: 0, background: '#fff', minWidth: 170 }} />{DAYS.map((d, i) => <th key={d} style={{ ...GRID_TH, color: cfg.openDays.includes(i) ? '#374151' : '#C4C4CC' }}>{d}</th>)}</tr></thead>
+      <tbody>
+        {total === 0 && <tr><td colSpan={8} style={{ textAlign: 'center', color: '#9CA3AF', fontSize: 13, padding: '32px 0' }}>No staff yet — add someone to map their availability.</td></tr>}
+        {groups.map((g) => <Fragment key={g.name}>
+          {grouped && <tr><td colSpan={8} style={{ padding: '12px 0 8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ width: 8, height: 8, borderRadius: 99, background: g.color }} />
+              <span style={{ fontSize: 12, fontWeight: 800, color: g.color, letterSpacing: 0.4, textTransform: 'uppercase' }}>{g.name}</span>
+              <div style={{ flex: 1, height: 1, background: '#F0F0F2' }} />
+            </div>
+          </td></tr>}
+          {grouped && g.staff.length === 0 && <tr><td colSpan={8} style={{ color: '#C4C4CC', fontSize: 12, padding: '4px 0 10px 18px' }}>No staff in this team yet.</td></tr>}
+          {g.staff.map((s) => {
+            const accent = g.color
+            const sel = selectedId === s.id, checked = selectedIds?.has(s.id), hov = interactive && hoverId === s.id
+            const rowBg = sel && !selectMode ? accent + '14' : (hov ? '#F4F5F8' : 'transparent')
+            const active = rowBg !== 'transparent'
+            const bar = sel && !selectMode ? accent : (hov ? accent + '66' : null)
+            return <tr key={s.id} onClick={() => (interactive ? (selectMode ? onToggle?.(s.id) : onSelect?.(s.id)) : null)} onMouseEnter={() => interactive && setHoverId(s.id)} onMouseLeave={() => interactive && setHoverId(null)} style={{ cursor: interactive ? 'pointer' : 'default', transition: 'background .1s' }}>
+              <td style={{ ...cell, position: 'sticky', left: 0, background: active ? rowBg : '#fff', borderTopLeftRadius: active ? 10 : 0, borderBottomLeftRadius: active ? 10 : 0, boxShadow: bar ? `inset 3px 0 0 ${bar}` : 'none' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 12.5, fontWeight: sel ? 800 : 600, color: '#111827' }}>
+                  {selectMode
+                    ? <span style={{ width: 18, height: 18, borderRadius: 5, flexShrink: 0, border: `1.5px solid ${checked ? accent : '#D1D5DB'}`, background: checked ? accent : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11, fontWeight: 800 }}>{checked ? '✓' : ''}</span>
+                    : <span style={{ width: 26, height: 26, borderRadius: 99, flexShrink: 0, background: accent + '18', color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800 }}>{initials(s.name)}</span>}
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{grouped ? s.name : first(s.name)}</span>
+                  {s.keyholder && <KeyMark size={12} color={accent} />}
+                </span>
+              </td>
+              {ALL.map((d) => {
+                const a = s.avail?.[d], closed = !cfg.openDays.includes(d)
+                return <td key={d} style={{ ...cell, background: active ? rowBg : 'transparent', borderTopRightRadius: active && d === 6 ? 10 : 0, borderBottomRightRadius: active && d === 6 ? 10 : 0 }}>
+                  {closed
+                    ? <div style={{ ...block, background: 'repeating-linear-gradient(45deg, #DDDDE3, #DDDDE3 1.5px, transparent 1.5px, transparent 6px)' }} />
+                    : a === true
+                      ? <div style={{ ...block, background: accent, color: '#fff' }}>All day</div>
+                      : Array.isArray(a)
+                        ? <div style={{ ...block, background: accent + '1A', border: `1px solid ${accent}55`, color: accent }}>{fmt(a[0])}–{fmt(a[1])}</div>
+                        : <div style={{ ...block, border: '1.5px dashed #D5D7DD' }} />}
+                </td>
+              })}
+            </tr>
+          })}
+        </Fragment>)}
+      </tbody>
+    </table>
+  </div>
+}
+function AvailKey({ accent }) {
+  const item = (box, label) => <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 11.5, color: '#6B7280' }}>{box}<span>{label}</span></span>
+  const sw = { width: 22, height: 14, borderRadius: 4, flexShrink: 0 }
+  return <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', marginTop: 12 }}>
+    {item(<span style={{ ...sw, background: accent }} />, 'Available all day')}
+    {item(<span style={{ ...sw, background: accent + '1A', border: `1px solid ${accent}55` }} />, 'Set hours (e.g. 1pm–5pm)')}
+    {item(<span style={{ ...sw, border: '1.5px dashed #D5D7DD' }} />, 'Not available')}
+    {item(<span style={{ ...sw, background: 'repeating-linear-gradient(45deg, #DDDDE3, #DDDDE3 1.5px, transparent 1.5px, transparent 6px)' }} />, 'Closed')}
+  </div>
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 const fromApi = (r) => ({ id: r.id, team_id: r.team_id, name: r.name, role: r.role, contracted: r.contracted_hours, max: r.max_hours, wage: r.hourly_rate, pay_basis: r.pay_basis || 'hourly', annual_salary: r.annual_salary || 0, annualised_hours: r.annualised_hours || 0, keyholder: r.keyholder, avail: r.availability || {} })
 const toApi = (s) => ({ team_id: s.team_id, name: s.name, role: s.role, contracted_hours: s.contracted, max_hours: s.max, hourly_rate: s.wage, pay_basis: s.pay_basis || 'hourly', annual_salary: s.annual_salary ?? 0, annualised_hours: s.annualised_hours ?? 0, keyholder: s.keyholder, availability: s.avail })
@@ -445,7 +550,7 @@ export default function StaffPage() {
         const [tr, lr, shr, str] = await Promise.all([fetch('/api/teams'), fetch('/api/location'), fetch('/api/shifts'), fetch('/api/staff')])
         const td = await tr.json(), ld = await lr.json(), shd = await shr.json(), std = await str.json()
         const withColor = (Array.isArray(td) ? td : []).map((t, i) => ({ id: t.id, name: t.name, color: TEAM_COLORS[i % TEAM_COLORS.length] }))
-        setTeams(withColor); setLocation(ld || null); setShifts(Array.isArray(shd) ? shd : []); setStaff((Array.isArray(std) ? std : []).map(fromApi)); setTeamId(withColor[0]?.id || null)
+        setTeams(withColor); setLocation(ld || null); setShifts(Array.isArray(shd) ? shd : []); setStaff((Array.isArray(std) ? std : []).map(fromApi)); setTeamId('all')
       } catch (e) { console.error('Failed to load staff page', e) } finally { setLoading(false) }
     })()
   }, [])
@@ -463,7 +568,9 @@ export default function StaffPage() {
   const teamStaff = useMemo(() => staff.filter((s) => s.team_id === teamId), [staff, teamId])
   const teamShifts = useMemo(() => shifts.filter((s) => s.team_id === teamId), [shifts, teamId])
   const selected = staff.find((s) => s.id === selectedId)
-  useEffect(() => { setSelectedId(null); setSelectMode(false); setSelectedIds(new Set()) }, [teamId])
+  // switching teams clears multi-select but NOT the selected person — adding/clicking from the
+  // all-teams view jumps you into that team with their inspector already open.
+  useEffect(() => { setSelectMode(false); setSelectedIds(new Set()) }, [teamId])
   useEffect(() => { setSaveState('clean') }, [selectedId])
 
   const patch = useCallback((id, p) => { setStaff((prev) => prev.map((s) => (s.id === id ? { ...s, ...p } : s))); setSaveState('dirty') }, [])
@@ -501,7 +608,7 @@ export default function StaffPage() {
   if (loading) return <div style={{ fontFamily: FONT, padding: 60, textAlign: 'center', color: '#9CA3AF' }}>Loading staff…</div>
   if (teams.length === 0) return <div style={{ fontFamily: FONT, padding: 60, textAlign: 'center', color: '#6B7280' }}>No teams yet. Finish onboarding to add teams first.</div>
 
-  const tabs = [...teams, { id: 'all', name: 'All teams' }]
+  const tabs = [{ id: 'all', name: 'All teams' }, ...teams]
   const panel = { background: '#fff', border: '1px solid #ECECEF', borderRadius: 14, padding: 20, boxShadow: '0 3px 10px rgba(17,24,39,.06), 0 1px 2px rgba(17,24,39,.04)' }
   const teamName = teams.find((t) => t.id === teamId)?.name || ''
   const khGaps = locationKeyholderGaps(staff, shifts, cfg)
@@ -517,7 +624,7 @@ export default function StaffPage() {
         {tabs.map((t) => {
           const active = t.id === teamId
           const count = t.id === 'all' ? staff.length : staff.filter((s) => s.team_id === t.id).length
-          return <button key={t.id} onClick={() => setTeamId(t.id)} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 700, padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', color: active ? '#111827' : '#9CA3AF', background: active ? '#fff' : 'transparent', boxShadow: active ? '0 1px 3px rgba(0,0,0,.1)' : 'none' }}>{t.id !== 'all' && <span style={{ width: 8, height: 8, borderRadius: 99, background: t.color }} />}{t.name}<span style={{ fontSize: 11, fontWeight: 700, color: active ? (t.color || PINK) : '#C4C4CC' }}>{count}</span></button>
+          return <button key={t.id} onClick={() => { setTeamId(t.id); setSelectedId(null) }} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 700, padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', color: active ? '#111827' : '#9CA3AF', background: active ? '#fff' : 'transparent', boxShadow: active ? '0 1px 3px rgba(0,0,0,.1)' : 'none' }}>{t.id !== 'all' && <span style={{ width: 8, height: 8, borderRadius: 99, background: t.color }} />}{t.name}<span style={{ fontSize: 11, fontWeight: 700, color: active ? (t.color || PINK) : '#C4C4CC' }}>{count}</span></button>
         })}
       </div>
       {!isAll && <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -532,27 +639,37 @@ export default function StaffPage() {
         </>}
       </div>}
     </div>
-    {khFlag && <div style={{ maxWidth: 640, margin: '0 auto 10px', padding: '11px 14px', borderRadius: 10, background: AMBER + '14', border: `1px solid ${AMBER}40`, fontSize: 12.5, color: '#92660B', lineHeight: 1.45 }}>
-      🔑 {khGaps.noKeyholder
+    {khFlag && <div style={{ maxWidth: 640, margin: '0 auto 10px', padding: '11px 14px', borderRadius: 10, background: AMBER + '14', border: `1px solid ${AMBER}40`, fontSize: 12.5, color: '#92660B', lineHeight: 1.45, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+      <span style={{ marginTop: 2 }}><KeyMark size={14} color={AMBER} /></span>
+      <span>{khGaps.noKeyholder
         ? <>No keyholders set — mark at least one person as a keyholder so someone can open &amp; close the location.</>
-        : <>No keyholder available to {khGaps.openMissing.length ? `open ${khGaps.openMissing.map((d) => DAYS[d]).join(', ')}` : ''}{khGaps.openMissing.length && khGaps.closeMissing.length ? ' · ' : ''}{khGaps.closeMissing.length ? `close ${khGaps.closeMissing.map((d) => DAYS[d]).join(', ')}` : ''}. Widen a keyholder’s availability or add another keyholder. <span style={{ color: '#6B7280' }}>(One keyholder covers the whole location — not per team.)</span></>}
+        : <>No keyholder available to {khGaps.openMissing.length ? `open ${khGaps.openMissing.map((d) => DAYS[d]).join(', ')}` : ''}{khGaps.openMissing.length && khGaps.closeMissing.length ? ' · ' : ''}{khGaps.closeMissing.length ? `close ${khGaps.closeMissing.map((d) => DAYS[d]).join(', ')}` : ''}. Widen a keyholder’s availability or add another keyholder. <span style={{ color: '#6B7280' }}>(One keyholder covers the whole location — not per team.)</span></>}</span>
     </div>}
 
     {isAll ? (
-      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '4px 24px 40px' }}><AllTeams teams={teams} staff={staff} shifts={shifts} onFix={applyFix} cfg={cfg} /></div>
+      <div style={{ maxWidth: 1240, margin: '0 auto', padding: '4px 24px 40px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <AllTeams teams={teams} staff={staff} shifts={shifts} onFix={applyFix} cfg={cfg} />
+        {/* whole-location availability — same idea as Shifts' all-teams full rota */}
+        <div style={panel}>
+          <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 3 }}>All availability <span style={{ color: '#9CA3AF', fontWeight: 600 }}>· whole location</span></div>
+          <div style={{ fontSize: 11.5, color: '#9CA3AF', marginBottom: 12 }}>Everyone’s week at a glance — click anyone to jump into their team and edit.</div>
+          <AvailabilityGrid groups={teams.map((t) => ({ name: t.name, color: t.color, staff: staff.filter((s) => s.team_id === t.id) }))} cfg={cfg} onSelect={(id) => { const st = staff.find((x) => x.id === id); if (st) { setTeamId(st.team_id); setSelectedId(st.id) } }} />
+          <AvailKey accent={PINK} />
+        </div>
+      </div>
     ) : (
-      <div style={{ display: 'flex', gap: 18, alignItems: 'flex-start', padding: '2px 24px 40px', maxWidth: 1240, margin: '0 auto' }}>
-        <div style={{ ...panel, width: 340, flexShrink: 0, position: 'sticky', top: 16, minHeight: 460 }}>
-          <Inspector s={selected} patch={(p) => patch(selected.id, p)} onDelete={() => removeStaff(selected.id)} saveState={saveState} onSave={() => saveStaff(selected)} accent={accent} cfg={cfg} />
+      // mirrors Shifts: inspector sticky-left; availability grid + key + coverage on the right
+      <div style={{ maxWidth: 1260, margin: '0 auto', padding: '2px 24px 40px', display: 'grid', gridTemplateColumns: '380px 1fr', gap: 18, alignItems: 'start' }}>
+        <div style={{ ...panel, position: 'sticky', top: 16 }}>
+          <Inspector key={selected?.id || 'none'} s={selected} patch={(p) => patch(selected.id, p)} onDelete={() => removeStaff(selected.id)} saveState={saveState} onSave={() => saveStaff(selected)} accent={accent} cfg={cfg} />
         </div>
-        <div style={{ flex: 1, minWidth: 300 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {teamStaff.map((s) => <StaffCard key={s.id} s={s} selected={selectedId === s.id} onClick={() => (selectMode ? toggleSelect(s.id) : setSelectedId(s.id))} accent={accent} cfg={cfg} selectMode={selectMode} checked={selectedIds.has(s.id)} />)}
-            {teamStaff.length === 0 && <div style={{ textAlign: 'center', color: '#9CA3AF', fontSize: 13, padding: '50px 0', ...panel }}>No staff yet. Add someone to get started.</div>}
+        <div style={panel}>
+          {!selectMode && teamStaff.length > 0 && <div style={{ fontSize: 11.5, color: '#9CA3AF', marginBottom: 12 }}>Click a staff member to edit them — their weekly availability shows in the grid.</div>}
+          <AvailabilityGrid groups={[{ name: teamName, color: accent, staff: teamStaff }]} cfg={cfg} selectedId={selectedId} onSelect={setSelectedId} selectMode={selectMode} selectedIds={selectedIds} onToggle={toggleSelect} />
+          <AvailKey accent={accent} />
+          <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #ECECEF' }}>
+            <TeamGlance staff={teamStaff} shifts={teamShifts} teamName={teamName} teamId={teamId} accent={accent} onFix={applyFix} cfg={cfg} wide />
           </div>
-        </div>
-        <div style={{ ...panel, width: 300, flexShrink: 0, position: 'sticky', top: 16 }}>
-          <TeamGlance staff={teamStaff} shifts={teamShifts} teamName={teamName} teamId={teamId} accent={accent} onFix={applyFix} cfg={cfg} />
         </div>
       </div>
     )}
