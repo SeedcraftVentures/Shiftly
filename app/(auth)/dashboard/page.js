@@ -12,6 +12,10 @@ import { TEAM_COLORS, cfgFromLocation, mapStaffForCoverage, readiness, scheduleC
 // ════════════════════════════════════════════════════════════════════════════
 
 const DAYNAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+// keyholder mark — clean line key, no emoji
+function KeyMark({ size = 13, color = '#92660B' }) {
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, display: 'block' }}><title>Keyholder</title><circle cx="8" cy="15" r="5" /><path d="M11.6 11.4 21 2" /><path d="M16.5 6.5 19.5 9.5" /></svg>
+}
 const DSHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] // index 0 = Mon (coverage convention)
 const greeting = () => { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening' }
 const prettyDate = (s) => { try { return new Date(s + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) } catch { return s } }
@@ -216,9 +220,9 @@ export default function DashboardPage() {
             {coverage.bottlenecks.slice(0, 3).map((b, i) => <p key={i} style={{ fontSize: 12, color: '#92660B', margin: i ? '6px 0 0' : 0, lineHeight: 1.45 }}><b>{b.name}</b> ({b.team}) is the only cover available every open day — they'd work {b.essential} days but can do {b.maxDays}. Spread availability or add staff.</p>)}
           </div>}
           {(coverage.khGaps.noKeyholder || coverage.khGaps.openMissing.length > 0 || coverage.khGaps.closeMissing.length > 0) && <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: T.r.sm, background: T.amber + '12', border: `1px solid ${T.amber}30` }}>
-            <p style={{ fontSize: 12, color: '#92660B', margin: 0, lineHeight: 1.45 }}>🔑 {coverage.khGaps.noKeyholder
+            <p style={{ fontSize: 12, color: '#92660B', margin: 0, lineHeight: 1.45, display: 'flex', alignItems: 'flex-start', gap: 6 }}><span style={{ marginTop: 1 }}><KeyMark size={13} color="#92660B" /></span><span>{coverage.khGaps.noKeyholder
               ? 'No keyholders set — mark someone as a keyholder so the location can open and close.'
-              : `No keyholder available to ${coverage.khGaps.openMissing.length ? `open ${coverage.khGaps.openMissing.map((d) => DSHORT[d]).join(', ')}` : ''}${coverage.khGaps.openMissing.length && coverage.khGaps.closeMissing.length ? ' · ' : ''}${coverage.khGaps.closeMissing.length ? `close ${coverage.khGaps.closeMissing.map((d) => DSHORT[d]).join(', ')}` : ''} (one keyholder covers the whole location).`}</p>
+              : `No keyholder available to ${coverage.khGaps.openMissing.length ? `open ${coverage.khGaps.openMissing.map((d) => DSHORT[d]).join(', ')}` : ''}${coverage.khGaps.openMissing.length && coverage.khGaps.closeMissing.length ? ' · ' : ''}${coverage.khGaps.closeMissing.length ? `close ${coverage.khGaps.closeMissing.map((d) => DSHORT[d]).join(', ')}` : ''} (one keyholder covers the whole location).`}</span></p>
           </div>}
           </div>
           <button onClick={() => router.push('/dashboard/staff')} style={{ marginTop: 14, alignSelf: 'flex-start', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: T.font, fontSize: 12.5, fontWeight: 700, color: T.pink }}>Review staffing →</button>

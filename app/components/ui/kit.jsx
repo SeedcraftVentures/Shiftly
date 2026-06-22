@@ -12,8 +12,16 @@ export const T = {
   ink: '#111827', body: '#374151', muted: '#6B7280', faint: '#9CA3AF',
   line: '#ECECEF', hair: '#F4F4F6', track: '#EFEFF2', surface: '#FAFAFB',
   font: "'Plus Jakarta Sans', sans-serif",
-  // ── shape & elevation scale — the cohesion backbone. Reach for these, not raw px. ──
-  r: { xs: 8, sm: 10, md: 12, lg: 16, xl: 22, pill: 999 },
+  // ── type scale — six named roles, reference by role not px. (~1.25 ratio off 16px
+  //    body.) Dense UI guidance: `small` (13) for metadata/labels/dense rows, `body`
+  //    (16) for real content; headings h3→display. Collapse ad-hoc sizes onto these. ──
+  fz: { display: 39, h1: 31, h2: 25, h3: 20, body: 16, small: 13 },
+  lh: { tight: 1.15, snug: 1.3, normal: 1.5 },
+  // ── spacing — 8-pt grid with a 4px sub-step. Every gap/padding/margin comes from here. ──
+  space: { xs: 4, sm: 8, snug: 12, md: 16, lg: 24, xl: 32, xxl: 48, huge: 64 },
+  // ── shape & elevation scale — the cohesion backbone. Reach for these, not raw px.
+  //    Radii are all multiples of 4 (4/8/12/16/20). ──
+  r: { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, pill: 999 },
   shadow: {
     sm: '0 1px 2px rgba(17,24,39,.06)',
     md: '0 3px 10px rgba(17,24,39,.06), 0 1px 2px rgba(17,24,39,.04)',
@@ -44,7 +52,7 @@ export function Input({ prefix, accent = T.pink, style, ...props }) {
   return <div style={{ position: 'relative' }} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}>
     {prefix && <span style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', fontSize: 14, fontWeight: 700, color: lit ? accent : T.faint, pointerEvents: 'none', transition: 'color .12s' }}>{prefix}</span>}
     <input {...props} onFocus={(e) => { setF(true); props.onFocus?.(e) }} onBlur={(e) => { setF(false); props.onBlur?.(e) }}
-      style={{ width: '100%', boxSizing: 'border-box', fontFamily: T.font, fontSize: 14, fontWeight: 600, color: T.ink, padding: prefix ? '11px 13px 11px 25px' : '11px 13px', borderRadius: T.r.sm, border: `1px solid ${lit ? accent : '#E5E7EB'}`, outline: 'none', boxShadow: f ? T.ring(accent) : 'none', transition: 'border-color .12s, box-shadow .12s', ...style }} />
+      style={{ width: '100%', boxSizing: 'border-box', minHeight: 44, fontFamily: T.font, fontSize: 14, fontWeight: 600, color: T.ink, padding: prefix ? '12px 13px 12px 25px' : '12px 13px', borderRadius: T.r.sm, border: `1px solid ${lit ? accent : '#E5E7EB'}`, outline: 'none', boxShadow: f ? T.ring(accent) : 'none', transition: 'border-color .12s, box-shadow .12s', ...style }} />
   </div>
 }
 // ── Select — native select with the same pink hover/focus convention + chevron ──
@@ -54,7 +62,7 @@ export function Select({ value, onChange, children, accent = T.pink, style, ...p
   const lit = f || h
   return <div style={{ position: 'relative' }} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}>
     <select value={value} onChange={onChange} {...props} onFocus={(e) => { setF(true); props.onFocus?.(e) }} onBlur={(e) => { setF(false); props.onBlur?.(e) }}
-      style={{ width: '100%', boxSizing: 'border-box', appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none', fontFamily: T.font, fontSize: 14, fontWeight: 600, color: T.ink, padding: '11px 34px 11px 13px', borderRadius: T.r.sm, border: `1px solid ${lit ? accent : '#E5E7EB'}`, outline: 'none', background: '#fff', boxShadow: f ? T.ring(accent) : 'none', cursor: 'pointer', transition: 'border-color .12s, box-shadow .12s', ...style }}>
+      style={{ width: '100%', boxSizing: 'border-box', minHeight: 44, appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none', fontFamily: T.font, fontSize: 14, fontWeight: 600, color: T.ink, padding: '12px 34px 12px 13px', borderRadius: T.r.sm, border: `1px solid ${lit ? accent : '#E5E7EB'}`, outline: 'none', background: '#fff', boxShadow: f ? T.ring(accent) : 'none', cursor: 'pointer', transition: 'border-color .12s, box-shadow .12s', ...style }}>
       {children}
     </select>
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={lit ? accent : T.faint} style={{ position: 'absolute', right: 11, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', transition: 'stroke .12s' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
@@ -71,9 +79,9 @@ export function Button({ variant = 'primary', size = 'md', shape = 'rounded', fu
   const [press, setPress] = useState(false)
   const disabled = props.disabled
   const sz = {
-    sm: { fontSize: 12.5, padding: '8px 14px', gap: 6, icon: 15 },
-    md: { fontSize: 13.5, padding: '11px 18px', gap: 7, icon: 16 },
-    lg: { fontSize: 15, padding: '14px 24px', gap: 8, icon: 18 },
+    sm: { fontSize: 12.5, padding: '8px 16px', gap: 6, icon: 15, minHeight: 40 },
+    md: { fontSize: 13.5, padding: '10px 18px', gap: 8, icon: 16, minHeight: 44 },
+    lg: { fontSize: 15, padding: '12px 24px', gap: 8, icon: 18, minHeight: 48 },
   }[size]
   const radius = shape === 'pill' ? T.r.pill : (size === 'lg' ? T.r.md : T.r.sm)
 
@@ -145,13 +153,13 @@ export function Stepper({ value, onChange, min = 0, max = 99, step = 1, suffix =
   const clamp = (n) => Math.max(min, Math.min(max, n))
   const commit = (raw) => { let n = parseFloat(raw); if (isNaN(n)) n = min; n = clamp(n); onChange(n); setText(String(n)) }
   const nudge = (d) => { const n = clamp((parseFloat(text) || 0) + d); onChange(n); setText(String(n)) }
-  const btn = { width: 36, height: 38, border: '1px solid #E5E7EB', borderRadius: T.r.sm, background: T.surface, cursor: 'pointer', fontSize: 18, color: T.muted, flexShrink: 0, fontFamily: T.font, transition: 'background .12s' }
+  const btn = { width: 40, height: 44, border: '1px solid #E5E7EB', borderRadius: T.r.sm, background: T.surface, cursor: 'pointer', fontSize: 18, color: T.muted, flexShrink: 0, fontFamily: T.font, transition: 'background .12s' }
   const lit = focused || hover
   const fieldShadow = focused ? `0 0 0 3px ${accent}33` : (hover ? `0 0 0 3px ${accent}1F` : 'inset 0 1px 2px rgba(17,24,39,.08)')
   return <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} style={{ display: full ? 'flex' : 'inline-flex', alignItems: 'center', gap: 6 }}>
     <button type="button" onClick={() => nudge(-step)} style={btn}>−</button>
     <div onMouseDown={(e) => { if (e.target !== inputRef.current) { e.preventDefault(); inputRef.current?.focus() } }}
-      style={{ ...(full ? { flex: 1, minWidth: 0 } : { width: 72 }), display: 'flex', alignItems: 'center', height: 38, boxSizing: 'border-box', border: `1px solid ${lit ? accent : '#E5E7EB'}`, borderRadius: T.r.sm, background: '#fff', boxShadow: fieldShadow, cursor: 'text', transition: 'box-shadow .12s, border-color .12s' }}>
+      style={{ ...(full ? { flex: 1, minWidth: 0 } : { width: 72 }), display: 'flex', alignItems: 'center', height: 44, boxSizing: 'border-box', border: `1px solid ${lit ? accent : '#E5E7EB'}`, borderRadius: T.r.sm, background: '#fff', boxShadow: fieldShadow, cursor: 'text', transition: 'box-shadow .12s, border-color .12s' }}>
       <input ref={inputRef} type="text" inputMode="decimal" value={text}
         onChange={(e) => setText(e.target.value.replace(/[^\d.]/g, ''))}
         onFocus={(e) => { setFocused(true); e.target.select() }}

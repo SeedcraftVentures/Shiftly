@@ -223,21 +223,25 @@ export async function POST(request) {
     const dms = (d) => new Date(d + 'T00:00:00Z').getTime()
     const compliance = []
 
-    // Keyholder is LOCATION-wide: a keyholder must be on at the location's open and close
-    // each day, across ALL teams (one to open, one to close — possibly the same person).
+    // Keyholder is LOCATION-wide and judged on ACTUAL TIMES, not the shift's pin: a keyholder must
+    // be present when the first person arrives (open) and when the last leaves (close) each day,
+    // across ALL teams. A keyholder working the full span counts for both — no Open/Close tag needed.
     {
+      const DAY_ORDER = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+      const fmtDays = (arr) => [...new Set(arr)].sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b)).map((d) => d.slice(0, 3)).join(', ')
       const byDayLoc = {}
       for (const a of allAssignments) (byDayLoc[`${a.week}__${a.day}`] ||= []).push(a)
-      let openMiss = 0, closeMiss = 0
-      for (const list of Object.values(byDayLoc)) {
+      const openDaysMiss = [], closeDaysMiss = []
+      for (const [key, list] of Object.entries(byDayLoc)) {
+        const day = key.split('__')[1]
         const spans = list.map((a) => { let s = toMin(a.start_time), e = toMin(a.end_time); if (e <= s) e += 1440; return { s, e, kh: keyholderSet.has(a.staff_id) } })
         const openT = Math.min(...spans.map((x) => x.s)), closeT = Math.max(...spans.map((x) => x.e))
-        if (!spans.some((x) => x.kh && x.s <= openT + 1)) openMiss++
-        if (!spans.some((x) => x.kh && x.e >= closeT - 1)) closeMiss++
+        if (!spans.some((x) => x.kh && x.s <= openT + 1)) openDaysMiss.push(day)
+        if (!spans.some((x) => x.kh && x.e >= closeT - 1)) closeDaysMiss.push(day)
       }
       const parts = []
-      if (openMiss) parts.push(`${openMiss} day(s) with no keyholder at open`)
-      if (closeMiss) parts.push(`${closeMiss} day(s) with no keyholder at close`)
+      if (openDaysMiss.length) parts.push(`no keyholder at open on ${fmtDays(openDaysMiss)}`)
+      if (closeDaysMiss.length) parts.push(`no keyholder at close on ${fmtDays(closeDaysMiss)}`)
       compliance.push({ key: 'keyholder', label: 'Keyholder on open & close', ok: parts.length === 0, detail: parts.join('; ') })
     }
     const minRest = Number(rules.min_rest_hours ?? 11)

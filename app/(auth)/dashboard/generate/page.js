@@ -233,6 +233,7 @@ export default function RotaBuilder() {
   const [saved, setSaved] = useState([])
   const [staff, setStaff] = useState([])
   const [shifts, setShifts] = useState([])
+  const [rules, setRules] = useState({ min_rest_hours: 11, max_consecutive_days: 5 })
   const [rotaName, setRotaName] = useState('')
   const [editCell, setEditCell] = useState(null) // { staff, day } → opens the add-shift inspector
   const dragRef = useRef(null)
@@ -240,12 +241,13 @@ export default function RotaBuilder() {
   useEffect(() => {
     (async () => {
       try {
-        const [tr, sr, str, shr] = await Promise.all([fetch('/api/teams'), fetch('/api/rotas'), fetch('/api/staff'), fetch('/api/shifts')])
-        const td = await tr.json(), sd = await sr.json(), std = await str.json(), shd = await shr.json()
+        const [tr, sr, str, shr, rr] = await Promise.all([fetch('/api/teams'), fetch('/api/rotas'), fetch('/api/staff'), fetch('/api/shifts'), fetch('/api/rules')])
+        const td = await tr.json(), sd = await sr.json(), std = await str.json(), shd = await shr.json(), rd = await rr.json()
         setTeams((Array.isArray(td) ? td : []).map((t, i) => ({ id: t.id, name: t.name, color: TEAM_COLORS[i % TEAM_COLORS.length] })))
         setSaved(Array.isArray(sd) ? sd : [])
-        setStaff((Array.isArray(std) ? std : []).map((s) => ({ id: s.id, name: s.name, team_id: s.team_id, contracted_hours: s.contracted_hours || 0 })))
+        setStaff((Array.isArray(std) ? std : []).map((s) => ({ id: s.id, name: s.name, team_id: s.team_id, contracted_hours: s.contracted_hours || 0, is_keyholder: !!s.keyholder })))
         setShifts(Array.isArray(shd) ? shd : [])
+        if (Array.isArray(rd) && rd[0]?.rules) setRules(rd[0].rules)
       } catch (e) { console.error(e) } finally { setLoading(false) }
     })()
   }, [])
@@ -333,6 +335,75 @@ export default function RotaBuilder() {
     }
     return out
   }, [result, staff, teams, weekCount])
+
+  // Keyholder compliance recomputed LIVE from the current grid. The server value freezes at
+  // generation (and is empty for saved rotas), so editing the grid left it stale — exactly the
+  // "the grid shows a keyholder but the banner disagrees" bug. Judged on ACTUAL TIMES: a keyholder
+  // present when the first person arrives and the last leaves counts, with no Open/Close pin needed.
+  const liveCompliance = useMemo(() => {
+    if (!result) return []
+    const tMin = (t) => { const [h, m] = String(t || '0:0').split(':').map(Number); return (h || 0) * 60 + (m || 0) }
+    const khSet = new Set(staff.filter((s) => s.is_keyholder).map((s) => s.id))
+    const DAY_ORDER = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+    const dayName = (a) => (typeof a.day === 'number' ? DAY_ORDER[a.day] : a.day)
+    const fmtDays = (arr) => [...new Set(arr)].sort((x, y) => DAY_ORDER.indexOf(x) - DAY_ORDER.indexOf(y)).map((d) => String(d).slice(0, 3)).join(', ')
+    const byDay = {}
+    for (const a of result.assignments) (byDay[`${a.week}__${dayName(a)}`] ||= []).push(a)
+    const openMiss = [], closeMiss = []
+    for (const [key, list] of Object.entries(byDay)) {
+      const day = key.split('__')[1]
+      const spans = list.map((a) => { let s = tMin(a.start_time), e = tMin(a.end_time); if (e <= s) e += 1440; return { s, e, kh: khSet.has(a.staff_id) } })
+      if (!spans.length) continue
+      const openT = Math.min(...spans.map((x) => x.s)), closeT = Math.max(...spans.map((x) => x.e))
+      if (!spans.some((x) => x.kh && x.s <= openT + 1)) openMiss.push(day)
+      if (!spans.some((x) => x.kh && x.e >= closeT - 1)) closeMiss.push(day)
+    }
+    const parts = []
+    if (openMiss.length) parts.push(`no keyholder at open on ${fmtDays(openMiss)}`)
+    if (closeMiss.length) parts.push(`no keyholder at close on ${fmtDays(closeMiss)}`)
+    const keyholder = { key: 'keyholder', label: 'Keyholder on open & close', ok: parts.length === 0, detail: parts.join('; ') }
+
+    const nameOf = (id) => staff.find((s) => s.id === id)?.name || 'Someone'
+    const dms = (d) => new Date(d + 'T00:00:00Z').getTime()
+    const fmtDate = (d) => new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })
+    const byStaff = {}
+    for (const a of result.assignments) (byStaff[a.staff_id] ||= []).push(a)
+
+    // Max consecutive days — across ALL weeks (a run that crosses the week boundary still counts).
+    const maxConsec = Number(rules.max_consecutive_days ?? 5)
+    const consec = []
+    for (const [sid, list] of Object.entries(byStaff)) {
+      const dates = [...new Set(list.map((a) => a.work_date))].sort()
+      let runStart = dates[0], prev = dates[0], best = null
+      const close = (end) => { const len = Math.round((dms(end) - dms(runStart)) / 864e5) + 1; if (len > maxConsec && (!best || len > best.len)) best = { len, start: runStart, end } }
+      for (let i = 1; i < dates.length; i++) {
+        if (Math.round((dms(dates[i]) - dms(prev)) / 864e5) === 1) { prev = dates[i]; continue }
+        close(prev); runStart = dates[i]; prev = dates[i]
+      }
+      close(prev)
+      if (best) consec.push(`${nameOf(sid)} — ${best.len} days in a row (${fmtDate(best.start)} → ${fmtDate(best.end)})`)
+    }
+    const consecutive = { key: 'max_consecutive_days', label: `Max ${maxConsec} consecutive days`, ok: consec.length === 0, detail: consec.join('; ') }
+
+    // Minimum rest between shifts.
+    const minRest = Number(rules.min_rest_hours ?? 11)
+    const rest = []
+    for (const [sid, list] of Object.entries(byStaff)) {
+      const sorted = [...list].sort((a, b) => (dms(a.work_date) + tMin(a.start_time) * 6e4) - (dms(b.work_date) + tMin(b.start_time) * 6e4))
+      let worst = null
+      for (let i = 1; i < sorted.length; i++) {
+        const prevEnd = dms(sorted[i - 1].work_date) + tMin(sorted[i - 1].end_time) * 6e4
+        const nextStart = dms(sorted[i].work_date) + tMin(sorted[i].start_time) * 6e4
+        const gap = (nextStart - prevEnd) / 36e5
+        if (gap < minRest - 0.01 && (worst === null || gap < worst)) worst = gap
+      }
+      if (worst !== null) rest.push(`${nameOf(sid)} (${Math.round(worst)}h gap)`)
+    }
+    const restRule = { key: 'min_rest_hours', label: `Minimum ${minRest}h rest between shifts`, ok: rest.length === 0, detail: rest.join('; ') }
+
+    return [keyholder, consecutive, restRule]
+  }, [result, staff, rules])
+
   const teamsInResult = useMemo(() => {
     const ids = [...new Set(weekAssignments.map((a) => a.team_id))]
     return ids.map((id) => ({ id, name: teams.find((t) => t.id === id)?.name || weekAssignments.find((a) => a.team_id === id)?.team_name || 'Team', color: teamColor(id) }))
@@ -402,14 +473,19 @@ export default function RotaBuilder() {
           {Array.from({ length: weekCount }, (_, i) => i + 1).map((w) => <button key={w} onClick={() => setSelectedWeek(w)} style={{ fontFamily: 'inherit', fontSize: 12.5, fontWeight: 700, padding: '6px 14px', borderRadius: 8, cursor: 'pointer', border: `1px solid ${selectedWeek === w ? PINK : '#E5E7EB'}`, background: selectedWeek === w ? PINK + '12' : '#fff', color: selectedWeek === w ? PINK : '#6B7280' }}>Week {w}</button>)}
         </div>}
 
-        {result.rule_compliance?.length > 0 && <div style={card}>
+        {liveCompliance.length > 0 && <div style={card}>
           <div style={{ fontSize: 12, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 12 }}>Rule compliance</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-            {result.rule_compliance.map((r, i) => <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 9, fontSize: 13 }}>
+            {liveCompliance.map((r, i) => <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 9, fontSize: 13 }}>
               <span style={{ color: r.ok ? '#16A34A' : AMBER, fontWeight: 800, flexShrink: 0 }}>{r.ok ? '✓' : '⚠'}</span>
               <span style={{ color: '#374151' }}><b>{r.label}</b>{r.ok ? '' : <span style={{ color: '#92660B' }}> — {r.detail}</span>}</span>
             </div>)}
           </div>
+        </div>}
+
+        {result.relaxed_teams?.length > 0 && <div style={{ ...card, background: '#FFFBEB', border: '1px solid #FDE68A' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#92660B', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 6 }}>Some rules relaxed to build</div>
+          <div style={{ fontSize: 12.5, color: '#374151', lineHeight: 1.5 }}><b>{result.relaxed_teams.join(', ')}</b> couldn’t be scheduled within every rule, so limits were eased (e.g. allowing up to 7 days in a row) to still produce a rota. That’s why a max-consecutive or rest flag may appear above. Adding availability or staff to {result.relaxed_teams.length > 1 ? 'these teams' : 'this team'} usually removes the need.</div>
         </div>}
 
         {result.skipped?.length > 0 && <div style={{ ...card, background: '#FEF2F2', border: '1px solid #FECACA' }}>
