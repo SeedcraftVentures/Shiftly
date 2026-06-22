@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { Inspector as ShiftInspector, TeamRotaGrid, GapStrip, DayTimeline, AxisTicks, coveragePct } from '../(auth)/dashboard/shifts/page'
 import { Inspector as StaffInspector, AvailabilityGrid, AvailKey, TeamGlance } from '../(auth)/dashboard/staff/page'
 
@@ -17,11 +17,7 @@ const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const DAY_INDEX = { Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4, Saturday: 5, Sunday: 6 }
 const ALL = [0, 1, 2, 3, 4, 5, 6]
 const WEEKDAYS = [0, 1, 2, 3, 4]
-// open every day 9–5 so the demo never silently drops a shift on a "closed" day
-const BUSINESS = { 0: [9, 17], 1: [9, 17], 2: [9, 17], 3: [9, 17], 4: [9, 17], 5: [9, 17], 6: [9, 17] }
-const CFG = { business: BUSINESS, openDays: ALL, open: 9, close: 17, glance: [9, 17], slider: [7, 19] }
 const uid = (() => { let n = 0; return () => `id${++n}` })()
-const allDay = () => Object.fromEntries(ALL.map((d) => [d, true]))
 
 function fmt(h) {
   if (typeof h === 'string') { const [a, b] = h.split(':').map(Number); h = a + (b || 0) / 60 }
@@ -40,10 +36,50 @@ const addBtn = { fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: '#
 function KeyMark({ size = 13, color = PINK }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, display: 'block' }}><title>Keyholder</title><circle cx="8" cy="15" r="5" /><path d="M11.6 11.4 21 2" /><path d="M16.5 6.5 19.5 9.5" /></svg>
 }
+const Label = ({ children }) => <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 9 }}>{children}</div>
+function DayPicker({ days, onChange }) {
+  const toggle = (d) => onChange(days.includes(d) ? days.filter((x) => x !== d) : [...days, d].sort((a, b) => a - b))
+  return <div style={{ display: 'flex', gap: 6 }}>
+    {ALL.map((d) => { const on = days.includes(d); return <button key={d} type="button" onClick={() => toggle(d)} style={{ flex: 1, fontFamily: 'inherit', fontSize: 12, fontWeight: 700, padding: '10px 0', borderRadius: 9, cursor: 'pointer', border: `1px solid ${on ? PINK : '#E5E7EB'}`, background: on ? PINK : '#fff', color: on ? '#fff' : '#9CA3AF', transition: 'all .12s' }}>{DAYS[d]}</button> })}
+  </div>
+}
+function TimeRange({ start, end, onChange, domain = [0, 24] }) {
+  const trackRef = useRef(null), drag = useRef(null)
+  const [dS, dE] = domain, span = dE - dS
+  const pct = (v) => ((v - dS) / span) * 100
+  useEffect(() => {
+    function move(e) {
+      if (!drag.current || !trackRef.current) return
+      const rect = trackRef.current.getBoundingClientRect()
+      const r = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+      const t = Math.round((dS + r * span) * 2) / 2
+      if (drag.current === 'start') onChange(Math.min(t, end - 1), end)
+      else onChange(start, Math.max(t, start + 1))
+    }
+    function up() { drag.current = null }
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up)
+    return () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up) }
+  }, [start, end, onChange, dS, span])
+  const handle = (which, v) => <div onPointerDown={() => (drag.current = which)} style={{ position: 'absolute', top: '50%', left: `${pct(v)}%`, transform: 'translate(-50%,-50%)', width: 18, height: 18, borderRadius: 99, background: '#fff', border: `2px solid ${PINK}`, boxShadow: '0 1px 4px rgba(0,0,0,.18)', cursor: 'grab', touchAction: 'none', zIndex: 2 }} />
+  return <div ref={trackRef} style={{ position: 'relative', height: 22, userSelect: 'none' }}>
+    <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 6, transform: 'translateY(-50%)', background: '#EFEFF2', borderRadius: 99 }} />
+    <div style={{ position: 'absolute', top: '50%', left: `${pct(start)}%`, width: `${pct(end) - pct(start)}%`, height: 6, transform: 'translateY(-50%)', background: `linear-gradient(90deg, ${PINK}99, ${PINK})`, borderRadius: 99 }} />
+    {handle('start', start)}{handle('end', end)}
+  </div>
+}
 
 // ════════════════════════════════════════════════════════════════════════════
 export default function TryMe() {
-  const [started, setStarted] = useState(false)
+  const [phase, setPhase] = useState('intro') // intro · hours · build
+  const [openDaysSel, setOpenDaysSel] = useState([0, 1, 2, 3, 4, 5])
+  const [hours, setHours] = useState([9, 17])
+  const business = useMemo(() => Object.fromEntries(ALL.map((d) => [d, openDaysSel.includes(d) ? [hours[0], hours[1]] : null])), [openDaysSel, hours])
+  const cfg = useMemo(() => {
+    const openDays = ALL.filter((d) => business[d])
+    const opens = openDays.map((d) => business[d][0]), closes = openDays.map((d) => business[d][1])
+    const open = opens.length ? Math.min(...opens) : 9, close = closes.length ? Math.max(...closes) : 17
+    return { business, openDays, open, close, glance: [Math.floor(open), Math.ceil(close)], slider: [Math.max(0, Math.floor(open) - 2), Math.min(24, Math.ceil(close) + 2)] }
+  }, [business])
   const [tab, setTab] = useState('shifts')
   const [shifts, setShifts] = useState([])
   const [staff, setStaff] = useState([])
@@ -58,20 +94,20 @@ export default function TryMe() {
   const [unlocked, setUnlocked] = useState(false)
 
   // ── shifts ──
-  const addShiftRaw = (over) => { const s = { id: uid(), team_id: 'demo', pin: 'open', name: 'Open', start: 9, end: 17, days: [...WEEKDAYS], staff: 1, keyholder: false, ...over }; setShifts((p) => [...p, s]); setSelShift(s.id); setShiftSave('clean') }
+  const addShiftRaw = (over) => { const s = { id: uid(), team_id: 'demo', pin: 'open', name: 'Open', start: cfg.open, end: Math.min(cfg.close, cfg.open + 8), days: WEEKDAYS.filter((d) => cfg.openDays.includes(d)), staff: 1, keyholder: false, ...over }; setShifts((p) => [...p, s]); setSelShift(s.id); setShiftSave('clean') }
   const patchShift = (id, p) => { setShifts((prev) => prev.map((s) => (s.id === id ? { ...s, ...p } : s))); setShiftSave('dirty') }
   const removeShift = (id) => { setShifts((prev) => prev.filter((s) => s.id !== id)); setSelShift(null) }
   const saveShift = () => { setShiftSave('saved'); setTimeout(() => setShiftSave((x) => (x === 'saved' ? 'clean' : x)), 1200) }
   const applyGap = (sug) => {
     const name = sug.kind === 'open' ? 'Open' : sug.kind === 'close' ? 'Close' : 'Custom'
     if (sug.kind === 'mid') return addShiftRaw({ pin: 'none', name, start: sug.from, end: sug.to, days: [sug.day] })
-    const start = sug.kind === 'open' ? CFG.open : Math.max(CFG.open, CFG.close - 8)
-    const end = sug.kind === 'open' ? Math.min(CFG.close, CFG.open + 8) : CFG.close
+    const start = sug.kind === 'open' ? cfg.open : Math.max(cfg.open, cfg.close - 8)
+    const end = sug.kind === 'open' ? Math.min(cfg.close, cfg.open + 8) : cfg.close
     addShiftRaw({ pin: sug.kind, name, start, end, days: [...sug.days] })
   }
 
   // ── staff ──
-  const addStaffRaw = () => { const s = { id: uid(), team_id: 'demo', name: '', role: '', contracted: 0, max: 40, wage: 11.44, pay_basis: 'hourly', annual_salary: 0, annualised_hours: 0, keyholder: false, avail: allDay() }; setStaff((p) => [...p, s]); setSelStaff(s.id); setStaffSave('clean') }
+  const addStaffRaw = () => { const s = { id: uid(), team_id: 'demo', name: '', role: '', contracted: 0, max: 40, wage: 11.44, pay_basis: 'hourly', annual_salary: 0, annualised_hours: 0, keyholder: false, avail: Object.fromEntries(cfg.openDays.map((d) => [d, true])) }; setStaff((p) => [...p, s]); setSelStaff(s.id); setStaffSave('clean') }
   const patchStaff = (id, p) => { setStaff((prev) => prev.map((s) => (s.id === id ? { ...s, ...p } : s))); setStaffSave('dirty') }
   const removeStaff = (id) => { setStaff((prev) => prev.filter((s) => s.id !== id)); setSelStaff(null) }
   const saveStaff = () => { setStaffSave('saved'); setTimeout(() => setStaffSave((x) => (x === 'saved' ? 'clean' : x)), 1200) }
@@ -79,7 +115,7 @@ export default function TryMe() {
   const generate = async () => {
     setTab('rota'); setGenerating(true); setError(null); setResult(null)
     try {
-      const res = await fetch('/api/try-me/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ business: BUSINESS, shifts, staff }) })
+      const res = await fetch('/api/try-me/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ business, shifts, staff }) })
       const data = await res.json()
       if (!res.ok || data.error) setError(data.error || 'Could not build a rota.')
       else setResult(data)
@@ -90,7 +126,8 @@ export default function TryMe() {
   const shiftObj = shifts.find((s) => s.id === selShift)
   const staffObj = staff.find((s) => s.id === selStaff)
 
-  if (!started) return <Intro onStart={() => setStarted(true)} />
+  if (phase === 'intro') return <Intro onStart={() => setPhase('hours')} />
+  if (phase === 'hours') return <HoursStep openDaysSel={openDaysSel} setOpenDaysSel={setOpenDaysSel} hours={hours} setHours={setHours} onBack={() => setPhase('intro')} onContinue={() => setPhase('build')} />
 
   return <div style={{ fontFamily: FONT, background: '#FAFAFB', minHeight: '100vh', color: '#111827' }}>
     <style>{`@media print { body * { visibility: hidden !important } #printable, #printable * { visibility: visible !important } #printable { position: absolute; left: 0; top: 0; width: 100% } .no-print { display: none !important } }`}</style>
@@ -112,7 +149,7 @@ export default function TryMe() {
       {/* ── Shifts (real builder) ── */}
       {tab === 'shifts' && <div className="no-print" style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 18, alignItems: 'start' }}>
         <div style={{ ...panel, position: 'sticky', top: 16 }}>
-          <ShiftInspector key={selShift || 'none'} shift={shiftObj} patch={(p) => patchShift(selShift, p)} onDelete={() => removeShift(selShift)} saveState={shiftSave} onSave={saveShift} accent={PINK} cfg={CFG} />
+          <ShiftInspector key={selShift || 'none'} shift={shiftObj} patch={(p) => patchShift(selShift, p)} onDelete={() => removeShift(selShift)} saveState={shiftSave} onSave={saveShift} accent={PINK} cfg={cfg} />
         </div>
         <div style={panel}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
@@ -123,19 +160,19 @@ export default function TryMe() {
           {shifts.length === 0
             ? <Empty>No shifts yet. Add the patterns your team works each week.</Empty>
             : <>
-              <TeamRotaGrid groups={[{ name: 'Your team', color: PINK, shifts }]} cfg={CFG} selectedId={selShift} onSelect={setSelShift} />
+              <TeamRotaGrid groups={[{ name: 'Your team', color: PINK, shifts }]} cfg={cfg} selectedId={selShift} onSelect={setSelShift} />
               <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #ECECEF', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, alignItems: 'start' }}>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 10 }}>Week at a glance · <span style={{ color: coveragePct(shifts, CFG) === 100 ? '#16A34A' : PINK }}>{coveragePct(shifts, CFG)}%</span></div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 10 }}>Week at a glance · <span style={{ color: coveragePct(shifts, cfg) === 100 ? '#16A34A' : PINK }}>{coveragePct(shifts, cfg)}%</span></div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {ALL.map((d) => <div key={d} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <span style={{ width: 28, fontSize: 11, fontWeight: 700, color: '#6B7280' }}>{DAYS[d]}</span>
-                      <DayTimeline dayIndex={d} shifts={shifts} color={PINK} cfg={CFG} />
+                      <DayTimeline dayIndex={d} shifts={shifts} color={PINK} cfg={cfg} />
                     </div>)}
                   </div>
-                  <AxisTicks cfg={CFG} />
+                  <AxisTicks cfg={cfg} />
                 </div>
-                <div><GapStrip shifts={shifts} onApply={applyGap} accent={PINK} cfg={CFG} /></div>
+                <div><GapStrip shifts={shifts} onApply={applyGap} accent={PINK} cfg={cfg} /></div>
               </div>
             </>}
         </div>
@@ -144,7 +181,7 @@ export default function TryMe() {
       {/* ── Team (real builder) ── */}
       {tab === 'team' && <div className="no-print" style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: 18, alignItems: 'start' }}>
         <div style={{ ...panel, position: 'sticky', top: 16 }}>
-          <StaffInspector key={selStaff || 'none'} s={staffObj} patch={(p) => patchStaff(selStaff, p)} onDelete={() => removeStaff(selStaff)} saveState={staffSave} onSave={saveStaff} accent={PINK} cfg={CFG} />
+          <StaffInspector key={selStaff || 'none'} s={staffObj} patch={(p) => patchStaff(selStaff, p)} onDelete={() => removeStaff(selStaff)} saveState={staffSave} onSave={saveStaff} accent={PINK} cfg={cfg} />
         </div>
         <div style={panel}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
@@ -155,10 +192,10 @@ export default function TryMe() {
           {staff.length === 0
             ? <Empty>No team yet. Add people and set when each of them is available.</Empty>
             : <>
-              <AvailabilityGrid groups={[{ name: 'Your team', color: PINK, staff }]} cfg={CFG} selectedId={selStaff} onSelect={setSelStaff} />
+              <AvailabilityGrid groups={[{ name: 'Your team', color: PINK, staff }]} cfg={cfg} selectedId={selStaff} onSelect={setSelStaff} />
               <AvailKey accent={PINK} />
               <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #ECECEF' }}>
-                <TeamGlance staff={staff} shifts={shifts} teamName="Your team" teamId="demo" accent={PINK} cfg={CFG} wide />
+                <TeamGlance staff={staff} shifts={shifts} teamName="Your team" teamId="demo" accent={PINK} cfg={cfg} wide />
               </div>
             </>}
         </div>
@@ -198,6 +235,28 @@ function Intro({ onStart }) {
   </div>
 }
 
+function HoursStep({ openDaysSel, setOpenDaysSel, hours, setHours, onBack, onContinue }) {
+  return <div style={{ fontFamily: FONT, background: '#FAFAFB', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, color: '#111827' }}>
+    <div style={{ ...panel, padding: '36px 32px', maxWidth: 560, width: '100%' }}>
+      <div style={{ fontSize: 12, fontWeight: 800, color: PINK, letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 }}>First · your opening hours</div>
+      <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.4, margin: '0 0 8px' }}>When are you open?</h1>
+      <p style={{ fontSize: 14.5, color: '#6B7280', margin: '0 0 26px', lineHeight: 1.5 }}>We’ll shape the whole builder around your real week — so what you build is yours, not a generic example.</p>
+      <Label>Open days</Label>
+      <DayPicker days={openDaysSel} onChange={setOpenDaysSel} />
+      <div style={{ marginTop: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9 }}>
+          <Label>Opening hours</Label>
+          <span style={{ fontSize: 13, fontWeight: 800, color: '#111827' }}>{fmt(hours[0])} – {fmt(hours[1])}</span>
+        </div>
+        <TimeRange start={hours[0]} end={hours[1]} onChange={(s, e) => setHours([s, e])} domain={[0, 24]} />
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 30 }}>
+        <button onClick={onBack} style={{ fontFamily: 'inherit', fontSize: 14, fontWeight: 700, color: '#6B7280', background: '#fff', border: '1px solid #E5E7EB', borderRadius: 10, padding: '12px 20px', cursor: 'pointer' }}>Back</button>
+        <button onClick={onContinue} disabled={!openDaysSel.length} style={{ ...primaryBtn(!openDaysSel.length), fontSize: 15, padding: '13px 28px' }}>Start building →</button>
+      </div>
+    </div>
+  </div>
+}
 function Result({ result, staff, onDownload, unlocked }) {
   const rows = staff.map((s) => ({ s, blocks: (result.assignments || []).filter((a) => String(a.staff_id) === String(s.id) || a.staff_name === s.name) }))
   const total = (result.assignments || []).length
