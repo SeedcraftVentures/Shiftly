@@ -73,9 +73,12 @@ function dayCoverage(shifts, d, cfg) {
   const gap = dayGapsFor(shifts, d, cfg).reduce((s, [a, b]) => s + (b - a), 0)
   return total ? (total - gap) / total : 1
 }
-// default shift name = team + what it's pinned to; auto-updates until the user customises it
-const autoName = (team, anchor) => `${team} ${anchor === 'open' ? 'open' : anchor === 'close' ? 'close' : 'mid'}`
-const isAutoName = (name, team) => !name || name === 'New shift' || ['open', 'close', 'mid'].some((a) => name === autoName(team, a))
+// default shift name follows the pin (team is already shown above the grid, so no prefix);
+// auto-updates until the user types their own.
+const autoName = (anchor) => (anchor === 'open' ? 'Open' : anchor === 'close' ? 'Close' : 'Custom')
+const isAutoName = (name) => !name || name === 'New shift' || ['Open', 'Close', 'Custom'].includes(name)
+// what the grid row shows: Open/Close derived from the pin, else the (custom) name
+const gridLabel = (s, cfg) => (s.start <= cfg.open + 0.01 ? 'Open' : s.end >= cfg.close - 0.01 ? 'Close' : (s.name || 'Custom'))
 const sameSet = (a, b) => [...a].sort((x, y) => x - y).join() === [...b].sort((x, y) => x - y).join()
 const scopeLabel = (days, cfg) => sameSet(days, cfg.openDays) ? 'Full-week' : sameSet(days, WEEKDAYS.filter((d) => cfg.openDays.includes(d))) ? 'Weekday' : sameSet(days, WEEKEND.filter((d) => cfg.openDays.includes(d))) ? 'Weekend' : days.map((d) => DAYS[d]).join(' ')
 // smart gaps — suggest structural shifts (full-week/weekday/weekend open or close) plus genuine
@@ -232,14 +235,14 @@ function SaveStatus({ state }) {
   const c = state === 'saved' ? { c: '#16A34A', t: '✓ Saved' } : state === 'dirty' ? { c: AMBER, t: '• Unsaved changes' } : { c: '#9CA3AF', t: 'Up to date' }
   return <span style={{ fontSize: 11.5, fontWeight: 600, color: c.c }}>{c.t}</span>
 }
-function Inspector({ shift, patch, onDelete, saveState, onSave, accent, cfg, teamName }) {
+function Inspector({ shift, patch, onDelete, saveState, onSave, accent, cfg }) {
   const curLen = shift ? Math.round((shift.end - shift.start) * 10) / 10 : 0
   const [lenMode, setLenMode] = useState(() => ([4, 8, 12].includes(curLen) ? String(curLen) : 'custom'))
   if (!shift) return <div style={{ color: '#9CA3AF', fontSize: 13, textAlign: 'center', marginTop: 70, lineHeight: 1.6 }}>Select a shift to edit<br />its properties here.</div>
   // anchor is derived from the times; pins snap them, which keeps the saved anchor_type in sync.
   const L = shift.end - shift.start
   const anchor = shift.start <= cfg.open + 0.01 ? 'open' : shift.end >= cfg.close - 0.01 ? 'close' : 'mid'
-  const rename = (p, a) => { if (isAutoName(shift.name, teamName)) p.name = autoName(teamName, a); return p }
+  const rename = (p, a) => { if (isAutoName(shift.name)) p.name = autoName(a); return p }
   const setAnchor = (a) => {
     const p = {}
     if (a === 'open') { p.start = cfg.open; p.end = Math.min(cfg.close, cfg.open + L) }
@@ -255,44 +258,40 @@ function Inspector({ shift, patch, onDelete, saveState, onSave, accent, cfg, tea
     else if (anchor === 'close') patch({ start: Math.max(cfg.open, cfg.close - n), end: cfg.close })
     else patch({ end: Math.min(cfg.close, shift.start + n) })
   }
-  const segWrap = { display: 'flex', background: '#F1F1F4', borderRadius: 9, padding: 3, gap: 2, marginTop: 8 }
-  return <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+  const segWrap = { display: 'flex', background: '#F1F1F4', borderRadius: 9, padding: 3, gap: 2, marginTop: 9 }
+  return <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9 }}>
         <Label>Shift name</Label>
         <button onClick={onDelete} style={{ fontSize: 12, fontWeight: 600, color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Delete</button>
       </div>
       <FieldInput value={shift.name} onChange={(e) => patch({ name: e.target.value })} />
     </div>
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-      <div>
-        <Label>Pin to</Label>
-        <div style={segWrap}>
-          <Seg active={anchor === 'open'} onClick={() => setAnchor('open')} accent={accent}>Open</Seg>
-          <Seg active={anchor === 'mid'} onClick={() => setAnchor('mid')} accent={accent}>None</Seg>
-          <Seg active={anchor === 'close'} onClick={() => setAnchor('close')} accent={accent}>Close</Seg>
-        </div>
+    <div>
+      <Label>Pin to</Label>
+      <div style={segWrap}>
+        <Seg active={anchor === 'open'} onClick={() => setAnchor('open')} accent={accent}>Open</Seg>
+        <Seg active={anchor === 'mid'} onClick={() => setAnchor('mid')} accent={accent}>None</Seg>
+        <Seg active={anchor === 'close'} onClick={() => setAnchor('close')} accent={accent}>Close</Seg>
       </div>
-      <div>
-        <Label>Length</Label>
-        <div style={segWrap}>
-          {[4, 8, 12].map((n) => <Seg key={n} active={lenMode === String(n)} onClick={() => setLen(n)} accent={accent}>{n}h</Seg>)}
-          <Seg active={lenMode === 'custom'} onClick={() => setLenMode('custom')} accent={accent}>Custom</Seg>
-        </div>
+    </div>
+    <div>
+      <Label>Length</Label>
+      <div style={segWrap}>
+        {[4, 8, 12].map((n) => <Seg key={n} active={lenMode === String(n)} onClick={() => setLen(n)} accent={accent}>{n}h</Seg>)}
+        <Seg active={lenMode === 'custom'} onClick={() => setLenMode('custom')} accent={accent}>Custom</Seg>
       </div>
     </div>
     <div>
       <Label>{fmt(shift.start)} – {fmt(shift.end)} · {curLen}h{anchor !== 'mid' && <span style={{ color: accent, fontWeight: 700 }}> · {anchor === 'open' ? 'opens' : 'closes'}</span>}</Label>
-      <div style={{ marginTop: 10 }}><TimeRange start={shift.start} end={shift.end} onChange={(start, end) => { setLenMode('custom'); patch({ start, end }) }} accent={accent} domain={cfg.slider} /></div>
+      <div style={{ marginTop: 11 }}><TimeRange start={shift.start} end={shift.end} onChange={(start, end) => { setLenMode('custom'); patch({ start, end }) }} accent={accent} domain={cfg.slider} /></div>
     </div>
-    <div><Label>Runs on</Label><div style={{ marginTop: 8 }}><DayPicker days={shift.days} onChange={(days) => patch({ days })} openDays={cfg.openDays} accent={accent} /></div></div>
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-      <div><Label>Staff needed</Label><div style={{ marginTop: 8 }}><Stepper value={shift.staff} onChange={(staff) => patch({ staff })} min={1} max={20} /></div></div>
-      <div><Label>Keyholder</Label>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9, height: 44, marginTop: 8, padding: '0 12px', borderRadius: 9, background: '#fff', border: '1px solid #E5E7EB' }}>
-          <Switch on={shift.keyholder} onClick={() => patch({ keyholder: !shift.keyholder })} accent={accent} />
-          <span style={{ fontSize: 12.5, fontWeight: 600, color: shift.keyholder ? accent : '#9CA3AF' }}>{shift.keyholder ? '🔑 Keyholder' : 'Not a keyholder'}</span>
-        </div>
+    <div><Label>Runs on</Label><div style={{ marginTop: 9 }}><DayPicker days={shift.days} onChange={(days) => patch({ days })} openDays={cfg.openDays} accent={accent} /></div></div>
+    <div><Label>Staff needed</Label><div style={{ marginTop: 9 }}><Stepper value={shift.staff} onChange={(staff) => patch({ staff })} min={1} max={20} /></div></div>
+    <div><Label>Keyholder</Label>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9, height: 44, marginTop: 9, padding: '0 12px', borderRadius: 9, background: '#fff', border: '1px solid #E5E7EB' }}>
+        <Switch on={shift.keyholder} onClick={() => patch({ keyholder: !shift.keyholder })} accent={accent} />
+        <span style={{ fontSize: 12.5, fontWeight: 600, color: shift.keyholder ? accent : '#9CA3AF' }}>{shift.keyholder ? '🔑 Keyholder' : 'Not a keyholder'}</span>
       </div>
     </div>
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
@@ -448,7 +447,7 @@ const RTH = { fontSize: 11, fontWeight: 700, color: '#6B7280', padding: '6px 6px
 const RTH_STAFF = { ...RTH, textAlign: 'left', position: 'sticky', left: 0, background: '#fff', minWidth: 150 }
 const RTD = { padding: '4px 4px', verticalAlign: 'top' }
 const RTD_STAFF = { padding: '4px 4px', verticalAlign: 'top', position: 'sticky', left: 0, background: '#fff' }
-function TeamRotaGrid({ groups, selectedId, onSelect, selectMode, selectedIds, onToggle }) {
+function TeamRotaGrid({ groups, cfg, selectedId, onSelect, selectMode, selectedIds, onToggle }) {
   const [hoverId, setHoverId] = useState(null)
   const interactive = !!onSelect || !!selectMode
   const cell = { padding: '5px 6px', verticalAlign: 'middle' }
@@ -458,13 +457,13 @@ function TeamRotaGrid({ groups, selectedId, onSelect, selectMode, selectedIds, o
       <thead><tr><th style={{ ...RTH_STAFF, minWidth: 124 }} />{DAYS.map((d) => <th key={d} style={RTH}><div style={{ fontWeight: 800, color: '#374151' }}>{d}</div></th>)}</tr></thead>
       <tbody>
         {groups.map((g) => <Fragment key={g.name}>
-          <tr><td colSpan={8} style={{ padding: '6px 0 10px' }}>
+          {groups.length > 1 && <tr><td colSpan={8} style={{ padding: '6px 0 10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ width: 8, height: 8, borderRadius: 99, background: g.color }} />
               <span style={{ fontSize: 12, fontWeight: 800, color: g.color, letterSpacing: 0.4, textTransform: 'uppercase' }}>{g.name}</span>
               <div style={{ flex: 1, height: 1, background: '#F0F0F2' }} />
             </div>
-          </td></tr>
+          </td></tr>}
           {g.shifts.length === 0 && <tr><td colSpan={8} style={{ textAlign: 'center', color: '#9CA3AF', fontSize: 13, padding: '20px 0' }}>No shifts yet — add one to see the week build up.</td></tr>}
           {g.shifts.map((s, idx) => {
             const blk = rotaBlock(g.color, idx)
@@ -478,7 +477,8 @@ function TeamRotaGrid({ groups, selectedId, onSelect, selectMode, selectedIds, o
                   {selectMode
                     ? <span style={{ width: 18, height: 18, borderRadius: 5, flexShrink: 0, border: `1.5px solid ${checked ? g.color : '#D1D5DB'}`, background: checked ? g.color : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11, fontWeight: 800 }}>{checked ? '✓' : ''}</span>
                     : <span style={{ width: 9, height: 9, borderRadius: 99, background: g.color, flexShrink: 0 }} />}
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{gridLabel(s, cfg)}</span>
+                  {interactive && !selectMode && hov && <span style={{ marginLeft: 'auto', paddingLeft: 4, color: g.color, fontSize: 14, fontWeight: 800, flexShrink: 0 }}>›</span>}
                 </span>
               </td>
               {ALL.map((d) => <td key={d} style={{ ...cell, background: rounded ? rowBg : 'transparent', borderTopRightRadius: rounded && d === 6 ? 10 : 0, borderBottomRightRadius: rounded && d === 6 ? 10 : 0 }}>
@@ -533,7 +533,9 @@ export default function ShiftsPage() {
   const isAll = teamId === 'all'
   const teamShifts = useMemo(() => shifts.filter((s) => s.team_id === teamId), [shifts, teamId])
   const selected = shifts.find((s) => s.id === selectedId)
-  useEffect(() => { setSelectedId(null); setSelectMode(false); setSelectedIds(new Set()) }, [teamId])
+  // switching teams clears multi-select, but NOT the selected shift — adding a shift from the
+  // all-teams tab jumps you to that team with its inspector already open.
+  useEffect(() => { setSelectMode(false); setSelectedIds(new Set()) }, [teamId])
   useEffect(() => { setSaveState('clean') }, [selectedId])
 
   const toggleSelect = useCallback((id) => setSelectedIds((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n }), [])
@@ -554,21 +556,19 @@ export default function ShiftsPage() {
     setTimeout(() => setSaveState((x) => (x === 'saved' ? 'clean' : x)), 1500)
   }, [toApi])
   const addShift = useCallback(async (tId, over = {}) => {
-    const tName = teams.find((t) => t.id === tId)?.name || ''
-    const draft = { team_id: tId, name: over.name || autoName(tName, 'open'), start: over.start ?? cfg.open, end: over.end ?? Math.min(cfg.open + 8, cfg.close), days: over.days || WEEKDAYS.filter((d) => cfg.openDays.includes(d)), staff: 1, keyholder: false }
+    const draft = { team_id: tId, name: over.name || autoName('open'), start: over.start ?? cfg.open, end: over.end ?? Math.min(cfg.open + 8, cfg.close), days: over.days || WEEKDAYS.filter((d) => cfg.openDays.includes(d)), staff: 1, keyholder: false }
     const res = await fetch('/api/shifts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(toApi(draft)) })
     if (!res.ok) return
     const created = await res.json()
     setShifts((prev) => [...prev, created]); setTeamId(tId); setSelectedId(created.id)
-  }, [cfg, toApi, teams])
+  }, [cfg, toApi])
   // smart-gap suggestions add a structural shift (open/close for a set of days, or a mid window)
   const applyGap = useCallback((sug) => {
-    const tName = teams.find((t) => t.id === teamId)?.name || ''
-    if (sug.kind === 'mid') return addShift(teamId, { name: autoName(tName, 'mid'), start: sug.from, end: sug.to, days: [sug.day] })
+    if (sug.kind === 'mid') return addShift(teamId, { name: autoName('mid'), start: sug.from, end: sug.to, days: [sug.day] })
     const start = sug.kind === 'open' ? cfg.open : Math.max(cfg.open, cfg.close - 8)
     const end = sug.kind === 'open' ? Math.min(cfg.close, cfg.open + 8) : cfg.close
-    return addShift(teamId, { name: autoName(tName, sug.kind), start, end, days: [...sug.days] })
-  }, [addShift, teamId, teams, cfg])
+    return addShift(teamId, { name: autoName(sug.kind), start, end, days: [...sug.days] })
+  }, [addShift, teamId, cfg])
   const removeShift = useCallback(async (id) => { await fetch(`/api/shifts?id=${id}`, { method: 'DELETE' }); setShifts((prev) => prev.filter((s) => s.id !== id)); setSelectedId(null) }, [])
   const applySuggestion = useCallback(async (tId, s) => {
     if (s.kind === 'end' || s.kind === 'start') {
@@ -585,7 +585,7 @@ export default function ShiftsPage() {
   if (loading) return <div style={{ fontFamily: FONT, padding: 60, textAlign: 'center', color: '#9CA3AF' }}>Loading shifts…</div>
   if (teams.length === 0) return <div style={{ fontFamily: FONT, padding: 60, textAlign: 'center', color: '#6B7280' }}>No teams yet. Finish onboarding to add teams first.</div>
 
-  const tabs = [...teams, { id: 'all', name: 'All teams' }]
+  const tabs = [{ id: 'all', name: 'All teams' }, ...teams]
   const panel = { background: '#fff', border: '1px solid #ECECEF', borderRadius: 14, padding: 20, boxShadow: '0 3px 10px rgba(17,24,39,.06), 0 1px 2px rgba(17,24,39,.04)' }
   const teamName = teams.find((t) => t.id === teamId)?.name || ''
 
@@ -599,7 +599,7 @@ export default function ShiftsPage() {
         {tabs.map((t) => {
           const active = t.id === teamId
           const count = t.id === 'all' ? shifts.length : shifts.filter((s) => s.team_id === t.id).length
-          return <button key={t.id} onClick={() => setTeamId(t.id)} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 700, padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', color: active ? '#111827' : '#9CA3AF', background: active ? '#fff' : 'transparent', boxShadow: active ? '0 1px 3px rgba(0,0,0,.1)' : 'none', transition: 'all .15s' }}>{t.id !== 'all' && <span style={{ width: 8, height: 8, borderRadius: 99, background: t.color }} />}{t.name}<span style={{ fontSize: 11, fontWeight: 700, color: active ? (t.color || PINK) : '#C4C4CC' }}>{count}</span></button>
+          return <button key={t.id} onClick={() => { setTeamId(t.id); setSelectedId(null) }} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 700, padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', color: active ? '#111827' : '#9CA3AF', background: active ? '#fff' : 'transparent', boxShadow: active ? '0 1px 3px rgba(0,0,0,.1)' : 'none', transition: 'all .15s' }}>{t.id !== 'all' && <span style={{ width: 8, height: 8, borderRadius: 99, background: t.color }} />}{t.name}<span style={{ fontSize: 11, fontWeight: 700, color: active ? (t.color || PINK) : '#C4C4CC' }}>{count}</span></button>
         })}
       </div>
     </div>
@@ -612,14 +612,14 @@ export default function ShiftsPage() {
         {/* full rota — every team's shifts in one grid */}
         <div style={panel}>
           <div style={{ fontSize: 13, fontWeight: 800, color: '#111827', marginBottom: 14 }}>Full rota <span style={{ color: '#9CA3AF', fontWeight: 600 }}>· all teams</span></div>
-          <TeamRotaGrid groups={teams.map((t) => ({ name: t.name, color: t.color, shifts: shifts.filter((s) => s.team_id === t.id) }))} />
+          <TeamRotaGrid groups={teams.map((t) => ({ name: t.name, color: t.color, shifts: shifts.filter((s) => s.team_id === t.id) }))} cfg={cfg} />
         </div>
       </div>
     ) : (
       <div style={{ maxWidth: 1240, margin: '0 auto', padding: '2px 24px 40px', display: 'grid', gridTemplateColumns: '320px 1fr', gap: 18, alignItems: 'start' }}>
         {/* inspector stays on the left; the rota grid is the list, with coverage + gaps under it */}
         <div style={{ ...panel, position: 'sticky', top: 16 }}>
-          <Inspector key={selected?.id || 'none'} shift={selected} patch={(p) => patch(selected.id, p)} onDelete={() => removeShift(selected.id)} saveState={saveState} onSave={() => saveShift(selected)} accent={accent} cfg={cfg} teamName={teamName} />
+          <Inspector key={selected?.id || 'none'} shift={selected} patch={(p) => patch(selected.id, p)} onDelete={() => removeShift(selected.id)} saveState={saveState} onSave={() => saveShift(selected)} accent={accent} cfg={cfg} />
         </div>
         <div style={panel}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
@@ -637,7 +637,8 @@ export default function ShiftsPage() {
               </div>
             </>}
           </div>
-          <TeamRotaGrid groups={[{ name: teamName, color: accent, shifts: teamShifts }]} selectedId={selectedId} onSelect={setSelectedId} selectMode={selectMode} selectedIds={selectedIds} onToggle={toggleSelect} />
+          {!selectMode && teamShifts.length > 0 && <div style={{ fontSize: 11.5, color: '#9CA3AF', marginBottom: 10 }}>Click a shift to edit it<span style={{ color: '#D1D5DB' }}> · </span>use <span style={{ fontWeight: 700, color: '#6B7280' }}>Select</span> to remove several at once.</div>}
+          <TeamRotaGrid groups={[{ name: teamName, color: accent, shifts: teamShifts }]} cfg={cfg} selectedId={selectedId} onSelect={setSelectedId} selectMode={selectMode} selectedIds={selectedIds} onToggle={toggleSelect} />
           {/* coverage + smart gaps, full-width under the grid */}
           <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #ECECEF', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
             <div>
