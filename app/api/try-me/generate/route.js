@@ -77,7 +77,13 @@ export async function POST(request) {
       return out
     }
 
-    // solve each team separately (its staff cover its shifts), then merge — mirrors the real app
+    const solve = async (st, sh, rls) => {
+      const resp = await fetch(`${pythonUrl}/schedule`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ staff: st, shifts: sh, rules: rls, weeks: 1 }) })
+      if (!resp.ok) return { http502: true }
+      const r = await resp.json().catch(() => null)
+      return { ok: !!(r && r.success !== false), assignments: r?.assignments || [], wall: r?.stats?.wall_time || 0 }
+    }
+    // solve each team separately, with a relaxation ladder so a demo never hard-fails (mirrors the real app)
     const teamIds = [...new Set([...inShifts, ...inStaff].map(tid))]
     const all = []
     let wall = 0, scheduler502 = false
@@ -85,10 +91,12 @@ export async function POST(request) {
       const teamStaff = toSchedulerStaff(inStaff.filter((s) => tid(s) === t))
       const teamShifts = toSchedulerShifts(inShifts.filter((p) => tid(p) === t))
       if (!teamStaff.length || !teamShifts.length) continue
-      const resp = await fetch(`${pythonUrl}/schedule`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ staff: teamStaff, shifts: teamShifts, rules, weeks: 1 }) })
-      if (!resp.ok) { scheduler502 = true; continue }
-      const r = await resp.json().catch(() => null)
-      if (r && r.success !== false) { all.push(...(r.assignments || [])); wall += r.stats?.wall_time || 0 }
+      const relaxed = { ...rules, fair_distribution: true, max_consecutive_days: 7, min_rest_hours: 0 }
+      let r = await solve(teamStaff, teamShifts, rules)
+      if (!r.http502 && !r.ok) r = await solve(teamStaff, teamShifts, relaxed)
+      if (!r.http502 && !r.ok) r = await solve(teamStaff.map((s) => ({ ...s, contracted_hours: 0 })), teamShifts, relaxed)
+      if (r.http502) { scheduler502 = true; continue }
+      if (r.ok) { all.push(...r.assignments); wall += r.wall }
     }
     if (all.length === 0) {
       if (scheduler502) return NextResponse.json({ error: 'The scheduler is waking up — try again in a few seconds.' }, { status: 502 })

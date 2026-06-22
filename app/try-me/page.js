@@ -37,44 +37,47 @@ function KeyMark({ size = 13, color = PINK }) {
 }
 
 // ── establishment scenarios (single team each) ───────────────────────────────
+// scenarios use realistic 8-hour shifts and staffing that comfortably covers the week
 const ESTS = [
   {
     id: 'cafe', short: 'cafe', name: 'a cafe', tag: 'Coffee, brunch & the morning rush', team: 'Cafe team',
     openDays: [0, 1, 2, 3, 4, 5, 6], hours: [7, 16],
     shifts: [
-      { name: 'Opener', start: 7, end: 13, days: [0, 1, 2, 3, 4, 5, 6], staff: 1, keyholder: true, pin: 'open' },
-      { name: 'Closer', start: 10, end: 16, days: [0, 1, 2, 3, 4, 5, 6], staff: 1, keyholder: true, pin: 'close' },
+      { name: 'Opener', start: 7, end: 15, days: [0, 1, 2, 3, 4, 5, 6], staff: 1, keyholder: true, pin: 'open' },
+      { name: 'Closer', start: 8, end: 16, days: [0, 1, 2, 3, 4, 5, 6], staff: 1, keyholder: true, pin: 'close' },
     ],
     staff: [
       { name: 'Sam Rivera', contracted: 32, keyholder: true, days: [0, 1, 2, 3, 4, 5, 6] },
-      { name: 'Alex Kim', contracted: 20, keyholder: false, days: [0, 1, 2, 3, 4] },
-      { name: 'Jess Doyle', contracted: 16, keyholder: true, days: [4, 5, 6] },
+      { name: 'Alex Kim', contracted: 32, keyholder: true, days: [0, 1, 2, 3, 4, 5, 6] },
+      { name: 'Jess Doyle', contracted: 24, keyholder: false, days: [0, 1, 2, 3, 4] },
+      { name: 'Riley Quinn', contracted: 24, keyholder: false, days: [3, 4, 5, 6] },
     ],
   },
   {
     id: 'bar', short: 'bar', name: 'a bar', tag: 'Evenings, weekends & late closes', team: 'Bar team',
-    openDays: [2, 3, 4, 5, 6], hours: [16, 23],
+    openDays: [2, 3, 4, 5, 6], hours: [15, 23],
     shifts: [
-      { name: 'Early', start: 16, end: 20, days: [2, 3, 4, 5, 6], staff: 1, keyholder: false, pin: 'open' },
-      { name: 'Close', start: 19, end: 23, days: [2, 3, 4, 5, 6], staff: 1, keyholder: true, pin: 'close' },
+      { name: 'Bar shift', start: 15, end: 23, days: [2, 3, 4, 5, 6], staff: 2, keyholder: true, pin: 'open' },
     ],
     staff: [
-      { name: 'Charlie Fox', contracted: 30, keyholder: true, days: [2, 3, 4, 5, 6] },
-      { name: 'Robin Shah', contracted: 18, keyholder: false, days: [4, 5, 6] },
-      { name: 'Drew Ellis', contracted: 20, keyholder: true, days: [2, 3, 4] },
+      { name: 'Charlie Fox', contracted: 32, keyholder: true, days: [2, 3, 4, 5, 6] },
+      { name: 'Robin Shah', contracted: 32, keyholder: true, days: [2, 3, 4, 5, 6] },
+      { name: 'Drew Ellis', contracted: 24, keyholder: false, days: [2, 3, 4, 5, 6] },
+      { name: 'Sam Page', contracted: 16, keyholder: false, days: [4, 5, 6] },
     ],
   },
   {
     id: 'shop', short: 'shop', name: 'a shop', tag: 'One floor, open till evening', team: 'Shop floor',
     openDays: [0, 1, 2, 3, 4, 5], hours: [9, 18],
     shifts: [
-      { name: 'Open', start: 9, end: 14, days: [0, 1, 2, 3, 4, 5], staff: 1, keyholder: true, pin: 'open' },
-      { name: 'Close', start: 13, end: 18, days: [0, 1, 2, 3, 4, 5], staff: 1, keyholder: true, pin: 'close' },
+      { name: 'Open', start: 9, end: 17, days: [0, 1, 2, 3, 4, 5], staff: 1, keyholder: true, pin: 'open' },
+      { name: 'Close', start: 10, end: 18, days: [0, 1, 2, 3, 4, 5], staff: 1, keyholder: true, pin: 'close' },
     ],
     staff: [
       { name: 'Pat Owens', contracted: 32, keyholder: true, days: [0, 1, 2, 3, 4, 5] },
-      { name: 'Jordan Lee', contracted: 20, keyholder: false, days: [0, 1, 2, 3, 4] },
-      { name: 'Morgan Tate', contracted: 16, keyholder: true, days: [3, 4, 5] },
+      { name: 'Jordan Lee', contracted: 32, keyholder: true, days: [0, 1, 2, 3, 4, 5] },
+      { name: 'Morgan Tate', contracted: 24, keyholder: false, days: [0, 1, 2, 3, 4] },
+      { name: 'Sky Adams', contracted: 16, keyholder: false, days: [3, 4, 5] },
     ],
   },
 ]
@@ -99,7 +102,6 @@ export default function TryMe() {
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
   const [gateOpen, setGateOpen] = useState(false)
-  const [unlocked, setUnlocked] = useState(false)
 
   const cfg = useMemo(() => (est ? buildCfg(est.openDays, est.hours) : buildCfg([0, 1, 2, 3, 4], [9, 17])), [est])
 
@@ -144,11 +146,9 @@ export default function TryMe() {
   const groups = [{ name: est.team, color: PINK, shifts }]
   const staffGroups = [{ name: est.team, color: PINK, staff }]
 
-  return <div style={{ fontFamily: FONT, background: '#FAFAFB', minHeight: '100vh', color: '#111827', paddingBottom: 140 }}>
-    <style>{`@media print { body * { visibility: hidden !important } #printable, #printable * { visibility: visible !important } #printable { position: absolute; left: 0; top: 0; width: 100% } .no-print { display: none !important } }`}</style>
-
+  return <div style={{ fontFamily: FONT, background: '#FAFAFB', minHeight: '100vh', color: '#111827', paddingBottom: 60 }}>
     {/* header / progress */}
-    <div style={{ borderBottom: '1px solid #ECECEF', background: '#fff' }} className="no-print">
+    <div style={{ borderBottom: '1px solid #ECECEF', background: '#fff' }}>
       <div style={{ maxWidth: 1080, margin: '0 auto', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
           <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.4 }}>Shiftly</span>
@@ -158,8 +158,14 @@ export default function TryMe() {
       </div>
     </div>
 
-    <div style={{ maxWidth: 1080, margin: '0 auto', padding: '22px 24px 0' }}>
-      {cur.tab === 'shifts' && <div className="no-print" style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 18, alignItems: 'start' }}>
+    <div style={{ maxWidth: 1080, margin: '0 auto', padding: '20px 24px 0' }}>
+      {/* coach — in the flow, right above the content, at eye height */}
+      <Coach step={step} cur={cur} generating={generating}
+        onBack={() => step > 0 && setStep(step - 1)}
+        onNext={() => { if (cur.generate) generate(); else if (cur.done) setGateOpen(true); else setStep(step + 1) }}
+        onRestart={() => setEst(null)} />
+
+      {cur.tab === 'shifts' && <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 18, alignItems: 'start' }}>
         <div style={{ ...panel, position: 'sticky', top: 16 }}><ShiftInspector key={selShift || 'none'} shift={shiftObj} patch={(p) => patchShift(selShift, p)} onDelete={() => removeShift(selShift)} saveState={shiftSave} onSave={saveShift} accent={PINK} cfg={cfg} /></div>
         <div style={panel}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
@@ -183,20 +189,14 @@ export default function TryMe() {
       </div>}
 
       {cur.tab === 'rota' && <div>
-        {generating && <div className="no-print" style={{ ...panel, textAlign: 'center', padding: '48px 24px', color: '#6B7280', fontSize: 14 }}>Building your rota… <span style={{ color: '#9CA3AF' }}>(the scheduler may take a few seconds to wake up)</span></div>}
-        {error && <div className="no-print" style={{ ...panel, padding: '16px 18px', background: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C', fontSize: 13.5 }}>{error} <button onClick={generate} style={{ marginLeft: 8, fontFamily: 'inherit', fontWeight: 700, color: '#B91C1C', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Try again</button></div>}
-        {!generating && !error && !result && <div className="no-print" style={{ ...panel, textAlign: 'center', padding: '48px 24px', color: '#6B7280', fontSize: 14 }}>Ready when you are — use the button below to generate the rota.</div>}
-        {result && <Result result={result} staff={staff} team={est.team} onDownload={() => (unlocked ? window.print() : setGateOpen(true))} unlocked={unlocked} />}
+        {generating && <div style={{ ...panel, textAlign: 'center', padding: '48px 24px', color: '#6B7280', fontSize: 14 }}>Building your rota… <span style={{ color: '#9CA3AF' }}>(the scheduler may take a few seconds to wake up)</span></div>}
+        {error && <div style={{ ...panel, padding: '16px 18px', background: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C', fontSize: 13.5 }}>{error} <button onClick={generate} style={{ marginLeft: 8, fontFamily: 'inherit', fontWeight: 700, color: '#B91C1C', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Try again</button></div>}
+        {!generating && !error && !result && <div style={{ ...panel, textAlign: 'center', padding: '48px 24px', color: '#6B7280', fontSize: 14 }}>Ready when you are — use the button above to generate the rota.</div>}
+        {result && <Result result={result} staff={staff} team={est.team} short={est.short} onJoin={() => setGateOpen(true)} />}
       </div>}
     </div>
 
-    {/* coach */}
-    <Coach step={step} total={steps.length} cur={cur} generating={generating}
-      onBack={() => step > 0 && setStep(step - 1)}
-      onNext={() => { if (cur.generate) generate(); else if (cur.done) setGateOpen(true); else setStep(step + 1) }}
-      onRestart={() => setEst(null)} />
-
-    {gateOpen && <WaitlistModal short={est.short} onClose={() => setGateOpen(false)} onDone={() => { setUnlocked(true); setGateOpen(false); setTimeout(() => window.print(), 300) }} />}
+    {gateOpen && <WaitlistModal short={est.short} onClose={() => setGateOpen(false)} />}
   </div>
 }
 
@@ -215,24 +215,18 @@ function Progress({ steps, step }) {
   </div>
 }
 
-function Coach({ step, total, cur, generating, onBack, onNext, onRestart }) {
-  const nextLabel = cur.generate ? (generating ? 'Building…' : 'Generate the rota →') : cur.done ? 'Make it mine →' : 'Next →'
-  return <div className="no-print" style={{ position: 'fixed', left: 0, right: 0, bottom: 0, display: 'flex', justifyContent: 'center', padding: '0 16px 18px', zIndex: 40, pointerEvents: 'none' }}>
-    <div style={{ pointerEvents: 'auto', maxWidth: 720, width: '100%', background: '#111827', color: '#fff', borderRadius: 16, padding: '16px 18px', boxShadow: '0 12px 40px rgba(0,0,0,.28)', display: 'flex', alignItems: 'center', gap: 16 }}>
-      <div style={{ width: 38, height: 38, borderRadius: 99, flexShrink: 0, background: PINK, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 800 }}>S</div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14.5, fontWeight: 800, marginBottom: 2 }}>{cur.title}</div>
-        <div style={{ fontSize: 13, color: '#D1D5DB', lineHeight: 1.45 }}>{cur.body}</div>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-        {step > 0 && !cur.done && <button onClick={onBack} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: '#D1D5DB', background: 'transparent', border: '1px solid #374151', borderRadius: 9, padding: '9px 14px', cursor: 'pointer' }}>Back</button>}
-        {cur.done
-          ? <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={onRestart} style={{ fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: '#D1D5DB', background: 'transparent', border: '1px solid #374151', borderRadius: 9, padding: '9px 14px', cursor: 'pointer' }}>Try another</button>
-              <button onClick={onNext} style={{ ...primaryBtn(false), padding: '10px 18px' }}>{nextLabel}</button>
-            </div>
-          : <button onClick={onNext} disabled={generating} style={{ ...primaryBtn(generating), padding: '10px 18px' }}>{nextLabel}</button>}
-      </div>
+function Coach({ step, cur, generating, onBack, onNext, onRestart }) {
+  const nextLabel = cur.generate ? (generating ? 'Building…' : 'Generate the rota →') : cur.done ? 'Join the waitlist →' : 'Next →'
+  return <div style={{ background: '#111827', color: '#fff', borderRadius: 16, padding: '20px 22px', boxShadow: '0 8px 28px rgba(17,24,39,.18)', display: 'flex', alignItems: 'center', gap: 18, marginBottom: 20, flexWrap: 'wrap' }}>
+    <div style={{ width: 44, height: 44, borderRadius: 99, flexShrink: 0, background: PINK, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800 }}>S</div>
+    <div style={{ flex: 1, minWidth: 220 }}>
+      <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 3 }}>{cur.title}</div>
+      <div style={{ fontSize: 14, color: '#D1D5DB', lineHeight: 1.5 }}>{cur.body}</div>
+    </div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+      {step > 0 && !cur.done && <button onClick={onBack} style={{ fontFamily: 'inherit', fontSize: 14, fontWeight: 700, color: '#D1D5DB', background: 'transparent', border: '1px solid #374151', borderRadius: 10, padding: '12px 18px', cursor: 'pointer' }}>Back</button>}
+      {cur.done && <button onClick={onRestart} style={{ fontFamily: 'inherit', fontSize: 14, fontWeight: 700, color: '#D1D5DB', background: 'transparent', border: '1px solid #374151', borderRadius: 10, padding: '12px 18px', cursor: 'pointer' }}>Try another</button>}
+      <button onClick={onNext} disabled={generating} style={{ ...primaryBtn(generating), fontSize: 15, padding: '12px 24px' }}>{nextLabel}</button>
     </div>
   </div>
 }
@@ -257,18 +251,15 @@ function Picker({ onPick }) {
   </div>
 }
 
-function Result({ result, staff, team, onDownload, unlocked }) {
+function Result({ result, staff, team, short, onJoin }) {
   const blocksFor = (s) => (result.assignments || []).filter((a) => String(a.staff_id) === String(s.id) || a.staff_name === s.name)
   const total = (result.assignments || []).length
   return <div>
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 14, flexWrap: 'wrap' }} className="no-print">
-      <div>
-        <div style={{ fontSize: 18, fontWeight: 800 }}>✓ Your rota is ready</div>
-        <div style={{ fontSize: 13, color: '#6B7280', marginTop: 2 }}>{total} shifts assigned{result.stats?.wall_time ? ` · built in ${result.stats.wall_time}s` : ''}.</div>
-      </div>
-      <button onClick={onDownload} style={primaryBtn(false)}>{unlocked ? '⤓ Download PDF' : '⤓ Download as PDF'}</button>
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontSize: 18, fontWeight: 800 }}>✓ The rota is ready</div>
+      <div style={{ fontSize: 13, color: '#6B7280', marginTop: 2 }}>{total} shifts assigned{result.stats?.wall_time ? ` · built in ${result.stats.wall_time}s` : ''} — fair, covered, keyholder on every open and close.</div>
     </div>
-    <div id="printable" style={panel}>
+    <div style={panel}>
       <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>{team} · weekly rota</div>
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720, tableLayout: 'fixed' }}>
@@ -291,30 +282,45 @@ function Result({ result, staff, team, onDownload, unlocked }) {
         </table>
       </div>
     </div>
+    <div style={{ ...panel, marginTop: 16, background: '#111827', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+      <div>
+        <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>Want this for your {short}?</div>
+        <div style={{ fontSize: 13.5, color: '#D1D5DB', marginTop: 3, lineHeight: 1.5, maxWidth: 520 }}>Shiftly builds your real rota in seconds — across teams, with payroll and compliance built in. Join the waitlist for early access.</div>
+      </div>
+      <button onClick={onJoin} style={{ ...primaryBtn(false), fontSize: 15, padding: '13px 26px', flexShrink: 0 }}>Join the waitlist →</button>
+    </div>
   </div>
 }
 
-function WaitlistModal({ short, onClose, onDone }) {
+function WaitlistModal({ short, onClose }) {
   const [email, setEmail] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState(null)
+  const [sent, setSent] = useState(false)
   const submit = async () => {
     setBusy(true); setErr(null)
     try {
       const res = await fetch('/api/try-me/waitlist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) })
       const data = await res.json()
       if (!res.ok || data.error) { setErr(data.error || 'Try again.'); setBusy(false); return }
-      onDone()
+      setSent(true); setBusy(false)
     } catch { setErr('Network error — try again.'); setBusy(false) }
   }
-  return <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(17,24,39,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 60, fontFamily: FONT }} className="no-print">
+  return <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(17,24,39,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, zIndex: 60, fontFamily: FONT }}>
     <div onClick={(e) => e.stopPropagation()} style={{ ...panel, maxWidth: 420, width: '100%', padding: 28 }}>
-      <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.3 }}>Make it yours</div>
-      <p style={{ fontSize: 13.5, color: '#6B7280', margin: '8px 0 18px', lineHeight: 1.5 }}>Pop in your email — we’ll save your spot on the waitlist and send your {short || 'rota'} PDF to download. No spam, ever.</p>
-      <input value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} type="email" placeholder="you@business.com" autoFocus style={{ width: '100%', boxSizing: 'border-box', fontSize: 15, fontWeight: 600, fontFamily: 'inherit', padding: '12px 14px', borderRadius: 9, border: '1px solid #E5E7EB', outline: 'none' }} />
-      {err && <div style={{ fontSize: 12.5, color: '#B91C1C', marginTop: 8 }}>{err}</div>}
-      <button onClick={submit} disabled={busy} style={{ ...primaryBtn(busy), width: '100%', marginTop: 14 }}>{busy ? 'Saving…' : 'Join the waitlist & download →'}</button>
-      <button onClick={onClose} style={{ width: '100%', marginTop: 8, background: 'none', border: 'none', color: '#9CA3AF', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 6 }}>Maybe later</button>
+      {sent ? <>
+        <div style={{ width: 46, height: 46, borderRadius: 99, background: '#16A34A', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 800, marginBottom: 14 }}>✓</div>
+        <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.3 }}>You’re on the list</div>
+        <p style={{ fontSize: 13.5, color: '#6B7280', margin: '8px 0 18px', lineHeight: 1.5 }}>Thanks — we’ll email you the moment your early-access spot is ready. You can keep exploring in the meantime.</p>
+        <button onClick={onClose} style={{ ...primaryBtn(false), width: '100%' }}>Keep exploring</button>
+      </> : <>
+        <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.3 }}>Get early access</div>
+        <p style={{ fontSize: 13.5, color: '#6B7280', margin: '8px 0 18px', lineHeight: 1.5 }}>Like what you saw? Join the waitlist and we’ll set Shiftly up for your {short || 'business'} when your spot opens. No spam, ever.</p>
+        <input value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} type="email" placeholder="you@business.com" autoFocus style={{ width: '100%', boxSizing: 'border-box', fontSize: 15, fontWeight: 600, fontFamily: 'inherit', padding: '12px 14px', borderRadius: 9, border: '1px solid #E5E7EB', outline: 'none' }} />
+        {err && <div style={{ fontSize: 12.5, color: '#B91C1C', marginTop: 8 }}>{err}</div>}
+        <button onClick={submit} disabled={busy} style={{ ...primaryBtn(busy), width: '100%', marginTop: 14 }}>{busy ? 'Saving…' : 'Join the waitlist →'}</button>
+        <button onClick={onClose} style={{ width: '100%', marginTop: 8, background: 'none', border: 'none', color: '#9CA3AF', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 6 }}>Maybe later</button>
+      </>}
     </div>
   </div>
 }
