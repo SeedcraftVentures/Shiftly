@@ -65,7 +65,7 @@ function teamGaps(shifts, cfg) {
   for (const d of cfg.openDays) for (const [from, to] of dayGapsFor(shifts, d, cfg)) out.push({ day: d, from, to })
   return out
 }
-function coveragePct(shifts, cfg) {
+export function coveragePct(shifts, cfg) {
   let open = 0
   for (const d of cfg.openDays) open += cfg.business[d][1] - cfg.business[d][0]
   const gapHours = teamGaps(shifts, cfg).reduce((s, g) => s + (g.to - g.from), 0)
@@ -114,7 +114,7 @@ function GapChip({ sug, onApply, accent }) {
     <span style={{ color: accent, fontWeight: 700 }}>+ add</span>
   </button>
 }
-function GapStrip({ shifts, onApply, accent, cfg, ok, onToggleOk }) {
+export function GapStrip({ shifts, onApply, accent, cfg, ok, onToggleOk }) {
   const gaps = smartGaps(shifts, cfg)
   if (!gaps.length) return <div style={{ fontSize: 12.5, fontWeight: 600, color: '#16A34A' }}>✓ Every open hour is covered.</div>
   // a deliberately-partial week (e.g. a team that doesn't work mornings) can be marked intentional —
@@ -249,7 +249,7 @@ function SaveStatus({ state }) {
   const c = state === 'saved' ? { c: '#16A34A', t: '✓ Saved' } : state === 'dirty' ? { c: AMBER, t: '• Unsaved changes' } : { c: '#9CA3AF', t: 'Up to date' }
   return <span style={{ fontSize: 11.5, fontWeight: 600, color: c.c }}>{c.t}</span>
 }
-function Inspector({ shift, patch, onDelete, saveState, onSave, accent, cfg }) {
+export function Inspector({ shift, patch, onDelete, saveState, onSave, accent, cfg }) {
   const curLen = shift ? Math.round((shift.end - shift.start) * 10) / 10 : 0
   const [lenMode, setLenMode] = useState(() => ([4, 8, 12].includes(curLen) ? String(curLen) : 'custom'))
   if (!shift) return <div style={{ color: '#9CA3AF', fontSize: 13, textAlign: 'center', marginTop: 70, lineHeight: 1.6 }}>Select a shift to edit<br />its properties here.</div>
@@ -336,7 +336,7 @@ function ShiftCard({ shift, selected, onClick, accent, cfg, selectMode = false, 
 }
 
 // ── week at a glance ────────────────────────────────────────────────────────────
-function DayTimeline({ dayIndex, shifts, height = 11, color = PINK, cfg }) {
+export function DayTimeline({ dayIndex, shifts, height = 11, color = PINK, cfg }) {
   const [dS, dE] = cfg.glance, span = (dE - dS) || 1
   const pct = (v) => ((Math.max(dS, Math.min(dE, v)) - dS) / span) * 100
   const bh = cfg.business[dayIndex]
@@ -348,7 +348,7 @@ function DayTimeline({ dayIndex, shifts, height = 11, color = PINK, cfg }) {
     </>}
   </div>
 }
-function AxisTicks({ cfg, ml = 38 }) {
+export function AxisTicks({ cfg, ml = 38 }) {
   const [dS, dE] = cfg.glance, span = (dE - dS) || 1
   const ticks = []; for (let h = Math.ceil(dS); h <= dE; h += 2) ticks.push(h)
   return <div style={{ position: 'relative', height: 12, marginLeft: ml }}>
@@ -464,7 +464,7 @@ const RTH = { fontSize: 11, fontWeight: 700, color: '#6B7280', padding: '6px 6px
 const RTH_STAFF = { ...RTH, textAlign: 'left', position: 'sticky', left: 0, background: '#fff', minWidth: 160 }
 const RTD = { padding: '4px 4px', verticalAlign: 'top' }
 const RTD_STAFF = { padding: '4px 4px', verticalAlign: 'top', position: 'sticky', left: 0, background: '#fff' }
-function TeamRotaGrid({ groups, cfg, selectedId, onSelect, selectMode, selectedIds, onToggle }) {
+export function TeamRotaGrid({ groups, cfg, selectedId, onSelect, selectMode, selectedIds, onToggle }) {
   const [hoverId, setHoverId] = useState(null)
   const interactive = !!onSelect || !!selectMode
   // match the rota builder grid exactly: name col 160, table minWidth 800, cell padding 4px.

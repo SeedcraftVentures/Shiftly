@@ -264,7 +264,7 @@ function Money({ value, onChange, step = '0.25', suffix = '' }) {
     {suffix && <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, fontWeight: 600, color: lit ? PINK : '#9CA3AF', pointerEvents: 'none', transition: 'color .12s' }}>{suffix}</span>}
   </div>
 }
-function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg }) {
+export function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg }) {
   if (!s) return <div style={{ color: '#9CA3AF', fontSize: 13, textAlign: 'center', marginTop: 70, lineHeight: 1.6 }}>Select a staff member to<br />edit their details here.</div>
   return <>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -383,7 +383,7 @@ function ShortfallList({ staff, shifts, teamId, onFix, cfg }) {
     )}
   </>
 }
-function TeamGlance({ staff, shifts, teamName, teamId, accent, onFix, cfg, wide = false }) {
+export function TeamGlance({ staff, shifts, teamName, teamId, accent, onFix, cfg, wide = false }) {
   const r = readiness(staff, shifts, cfg)
   const bottlenecks = coverageBottlenecks(staff, shifts, cfg)
   const ok = r.ready && bottlenecks.length === 0
@@ -457,7 +457,7 @@ function AllTeams({ teams, staff, shifts, onFix, cfg }) {
 
 // ── availability grid — one row per person, days across, cell = their availability that day ──
 const GRID_TH = { fontSize: 11, fontWeight: 700, padding: '6px 6px 10px', textAlign: 'center' }
-function AvailabilityGrid({ groups, cfg, selectedId, onSelect, selectMode, selectedIds, onToggle }) {
+export function AvailabilityGrid({ groups, cfg, selectedId, onSelect, selectMode, selectedIds, onToggle }) {
   const [hoverId, setHoverId] = useState(null)
   const interactive = !!onSelect || !!selectMode
   const grouped = groups.length > 1
@@ -514,7 +514,7 @@ function AvailabilityGrid({ groups, cfg, selectedId, onSelect, selectMode, selec
     </table>
   </div>
 }
-function AvailKey({ accent }) {
+export function AvailKey({ accent }) {
   const item = (box, label) => <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 11.5, color: '#6B7280' }}>{box}<span>{label}</span></span>
   const sw = { width: 22, height: 14, borderRadius: 4, flexShrink: 0 }
   return <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', marginTop: 12 }}>
