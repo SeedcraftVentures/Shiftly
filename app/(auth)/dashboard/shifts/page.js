@@ -643,7 +643,6 @@ export default function ShiftsPage() {
 
     {isAll ? (
       <div style={{ maxWidth: 1240, margin: '0 auto', padding: '4px 24px 40px', display: 'flex', flexDirection: 'column', gap: 18 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}><AddPicker teams={teams} onPick={(tId) => addShift(tId)} /></div>
         <AllMatrix teams={teams} shifts={shifts} expanded={expanded} setExpanded={setExpanded} onApply={applySuggestion} cfg={cfg} okTeams={okTeams} onToggleOk={toggleOk} />
         {/* full rota — every team's shifts in one grid */}
         <div style={panel}>
