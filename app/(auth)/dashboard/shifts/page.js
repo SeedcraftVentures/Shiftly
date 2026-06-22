@@ -400,7 +400,7 @@ function WeekGlance({ shifts, teamName, teamId, onApply, accent, cfg }) {
 
 // ── all-teams — one container, thin collapsible rows (matches the Staff all-teams) ──
 function AllMatrix({ teams, shifts, expanded, setExpanded, onApply, cfg, okTeams, onToggleOk }) {
-  const panel = { background: '#fff', border: '1px solid #ECECEF', borderRadius: 14, padding: '4px 18px' }
+  const panel = { background: '#fff', border: '1px solid #ECECEF', borderRadius: 14, padding: '4px 18px', boxShadow: '0 3px 10px rgba(17,24,39,.06), 0 1px 2px rgba(17,24,39,.04)' }
   return <div style={panel}>
     {teams.map((t, idx) => {
       const ts = shifts.filter((s) => s.team_id === t.id)
@@ -642,10 +642,9 @@ export default function ShiftsPage() {
     </div>
 
     {isAll ? (
-      <div style={{ maxWidth: 1240, margin: '0 auto', padding: '4px 24px 40px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 16 }}><AddPicker teams={teams} onPick={(tId) => addShift(tId)} /></div>
+      <div style={{ maxWidth: 1240, margin: '0 auto', padding: '4px 24px 40px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}><AddPicker teams={teams} onPick={(tId) => addShift(tId)} /></div>
         <AllMatrix teams={teams} shifts={shifts} expanded={expanded} setExpanded={setExpanded} onApply={applySuggestion} cfg={cfg} okTeams={okTeams} onToggleOk={toggleOk} />
-        <div style={{ fontSize: 11.5, color: '#9CA3AF', margin: '12px 0 24px', textAlign: 'center' }}>Click a team row to see its week and fill gaps.</div>
         {/* full rota — every team's shifts in one grid */}
         <div style={panel}>
           <div style={{ fontSize: 13, fontWeight: 800, color: '#111827', marginBottom: 14 }}>Full rota <span style={{ color: '#9CA3AF', fontWeight: 600 }}>· all teams</span></div>
