@@ -73,12 +73,16 @@ function dayCoverage(shifts, d, cfg) {
   const gap = dayGapsFor(shifts, d, cfg).reduce((s, [a, b]) => s + (b - a), 0)
   return total ? (total - gap) / total : 1
 }
+// the pin is an EXPLICIT, stored choice (not derived from times) so "No pin" is real even for a
+// full-length shift. It maps to/from the existing anchor_type column — no schema change.
+const withPin = (s) => ({ ...s, pin: s.pin || (s.anchor_type === 'open' ? 'open' : s.anchor_type === 'close' ? 'close' : 'none') })
+const pinToAnchor = (pin) => (pin === 'open' ? 'open' : pin === 'close' ? 'close' : 'fixed')
 // default shift name follows the pin (team is already shown above the grid, so no prefix);
 // auto-updates until the user types their own.
-const autoName = (anchor) => (anchor === 'open' ? 'Open' : anchor === 'close' ? 'Close' : 'Custom')
+const autoName = (pin) => (pin === 'open' ? 'Open' : pin === 'close' ? 'Close' : 'Custom')
 const isAutoName = (name) => !name || name === 'New shift' || ['Open', 'Close', 'Custom'].includes(name)
-// what the grid row shows: Open/Close derived from the pin, else the (custom) name
-const gridLabel = (s, cfg) => (s.start <= cfg.open + 0.01 ? 'Open' : s.end >= cfg.close - 0.01 ? 'Close' : (s.name || 'Custom'))
+// what the grid row shows: Open/Close from the pin, else the (custom) name
+const gridLabel = (s) => (s.pin === 'open' ? 'Open' : s.pin === 'close' ? 'Close' : (s.name || 'Custom'))
 const sameSet = (a, b) => [...a].sort((x, y) => x - y).join() === [...b].sort((x, y) => x - y).join()
 const scopeLabel = (days, cfg) => sameSet(days, cfg.openDays) ? 'Full-week' : sameSet(days, WEEKDAYS.filter((d) => cfg.openDays.includes(d))) ? 'Weekday' : sameSet(days, WEEKEND.filter((d) => cfg.openDays.includes(d))) ? 'Weekend' : days.map((d) => DAYS[d]).join(' ')
 // smart gaps — suggest structural shifts (full-week/weekday/weekend open or close) plus genuine
@@ -239,17 +243,14 @@ function Inspector({ shift, patch, onDelete, saveState, onSave, accent, cfg }) {
   const curLen = shift ? Math.round((shift.end - shift.start) * 10) / 10 : 0
   const [lenMode, setLenMode] = useState(() => ([4, 8, 12].includes(curLen) ? String(curLen) : 'custom'))
   if (!shift) return <div style={{ color: '#9CA3AF', fontSize: 13, textAlign: 'center', marginTop: 70, lineHeight: 1.6 }}>Select a shift to edit<br />its properties here.</div>
-  // anchor is derived from the times; pins snap them, which keeps the saved anchor_type in sync.
+  // the pin is an explicit choice; Open/Close snap the times, "No pin" just relabels (no time change).
   const L = shift.end - shift.start
-  const anchor = shift.start <= cfg.open + 0.01 ? 'open' : shift.end >= cfg.close - 0.01 ? 'close' : 'mid'
+  const anchor = shift.pin || 'none'
   const rename = (p, a) => { if (isAutoName(shift.name)) p.name = autoName(a); return p }
   const setAnchor = (a) => {
-    const p = {}
+    const p = { pin: a }
     if (a === 'open') { p.start = cfg.open; p.end = Math.min(cfg.close, cfg.open + L) }
     else if (a === 'close') { p.start = Math.max(cfg.open, cfg.close - L); p.end = cfg.close }
-    else if (anchor === 'open') { p.start = Math.min(cfg.close - L, cfg.open + 1) }
-    else if (anchor === 'close') { p.end = Math.max(cfg.open + L, cfg.close - 1) }
-    else return
     patch(rename(p, a))
   }
   const setLen = (n) => {
@@ -271,7 +272,7 @@ function Inspector({ shift, patch, onDelete, saveState, onSave, accent, cfg }) {
       <Label>Pin to</Label>
       <div style={segWrap}>
         <Seg active={anchor === 'open'} onClick={() => setAnchor('open')} accent={accent}>Open</Seg>
-        <Seg active={anchor === 'mid'} onClick={() => setAnchor('mid')} accent={accent}>None</Seg>
+        <Seg active={anchor === 'none'} onClick={() => setAnchor('none')} accent={accent}>No pin</Seg>
         <Seg active={anchor === 'close'} onClick={() => setAnchor('close')} accent={accent}>Close</Seg>
       </div>
     </div>
@@ -283,15 +284,16 @@ function Inspector({ shift, patch, onDelete, saveState, onSave, accent, cfg }) {
       </div>
     </div>
     <div>
-      <Label>{fmt(shift.start)} – {fmt(shift.end)} · {curLen}h{anchor !== 'mid' && <span style={{ color: accent, fontWeight: 700 }}> · {anchor === 'open' ? 'opens' : 'closes'}</span>}</Label>
+      <Label>{fmt(shift.start)} – {fmt(shift.end)} · {curLen}h{anchor !== 'none' && <span style={{ color: accent, fontWeight: 700 }}> · {anchor === 'open' ? 'opens' : 'closes'}</span>}</Label>
       <div style={{ marginTop: 11 }}><TimeRange start={shift.start} end={shift.end} onChange={(start, end) => { setLenMode('custom'); patch({ start, end }) }} accent={accent} domain={cfg.slider} /></div>
     </div>
     <div><Label>Runs on</Label><div style={{ marginTop: 9 }}><DayPicker days={shift.days} onChange={(days) => patch({ days })} openDays={cfg.openDays} accent={accent} /></div></div>
-    <div><Label>Staff needed</Label><div style={{ marginTop: 9 }}><Stepper value={shift.staff} onChange={(staff) => patch({ staff })} min={1} max={20} /></div></div>
-    <div><Label>Keyholder</Label>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 9, height: 44, marginTop: 9, padding: '0 12px', borderRadius: 9, background: '#fff', border: '1px solid #E5E7EB' }}>
-        <Switch on={shift.keyholder} onClick={() => patch({ keyholder: !shift.keyholder })} accent={accent} />
-        <span style={{ fontSize: 12.5, fontWeight: 600, color: shift.keyholder ? accent : '#9CA3AF' }}>{shift.keyholder ? '🔑 Keyholder' : 'Not a keyholder'}</span>
+    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12, alignItems: 'end' }}>
+      <div><Label>Staff needed</Label><div style={{ marginTop: 9 }}><Stepper value={shift.staff} onChange={(staff) => patch({ staff })} min={1} max={20} /></div></div>
+      <div><Label>Keyholder</Label>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 44, marginTop: 9, borderRadius: 9, background: '#fff', border: '1px solid #E5E7EB' }}>
+          <Switch on={shift.keyholder} onClick={() => patch({ keyholder: !shift.keyholder })} accent={accent} />
+        </div>
       </div>
     </div>
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 2 }}>
@@ -465,31 +467,42 @@ function TeamRotaGrid({ groups, cfg, selectedId, onSelect, selectMode, selectedI
             </div>
           </td></tr>}
           {g.shifts.length === 0 && <tr><td colSpan={8} style={{ textAlign: 'center', color: '#9CA3AF', fontSize: 13, padding: '20px 0' }}>No shifts yet — add one to see the week build up.</td></tr>}
+          {/* one row per staff member — people read a rota as one line per person, so a 2-staff
+              shift shows two rows. Rows of the same shift share a colour, group rounding and the
+              left accent bar, so they read as one shift. */}
           {g.shifts.map((s, idx) => {
             const blk = rotaBlock(g.color, idx)
             const sel = selectedId === s.id, checked = selectedIds?.has(s.id), hov = interactive && hoverId === s.id
             const rowBg = sel && !selectMode ? g.color + '14' : (hov ? '#F4F5F8' : 'transparent')
-            const rounded = rowBg !== 'transparent'
+            const active = rowBg !== 'transparent'
             const bar = sel && !selectMode ? g.color : (hov ? g.color + '66' : null)
-            return <tr key={s.id} onClick={() => (interactive ? (selectMode ? onToggle?.(s.id) : onSelect?.(s.id)) : null)} onMouseEnter={() => interactive && setHoverId(s.id)} onMouseLeave={() => interactive && setHoverId(null)} style={{ cursor: interactive ? 'pointer' : 'default', transition: 'background .1s' }}>
-              <td style={{ ...cell, position: 'sticky', left: 0, background: rounded ? rowBg : '#fff', borderTopLeftRadius: rounded ? 10 : 0, borderBottomLeftRadius: rounded ? 10 : 0, boxShadow: bar ? `inset 3px 0 0 ${bar}` : 'none' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: sel ? 800 : 600, color: '#111827' }}>
-                  {selectMode
-                    ? <span style={{ width: 18, height: 18, borderRadius: 5, flexShrink: 0, border: `1.5px solid ${checked ? g.color : '#D1D5DB'}`, background: checked ? g.color : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11, fontWeight: 800 }}>{checked ? '✓' : ''}</span>
-                    : <span style={{ width: 9, height: 9, borderRadius: 99, background: g.color, flexShrink: 0 }} />}
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{gridLabel(s, cfg)}</span>
-                  {interactive && !selectMode && hov && <span style={{ marginLeft: 'auto', paddingLeft: 4, color: g.color, fontSize: 14, fontWeight: 800, flexShrink: 0 }}>›</span>}
-                </span>
-              </td>
-              {ALL.map((d) => <td key={d} style={{ ...cell, background: rounded ? rowBg : 'transparent', borderTopRightRadius: rounded && d === 6 ? 10 : 0, borderBottomRightRadius: rounded && d === 6 ? 10 : 0 }}>
-                {s.days.includes(d)
-                  ? <div style={{ background: blk.background, borderRadius: 10, padding: '10px 10px', boxShadow: blk.shadow }}>
-                      <div style={{ color: blk.color, fontWeight: 700, fontSize: 11, lineHeight: 1.25, whiteSpace: 'nowrap' }}>{fmt(s.start)}–{fmt(s.end)}</div>
-                      <div style={{ color: blk.subColor, fontSize: 9.5 }}>{s.keyholder ? '🔑 keyholder' : `${s.staff} staff`}</div>
-                    </div>
-                  : null}
-              </td>)}
-            </tr>
+            const n = Math.max(1, s.staff || 1)
+            return Array.from({ length: n }, (_, i) => {
+              const first = i === 0, last = i === n - 1
+              return <tr key={`${s.id}-${i}`} onClick={() => (interactive ? (selectMode ? onToggle?.(s.id) : onSelect?.(s.id)) : null)} onMouseEnter={() => interactive && setHoverId(s.id)} onMouseLeave={() => interactive && setHoverId(null)} style={{ cursor: interactive ? 'pointer' : 'default', transition: 'background .1s' }}>
+                <td style={{ ...cell, position: 'sticky', left: 0, background: active ? rowBg : '#fff', borderTopLeftRadius: active && first ? 10 : 0, borderBottomLeftRadius: active && last ? 10 : 0, boxShadow: bar ? `inset 3px 0 0 ${bar}` : 'none' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: sel ? 800 : 600 }}>
+                    {selectMode
+                      ? (first
+                          ? <span style={{ width: 18, height: 18, borderRadius: 5, flexShrink: 0, border: `1.5px solid ${checked ? g.color : '#D1D5DB'}`, background: checked ? g.color : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11, fontWeight: 800 }}>{checked ? '✓' : ''}</span>
+                          : <span style={{ width: 18, flexShrink: 0 }} />)
+                      : <span style={{ width: 9, height: 9, borderRadius: 99, flexShrink: 0, background: first ? g.color : 'transparent', border: first ? 'none' : `1.5px solid ${g.color}66` }} />}
+                    {first
+                      ? <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, color: '#111827' }}>{gridLabel(s)}</span>
+                      : <span style={{ minWidth: 0 }} />}
+                    {interactive && !selectMode && hov && first && <span style={{ marginLeft: 'auto', paddingLeft: 4, color: g.color, fontSize: 14, fontWeight: 800, flexShrink: 0 }}>›</span>}
+                  </span>
+                </td>
+                {ALL.map((d) => <td key={d} style={{ ...cell, background: active ? rowBg : 'transparent', borderTopRightRadius: active && first && d === 6 ? 10 : 0, borderBottomRightRadius: active && last && d === 6 ? 10 : 0 }}>
+                  {s.days.includes(d)
+                    ? <div style={{ background: blk.background, borderRadius: 10, padding: '9px 8px', boxShadow: blk.shadow, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, minHeight: 30 }}>
+                        <div style={{ color: blk.color, fontWeight: 700, fontSize: 11, lineHeight: 1.2, whiteSpace: 'nowrap' }}>{fmt(s.start)}–{fmt(s.end)}</div>
+                        {first && s.keyholder && <div style={{ color: blk.subColor, fontSize: 10 }}>🔑</div>}
+                      </div>
+                    : null}
+                </td>)}
+              </tr>
+            })
           })}
         </Fragment>)}
       </tbody>
@@ -516,7 +529,7 @@ export default function ShiftsPage() {
         const [tr, lr, sr] = await Promise.all([fetch('/api/teams'), fetch('/api/location'), fetch('/api/shifts')])
         const td = await tr.json(), ld = await lr.json(), sd = await sr.json()
         const withColor = (Array.isArray(td) ? td : []).map((t, i) => ({ id: t.id, name: t.name, color: TEAM_COLORS[i % TEAM_COLORS.length] }))
-        setTeams(withColor); setLocation(ld || null); setShifts(Array.isArray(sd) ? sd : []); setTeamId(withColor[0]?.id || null)
+        setTeams(withColor); setLocation(ld || null); setShifts((Array.isArray(sd) ? sd : []).map(withPin)); setTeamId(withColor[0]?.id || null)
       } catch (e) { console.error('Failed to load shifts page', e) } finally { setLoading(false) }
     })()
   }, [])
@@ -547,27 +560,28 @@ export default function ShiftsPage() {
   }, [selectedIds])
 
   const ANCHOR = { Opening: 'open', Closing: 'close', Regular: 'fixed' }
-  const toApi = useCallback((s) => ({ team_id: s.team_id, name: s.name, anchor_type: ANCHOR[designation(s, cfg)], start: s.start, end: s.end, days: s.days, staff: s.staff, keyholder: s.keyholder, break_duration_mins: 0, break_type: 'unpaid' }), [cfg])
+  const toApi = useCallback((s) => ({ team_id: s.team_id, name: s.name, anchor_type: s.pin ? pinToAnchor(s.pin) : ANCHOR[designation(s, cfg)], start: s.start, end: s.end, days: s.days, staff: s.staff, keyholder: s.keyholder, break_duration_mins: 0, break_type: 'unpaid' }), [cfg])
   const patch = useCallback((id, p) => { setShifts((prev) => prev.map((s) => (s.id === id ? { ...s, ...p } : s))); setSaveState('dirty') }, [])
   const saveShift = useCallback(async (shift) => {
     setSaveState('saved')
     const res = await fetch('/api/shifts', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: shift.id, ...toApi(shift) }) })
-    if (res.ok) { const saved = await res.json(); setShifts((prev) => prev.map((s) => (s.id === shift.id ? saved : s))) }
+    if (res.ok) { const saved = await res.json(); setShifts((prev) => prev.map((s) => (s.id === shift.id ? withPin(saved) : s))) }
     setTimeout(() => setSaveState((x) => (x === 'saved' ? 'clean' : x)), 1500)
   }, [toApi])
   const addShift = useCallback(async (tId, over = {}) => {
-    const draft = { team_id: tId, name: over.name || autoName('open'), start: over.start ?? cfg.open, end: over.end ?? Math.min(cfg.open + 8, cfg.close), days: over.days || WEEKDAYS.filter((d) => cfg.openDays.includes(d)), staff: 1, keyholder: false }
+    const pin = over.pin || 'open'
+    const draft = { team_id: tId, pin, name: over.name || autoName(pin), start: over.start ?? cfg.open, end: over.end ?? Math.min(cfg.open + 8, cfg.close), days: over.days || WEEKDAYS.filter((d) => cfg.openDays.includes(d)), staff: 1, keyholder: false }
     const res = await fetch('/api/shifts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(toApi(draft)) })
     if (!res.ok) return
     const created = await res.json()
-    setShifts((prev) => [...prev, created]); setTeamId(tId); setSelectedId(created.id)
+    setShifts((prev) => [...prev, withPin(created)]); setTeamId(tId); setSelectedId(created.id)
   }, [cfg, toApi])
   // smart-gap suggestions add a structural shift (open/close for a set of days, or a mid window)
   const applyGap = useCallback((sug) => {
-    if (sug.kind === 'mid') return addShift(teamId, { name: autoName('mid'), start: sug.from, end: sug.to, days: [sug.day] })
+    if (sug.kind === 'mid') return addShift(teamId, { pin: 'none', name: autoName('none'), start: sug.from, end: sug.to, days: [sug.day] })
     const start = sug.kind === 'open' ? cfg.open : Math.max(cfg.open, cfg.close - 8)
     const end = sug.kind === 'open' ? Math.min(cfg.close, cfg.open + 8) : cfg.close
-    return addShift(teamId, { name: autoName(sug.kind), start, end, days: [...sug.days] })
+    return addShift(teamId, { pin: sug.kind, name: autoName(sug.kind), start, end, days: [...sug.days] })
   }, [addShift, teamId, cfg])
   const removeShift = useCallback(async (id) => { await fetch(`/api/shifts?id=${id}`, { method: 'DELETE' }); setShifts((prev) => prev.filter((s) => s.id !== id)); setSelectedId(null) }, [])
   const applySuggestion = useCallback(async (tId, s) => {
@@ -575,10 +589,10 @@ export default function ShiftsPage() {
       const field = s.kind === 'end' ? 'end' : 'start'
       let updated
       setShifts((prev) => prev.map((x) => { if (x.id === s.target) { updated = { ...x, [field]: s.value }; return updated } return x }))
-      if (updated) { const res = await fetch('/api/shifts', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: updated.id, ...toApi(updated) }) }); if (res.ok) { const saved = await res.json(); setShifts((prev) => prev.map((x) => (x.id === saved.id ? saved : x))) } }
+      if (updated) { const res = await fetch('/api/shifts', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: updated.id, ...toApi(updated) }) }); if (res.ok) { const saved = await res.json(); setShifts((prev) => prev.map((x) => (x.id === saved.id ? withPin(saved) : x))) } }
     } else {
-      const res = await fetch('/api/shifts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(toApi({ team_id: tId, name: 'Cover', start: s.from, end: s.to, days: [s.day], staff: 1, keyholder: false })) })
-      if (res.ok) { const created = await res.json(); setShifts((prev) => [...prev, created]) }
+      const res = await fetch('/api/shifts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(toApi({ team_id: tId, pin: 'none', name: 'Cover', start: s.from, end: s.to, days: [s.day], staff: 1, keyholder: false })) })
+      if (res.ok) { const created = await res.json(); setShifts((prev) => [...prev, withPin(created)]) }
     }
   }, [toApi])
 
