@@ -398,56 +398,54 @@ function WeekGlance({ shifts, teamName, teamId, onApply, accent, cfg }) {
   </div>
 }
 
-// ── all-teams matrix ─────────────────────────────────────────────────────────────
-function MatrixCell({ shifts, dayIndex, color, cfg }) {
-  const cov = dayCoverage(shifts, dayIndex, cfg)
-  if (cov === null) return <div style={{ height: 8, borderRadius: 99, background: '#F4F4F6' }} />
-  return <div style={{ height: 8, borderRadius: 99, background: color + '20', overflow: 'hidden' }}><div style={{ width: `${Math.round(cov * 100)}%`, height: '100%', background: color, borderRadius: 99 }} /></div>
-}
-function RowFragment({ team, ts, pct, ok, onToggleOk, open, toggle, onApply, cfg }) {
-  const low = pct < 100, calm = !low || ok
-  return <>
-    <button onClick={toggle} style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: '#111827', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0 }}>
-      <span style={{ width: 9, height: 9, borderRadius: 99, background: team.color, flexShrink: 0 }} />{team.name}
-      <span style={{ color: '#C4C4CC', fontSize: 15, transform: open ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}>›</span>
-    </button>
-    {ALL.map((d) => <div key={d}><MatrixCell shifts={ts} dayIndex={d} color={team.color} cfg={cfg} /></div>)}
-    <span title={ok ? 'Marked as intentional' : undefined} style={{ fontSize: 12.5, fontWeight: 800, color: pct === 100 ? '#16A34A' : ok ? '#9CA3AF' : team.color, textAlign: 'right' }}>{ok && low ? '✓ ' : ''}{pct}%</span>
-    {open && <div style={{ gridColumn: '1 / -1', background: '#FAFAFB', border: '1px solid #ECECEF', borderRadius: 12, padding: 16, margin: '4px 0 8px', display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-      {low && <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: ok ? '#F0FDF4' : '#fff', border: `1px solid ${ok ? '#BBF7D0' : '#ECECEF'}`, borderRadius: 10, padding: '10px 14px' }}>
-        <span style={{ fontSize: 12.5, fontWeight: 500, color: ok ? '#15803D' : '#6B7280' }}>{ok ? '✓ Marked as intentional — the gaps below are expected.' : `${team.name} covers ${pct}% of opening hours. If that's deliberate (e.g. this team doesn't work mornings), mark it as fine.`}</span>
-        <button onClick={onToggleOk} style={{ flexShrink: 0, fontFamily: 'inherit', fontSize: 12.5, fontWeight: 700, color: ok ? '#6B7280' : '#fff', background: ok ? '#fff' : team.color, border: ok ? '1px solid #E5E7EB' : 'none', borderRadius: 8, padding: '7px 14px', cursor: 'pointer' }}>{ok ? 'Undo' : 'Looks right'}</button>
-      </div>}
-      <div style={{ flex: 1, minWidth: 240 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 10 }}>{team.name} this week</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {ALL.map((d) => <div key={d} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ width: 28, fontSize: 11, fontWeight: 700, color: cfg.business[d] ? '#6B7280' : '#C4C4CC' }}>{DAYS[d]}</span>
-            <DayTimeline dayIndex={d} shifts={ts} color={team.color} cfg={cfg} />
-          </div>)}
-        </div>
-        <AxisTicks cfg={cfg} />
-      </div>
-      <div style={{ width: 260, flexShrink: 0, borderLeft: '1px solid #ECECEF', paddingLeft: 20 }}>
-        {ok
-          ? <div style={{ fontSize: 12.5, color: '#9CA3AF', lineHeight: 1.6, paddingTop: 4 }}>Nothing to fill — this week is set up the way you want.<br /><button onClick={onToggleOk} style={{ fontFamily: 'inherit', fontSize: 12, fontWeight: 600, color: team.color, background: 'none', border: 'none', padding: '8px 0 0', cursor: 'pointer' }}>Show suggestions anyway</button></div>
-          : <GapList shifts={ts} teamId={team.id} onApply={onApply} cfg={cfg} />}
-      </div>
-    </div>}
-  </>
-}
+// ── all-teams — one container, thin collapsible rows (matches the Staff all-teams) ──
 function AllMatrix({ teams, shifts, expanded, setExpanded, onApply, cfg, okTeams, onToggleOk }) {
-  return <div style={{ background: '#fff', border: '1px solid #ECECEF', borderRadius: 14, padding: 18 }}>
-    <div style={{ display: 'grid', gridTemplateColumns: '150px repeat(7, 1fr) 56px', gap: 9, alignItems: 'center' }}>
-      <span />
-      {DAYS.map((d, i) => <span key={i} style={{ fontSize: 11, fontWeight: 700, color: cfg.business[i] ? '#6B7280' : '#C4C4CC', textAlign: 'center' }}>{d}</span>)}
-      <span style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', textAlign: 'right' }}>COVER</span>
-      {teams.map((t) => {
-        const ts = shifts.filter((s) => s.team_id === t.id)
-        return <RowFragment key={t.id} team={t} ts={ts} pct={coveragePct(ts, cfg)} ok={okTeams.has(t.id)} onToggleOk={() => onToggleOk(t.id)} open={expanded === t.id} toggle={() => setExpanded(expanded === t.id ? null : t.id)} onApply={onApply} cfg={cfg} />
-      })}
-    </div>
-    <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid #F0F0F2' }}><AxisTicks cfg={cfg} ml={159} /></div>
+  const panel = { background: '#fff', border: '1px solid #ECECEF', borderRadius: 14, padding: '4px 18px' }
+  return <div style={panel}>
+    {teams.map((t, idx) => {
+      const ts = shifts.filter((s) => s.team_id === t.id)
+      const pct = coveragePct(ts, cfg)
+      const ok = okTeams.has(t.id), low = pct < 100, isOpen = expanded === t.id
+      const sg = low && !ok ? smartGaps(ts, cfg).length : 0
+      const barColor = pct === 100 ? '#16A34A' : ok ? '#9CA3AF' : t.color
+      const status = pct === 100 ? { c: '#16A34A', t: '✓ Fully covered' }
+        : ok ? { c: '#9CA3AF', t: '✓ Marked intentional' }
+          : { c: '#92660B', t: sg ? `${sg} suggestion${sg === 1 ? '' : 's'} to fill` : 'Has gaps' }
+      return <Fragment key={t.id}>
+        <div onClick={() => setExpanded(isOpen ? null : t.id)} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '13px 0', borderTop: idx ? '1px solid #F0F0F2' : 'none', cursor: 'pointer' }}>
+          <span style={{ color: '#C4C4CC', fontSize: 15, transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform .15s', flexShrink: 0 }}>›</span>
+          <span style={{ width: 9, height: 9, borderRadius: 99, background: t.color, flexShrink: 0 }} />
+          <span style={{ fontSize: 14, fontWeight: 800, flexShrink: 0 }}>{t.name}</span>
+          <span style={{ fontSize: 11.5, color: '#9CA3AF', fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap' }}>· {ts.length} shift{ts.length === 1 ? '' : 's'}</span>
+          <div style={{ flex: 1, minWidth: 30, maxWidth: 220, height: 10, borderRadius: 99, background: barColor + '18', overflow: 'hidden' }}><div style={{ width: `${Math.round(Math.min(1, pct / 100) * 100)}%`, height: '100%', background: barColor, borderRadius: 99, transition: 'width .3s' }} /></div>
+          <span style={{ fontSize: 12, fontWeight: 600, color: status.c, flexShrink: 0, textAlign: 'right' }}>{status.t}</span>
+          <span title={ok ? 'Marked as intentional' : undefined} style={{ fontSize: 13, fontWeight: 800, color: pct === 100 ? '#16A34A' : ok ? '#9CA3AF' : t.color, flexShrink: 0, width: 48, textAlign: 'right' }}>{ok && low ? '✓ ' : ''}{pct}%</span>
+        </div>
+        {isOpen && <div style={{ padding: '2px 0 18px' }}>
+          {low && <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: ok ? '#F0FDF4' : '#FAFAFB', border: `1px solid ${ok ? '#BBF7D0' : '#ECECEF'}`, borderRadius: 10, padding: '10px 14px', marginBottom: 16 }}>
+            <span style={{ fontSize: 12.5, fontWeight: 500, color: ok ? '#15803D' : '#6B7280' }}>{ok ? '✓ Marked as intentional — the gaps below are expected.' : `${t.name} covers ${pct}% of opening hours. If that's deliberate (e.g. this team doesn't work mornings), mark it as fine.`}</span>
+            <button onClick={() => onToggleOk(t.id)} style={{ flexShrink: 0, fontFamily: 'inherit', fontSize: 12.5, fontWeight: 700, color: ok ? '#6B7280' : '#fff', background: ok ? '#fff' : t.color, border: ok ? '1px solid #E5E7EB' : 'none', borderRadius: 8, padding: '7px 14px', cursor: 'pointer' }}>{ok ? 'Undo' : 'Looks right'}</button>
+          </div>}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 260px', gap: 24, alignItems: 'start' }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 10 }}>{t.name} this week</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {ALL.map((d) => <div key={d} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ width: 28, fontSize: 11, fontWeight: 700, color: cfg.business[d] ? '#6B7280' : '#C4C4CC' }}>{DAYS[d]}</span>
+                  <DayTimeline dayIndex={d} shifts={ts} color={t.color} cfg={cfg} />
+                </div>)}
+              </div>
+              <AxisTicks cfg={cfg} />
+            </div>
+            <div style={{ borderLeft: '1px solid #ECECEF', paddingLeft: 20 }}>
+              {ok
+                ? <div style={{ fontSize: 12.5, color: '#9CA3AF', lineHeight: 1.6, paddingTop: 4 }}>Nothing to fill — this week is set up the way you want.<br /><button onClick={() => onToggleOk(t.id)} style={{ fontFamily: 'inherit', fontSize: 12, fontWeight: 600, color: t.color, background: 'none', border: 'none', padding: '8px 0 0', cursor: 'pointer' }}>Show suggestions anyway</button></div>
+                : <GapList shifts={ts} teamId={t.id} onApply={onApply} cfg={cfg} />}
+            </div>
+          </div>
+        </div>}
+      </Fragment>
+    })}
   </div>
 }
 function AddPicker({ teams, onPick }) {
