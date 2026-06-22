@@ -1,3 +1,19 @@
+# /try-me — free no-auth rota tool (lead magnet)  [ACTIVE]
+
+Public, no-Clerk tool at `/try-me`: build shifts + a team, generate ONE rota free, gate the
+PDF download behind a Clerk-waitlist email. Used as a paid-ad landing.
+
+- Decisions: `/try-me` · build-your-own (no example) · emails → Clerk waitlist · single implicit
+  team · availability = per-day on/off (scheduler ignores time windows) · PDF v1 = browser print.
+- [x] Audit: scheduler takes inline `{staff, shifts, rules, weeks}`; Clerk `waitlistEntries.create` exists; no PDF lib.
+- [ ] middleware: `/try-me(.*)` public
+- [ ] `POST /api/try-me/generate` — no auth; caps + IP rate-limit; convert → scheduler shape; call; return assignments
+- [ ] `POST /api/try-me/waitlist` — no auth; `clerkClient().waitlistEntries.create`
+- [ ] `/try-me` page — 3-step builder (Shifts → Team → Rota), in-memory, generate, result grid, email-gated print
+- [ ] build-check + commit + push
+
+---
+
 # Shiftly Rebuild — Demo-Readiness Plan (branch: shiftly-rebuild)
 
 > Status: **PLAN — awaiting approval before any code is written.**
