@@ -548,7 +548,7 @@ export default function ShiftsPage() {
         const [tr, lr, sr] = await Promise.all([fetch('/api/teams'), fetch('/api/location'), fetch('/api/shifts')])
         const td = await tr.json(), ld = await lr.json(), sd = await sr.json()
         const withColor = (Array.isArray(td) ? td : []).map((t, i) => ({ id: t.id, name: t.name, color: TEAM_COLORS[i % TEAM_COLORS.length] }))
-        setTeams(withColor); setLocation(ld || null); setShifts((Array.isArray(sd) ? sd : []).map(withPin)); setTeamId(withColor[0]?.id || null)
+        setTeams(withColor); setLocation(ld || null); setShifts((Array.isArray(sd) ? sd : []).map(withPin)); setTeamId('all')
       } catch (e) { console.error('Failed to load shifts page', e) } finally { setLoading(false) }
     })()
   }, [])
