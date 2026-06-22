@@ -51,50 +51,50 @@ export async function POST(request) {
     if (inShifts.length > 40) return NextResponse.json({ error: 'This free tool handles up to 40 shift patterns.' }, { status: 400 })
     if (inStaff.length > 30) return NextResponse.json({ error: 'This free tool handles up to 30 team members.' }, { status: 400 })
 
-    const staff = inStaff.map((s, i) => ({
+    const rules = { min_rest_hours: 11, max_consecutive_days: 5, enforce_keyholder: false, fair_distribution: true }
+    const pythonUrl = process.env.PYTHON_SCHEDULER_URL || 'https://shiftly-scheduler-e470.onrender.com'
+    const tid = (x) => x.team_id || 'demo'
+
+    const toSchedulerStaff = (list) => list.map((s, i) => ({
       id: s.id || `s${i}`,
       name: s.name || `Person ${i + 1}`,
       contracted_hours: Number(s.contracted) || 0,
       max_hours: Number(s.max) || Number(s.contracted) || 48,
       keyholder: !!s.keyholder,
       availability_grid: availabilityGrid(s.avail),
-      team_id: 'demo',
+      team_id: tid(s),
       team_name: 'Team',
     }))
-
-    // expand each shift pattern into one shift per open day it runs
-    const shifts = []
-    for (const [i, p] of inShifts.entries()) {
-      const days = Array.isArray(p.days) ? p.days : []
-      for (const d of days) {
-        if (!openDays.has(d)) continue
-        const anchor = p.start <= (business[d]?.[0] ?? 9) + 0.01 ? 'open' : (p.end >= (business[d]?.[1] ?? 17) - 0.01 ? 'close' : 'fixed')
-        shifts.push({
-          id: `${p.id || 'sh' + i}`,
-          name: p.name || `Shift ${i + 1}`,
-          day: DAY_FULL[d],
-          start_time: hhmm(p.start),
-          end_time: hhmm(p.end),
-          staff_required: Number(p.staff) || 1,
-          keyholder_required: !!p.keyholder,
-          anchor_type: anchor,
-        })
+    const toSchedulerShifts = (list) => {
+      const out = []
+      for (const [i, p] of list.entries()) {
+        for (const d of (Array.isArray(p.days) ? p.days : [])) {
+          if (!openDays.has(d)) continue
+          const anchor = p.start <= (business[d]?.[0] ?? 9) + 0.01 ? 'open' : (p.end >= (business[d]?.[1] ?? 17) - 0.01 ? 'close' : 'fixed')
+          out.push({ id: `${p.id || 'sh' + i}`, name: p.name || `Shift ${i + 1}`, day: DAY_FULL[d], start_time: hhmm(p.start), end_time: hhmm(p.end), staff_required: Number(p.staff) || 1, keyholder_required: !!p.keyholder, anchor_type: anchor })
+        }
       }
+      return out
     }
-    if (shifts.length === 0) return NextResponse.json({ error: 'Your shifts don’t run on any open days — check your opening hours.' }, { status: 400 })
 
-    const rules = { min_rest_hours: 11, max_consecutive_days: 5, enforce_keyholder: false, fair_distribution: true }
-    const pythonUrl = process.env.PYTHON_SCHEDULER_URL || 'https://shiftly-scheduler-e470.onrender.com'
-
-    const resp = await fetch(`${pythonUrl}/schedule`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ staff, shifts, rules, weeks: 1 }) })
-    if (!resp.ok) {
-      const txt = await resp.text().catch(() => '')
-      return NextResponse.json({ error: 'The scheduler is waking up — try again in a few seconds.', detail: txt.slice(0, 200) }, { status: 502 })
+    // solve each team separately (its staff cover its shifts), then merge — mirrors the real app
+    const teamIds = [...new Set([...inShifts, ...inStaff].map(tid))]
+    const all = []
+    let wall = 0, scheduler502 = false
+    for (const t of teamIds) {
+      const teamStaff = toSchedulerStaff(inStaff.filter((s) => tid(s) === t))
+      const teamShifts = toSchedulerShifts(inShifts.filter((p) => tid(p) === t))
+      if (!teamStaff.length || !teamShifts.length) continue
+      const resp = await fetch(`${pythonUrl}/schedule`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ staff: teamStaff, shifts: teamShifts, rules, weeks: 1 }) })
+      if (!resp.ok) { scheduler502 = true; continue }
+      const r = await resp.json().catch(() => null)
+      if (r && r.success !== false) { all.push(...(r.assignments || [])); wall += r.stats?.wall_time || 0 }
     }
-    const result = await resp.json()
-    if (!result || result.success === false) return NextResponse.json({ error: result?.error || 'Couldn’t build a rota from those inputs. Add more availability or staff.' }, { status: 200 })
-
-    return NextResponse.json({ success: true, assignments: result.assignments || [], stats: result.stats || null })
+    if (all.length === 0) {
+      if (scheduler502) return NextResponse.json({ error: 'The scheduler is waking up — try again in a few seconds.' }, { status: 502 })
+      return NextResponse.json({ error: 'Couldn’t build a rota from those inputs. Make sure each team has staff with enough availability for its shifts.' }, { status: 200 })
+    }
+    return NextResponse.json({ success: true, assignments: all, stats: { wall_time: Math.round(wall * 100) / 100 } })
   } catch (e) {
     return NextResponse.json({ error: 'Something went wrong generating the rota.', detail: String(e).slice(0, 200) }, { status: 500 })
   }
