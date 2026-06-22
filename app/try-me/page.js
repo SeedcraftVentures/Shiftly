@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { HeatGlow, SHIFTLY_PALETTE } from '../components/HeatGlow'
 import { Inspector as ShiftInspector, TeamRotaGrid } from '../(auth)/dashboard/shifts/page'
 import { Inspector as StaffInspector, AvailabilityGrid, AvailKey } from '../(auth)/dashboard/staff/page'
 
 // ════════════════════════════════════════════════════════════════════════════
-//  /try-me — guided, no-sign-in demo (lead magnet).
+//  /try-me - guided, no-sign-in demo (lead magnet).
 //  Pick an establishment (cafe / bar / shop, all single-team) → drop into a
 //  pre-built scenario → a coach walks you through the real builder → generate a
 //  rota → "make it yours" gate (waitlist email). Teaches + de-risks overwhelm.
@@ -34,18 +35,33 @@ const primaryBtn = (disabled) => ({ fontFamily: 'inherit', fontSize: 14, fontWei
 const addBtn = { fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: '#fff', background: PINK, border: 'none', borderRadius: 9, padding: '8px 14px', cursor: 'pointer' }
 const TM_ANIM = `@keyframes tmUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}@keyframes tmPulse{0%,100%{box-shadow:0 0 0 0 ${PINK}55}50%{box-shadow:0 0 0 7px ${PINK}00}}@keyframes tmFall{to{transform:translateY(110vh) rotate(720deg);opacity:0}}.tmUp{animation:tmUp .4s ease both}`
 const RULES = [
-  { key: 'keyholder', label: 'A keyholder opens & closes, every day' },
-  { key: 'rest', label: 'At least 11 hours’ rest between shifts' },
-  { key: 'consecutive', label: 'Never more than 5 days in a row' },
-  { key: 'maxhours', label: 'Everyone within their max hours' },
+  { key: 'keyholder', label: 'A keyholder opens & closes, every day', tip: 'Someone who can lock up is always on at open and close.' },
+  { key: 'rest', label: 'At least 11 hours’ rest between shifts', tip: 'No one finishes late then starts early the next morning.' },
+  { key: 'consecutive', label: 'Never more than 5 days in a row', tip: 'Everyone gets a proper break during the week.' },
+  { key: 'maxhours', label: 'Everyone within their max hours', tip: 'No one is pushed past the hours they’re happy to work.' },
 ]
+const TIP = Object.fromEntries(RULES.map((r) => [r.key, r.tip]))
+function RuleRow({ marker, color, label, detail, tip }) {
+  const row = <span style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 13.5, cursor: tip ? 'help' : 'default' }}>
+    <span style={{ width: 20, height: 20, borderRadius: 99, flexShrink: 0, background: color + '18', color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800 }}>{marker}</span>
+    <span style={{ color: '#374151', lineHeight: 1.4 }}><b style={{ color: '#111827', borderBottom: tip ? '1px dotted #C4C4CC' : 'none' }}>{label}</b>{detail ? <span style={{ color: '#92660B' }}> · {detail}</span> : ''}</span>
+  </span>
+  return tip ? <Tip text={tip} style={{ display: 'flex' }}>{row}</Tip> : row
+}
 function KeyMark({ size = 13, color = PINK }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, display: 'block' }}><title>Keyholder</title><circle cx="8" cy="15" r="5" /><path d="M11.6 11.4 21 2" /><path d="M16.5 6.5 19.5 9.5" /></svg>
+}
+function Tip({ text, children, style }) {
+  const [show, setShow] = useState(false)
+  return <span onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)} style={{ position: 'relative', display: 'inline-flex', ...style }}>
+    {children}
+    {show && <span style={{ position: 'absolute', bottom: 'calc(100% + 9px)', left: '50%', transform: 'translateX(-50%)', background: '#111827', color: '#fff', fontSize: 11.5, fontWeight: 600, lineHeight: 1.4, padding: '7px 10px', borderRadius: 8, width: 'max-content', maxWidth: 220, textAlign: 'center', zIndex: 60, boxShadow: '0 6px 18px rgba(0,0,0,.22)', pointerEvents: 'none' }}>{text}<span style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', borderWidth: '5px 5px 0', borderStyle: 'solid', borderColor: '#111827 transparent transparent' }} /></span>}
+  </span>
 }
 
 // ── establishment scenarios (single team each) ───────────────────────────────
 // realistic scenarios: opener + a lunch/peak cover + closer, staffed to comfortably (and fairly)
-// cover the week. Everyone's a keyholder — small teams trust each other with the keys — so a
+// cover the week. Everyone's a keyholder (small teams trust each other with the keys), so a
 // keyholder always opens & closes (the demo always builds a perfect, compliant rota).
 const ESTS = [
   {
@@ -141,16 +157,16 @@ export default function TryMe() {
       const data = await res.json()
       if (!res.ok || data.error) { setError(data.error || 'Could not build a rota.') }
       else { setResult(data); setStep(3) }
-    } catch { setError('Network error — try again.') } finally { setGenerating(false) }
+    } catch { setError('Network error, try again.') } finally { setGenerating(false) }
   }
 
   if (!est) return <Picker onPick={pick} />
 
   const steps = [
     { tab: 'shifts', title: `Here’s ${est.name}’s week`, body: `I’ve set up the shifts a typical ${est.short} runs across the week. Click any shift to tweak its hours, days or cover, or just carry on.` },
-    { tab: 'team', title: 'Meet the team', body: 'Each row shows when someone can work — pink means available. Click a name to change their hours, keyholder status or availability.' },
-    { tab: 'rota', title: 'Now the whole point — fairness', body: 'Anyone can fill a grid. Shiftly builds it fair: 11h rest between shifts, never more than 5 days in a row, a keyholder on every open & close, and hours shared evenly. Hit generate and see it prove it.', generate: true },
-    { tab: 'rota', title: 'That’s the week, sorted', body: `Built in seconds — and fair by the rules below. This is exactly how it works for your place. Want to make it yours?`, done: true },
+    { tab: 'team', title: 'Meet the team', body: 'Each row shows when someone can work; pink means available. Click a name to change their hours, keyholder status or availability.' },
+    { tab: 'rota', title: 'Now the whole point: fairness', body: 'Anyone can fill a grid. Shiftly builds it fair: 11h rest between shifts, never more than 5 days in a row, a keyholder on every open and close, and hours shared evenly. Hit generate and see it prove it.', generate: true },
+    { tab: 'rota', title: 'That’s the week, sorted', body: `Built in seconds, and fair by the rules below. This is exactly how it works for your place. Ready to finish?`, done: true },
   ]
   const cur = steps[step]
   const shiftObj = shifts.find((s) => s.id === selShift)
@@ -174,7 +190,7 @@ export default function TryMe() {
     </div>
 
     <div style={{ maxWidth: 1080, margin: '0 auto', padding: '20px 24px 0' }}>
-      {/* coach — in the flow, right above the content, at eye height */}
+      {/* coach in the flow, right above the content, at eye height */}
       <Coach step={step} cur={cur} generating={generating}
         onBack={() => step > 0 && setStep(step - 1)}
         onNext={() => { if (cur.generate) generate(); else if (cur.done) setFinished(true); else setStep(step + 1) }}
@@ -185,18 +201,18 @@ export default function TryMe() {
         <div style={panel}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
             <span style={{ fontSize: 14, fontWeight: 800 }}>Your shifts <span style={{ color: '#9CA3AF', fontWeight: 600 }}>· {shifts.length}</span></span>
-            <button onClick={addShift} style={addBtn}>+ Add shift</button>
+            <Tip text="Add another shift pattern, e.g. a weekend brunch shift"><button onClick={addShift} style={addBtn}>+ Add shift</button></Tip>
           </div>
           <TeamRotaGrid groups={groups} cfg={cfg} selectedId={selShift} onSelect={setSelShift} />
         </div>
       </div>}
 
       {cur.tab === 'team' && <div className="no-print" style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: 18, alignItems: 'start' }}>
-        <div style={{ ...panel, position: 'sticky', top: 16 }}><StaffInspector key={selStaff || 'none'} s={staffObj} patch={(p) => patchStaff(selStaff, p)} onDelete={() => removeStaff(selStaff)} saveState={staffSave} onSave={saveStaff} accent={PINK} cfg={cfg} /></div>
+        <div style={{ ...panel, position: 'sticky', top: 16 }}><StaffInspector key={selStaff || 'none'} s={staffObj} patch={(p) => patchStaff(selStaff, p)} onDelete={() => removeStaff(selStaff)} saveState={staffSave} onSave={saveStaff} accent={PINK} cfg={cfg} hidePay /></div>
         <div style={panel}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
             <span style={{ fontSize: 14, fontWeight: 800 }}>Your team <span style={{ color: '#9CA3AF', fontWeight: 600 }}>· {staff.length}</span></span>
-            <button onClick={addStaff} style={addBtn}>+ Add person</button>
+            <Tip text="Add a team member and set when they’re available"><button onClick={addStaff} style={addBtn}>+ Add person</button></Tip>
           </div>
           <AvailabilityGrid groups={staffGroups} cfg={cfg} selectedId={selStaff} onSelect={setSelStaff} />
           <AvailKey accent={PINK} />
@@ -229,7 +245,7 @@ function Progress({ steps, step }) {
 }
 
 function Coach({ step, cur, generating, onBack, onNext, onRestart }) {
-  const nextLabel = cur.generate ? (generating ? 'Building…' : 'Generate the rota →') : cur.done ? 'Join the waitlist →' : 'Next →'
+  const nextLabel = cur.generate ? (generating ? 'Building…' : 'Generate the rota →') : cur.done ? 'Finish →' : 'Next →'
   return <div key={step} className="tmUp" style={{ background: '#FFF4F8', border: `1px solid ${PINK}33`, borderLeft: `5px solid ${PINK}`, borderRadius: 14, padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 14, marginBottom: 18, flexWrap: 'wrap', boxShadow: `0 6px 20px ${PINK}1A` }}>
     <div style={{ width: 38, height: 38, borderRadius: 99, flexShrink: 0, background: PINK, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 800, animation: 'tmPulse 2.4s ease-in-out infinite' }}>S</div>
     <div style={{ flex: 1, minWidth: 220 }}>
@@ -246,19 +262,17 @@ function Coach({ step, cur, generating, onBack, onNext, onRestart }) {
 }
 function RulesPanel() {
   return <div className="tmUp" style={panel}>
-    <div style={{ fontSize: 15, fontWeight: 800 }}>The rules Shiftly always builds to</div>
-    <div style={{ fontSize: 12.5, color: '#6B7280', margin: '3px 0 16px' }}>Anyone can fill a grid. Shiftly fills it <b style={{ color: '#111827' }}>fairly</b> — every single time:</div>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10 }}>
-      {RULES.map((r) => <div key={r.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px', borderRadius: 10, background: '#FAFAFB', border: '1px solid #ECECEF' }}>
-        <span style={{ width: 18, height: 18, borderRadius: 99, flexShrink: 0, background: PINK + '18', color: PINK, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800 }}>•</span>
-        <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>{r.label}</span>
-      </div>)}
+    <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 5 }}>The rules</div>
+    <div style={{ fontSize: 15, fontWeight: 800 }}>Every Shiftly rota is built fair</div>
+    <div style={{ fontSize: 13, color: '#6B7280', margin: '3px 0 16px' }}>Anyone can fill a grid. Shiftly fills it fairly, every time <span style={{ color: '#9CA3AF' }}>(hover a rule to see what it means)</span>:</div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {RULES.map((r) => <RuleRow key={r.key} marker="•" color={PINK} label={r.label} tip={r.tip} />)}
     </div>
-    <div style={{ marginTop: 14, fontSize: 12.5, color: '#9CA3AF' }}>Hit <b style={{ color: PINK }}>Generate the rota</b> above and we’ll prove every one.</div>
+    <div style={{ marginTop: 16, fontSize: 12.5, color: '#9CA3AF' }}>Generate the rota above and we’ll prove every one.</div>
   </div>
 }
 function Confetti() {
-  const cols = [PINK, '#6366F1', '#14B8A6', '#F59E0B', '#FFD1E3', '#fff']
+  const cols = [PINK, '#6366F1', '#14B8A6', '#F59E0B', '#FFA8C7', '#C20D5C']
   const pieces = Array.from({ length: 70 }, (_, i) => ({ left: Math.random() * 100, delay: Math.random() * 1.2, dur: 2.8 + Math.random() * 2.2, c: cols[i % cols.length], w: 6 + Math.random() * 7, rot: Math.random() * 360 }))
   return <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
     {pieces.map((p, i) => <span key={i} style={{ position: 'absolute', top: -24, left: `${p.left}%`, width: p.w, height: p.w * 0.55, background: p.c, borderRadius: 2, transform: `rotate(${p.rot}deg)`, animation: `tmFall ${p.dur}s linear ${p.delay}s infinite` }} />)}
@@ -276,48 +290,51 @@ function Finish({ est, onRestart }) {
       const data = await res.json()
       if (!res.ok || data.error) { setErr(data.error || 'Try again.'); setBusy(false); return }
       setSent(true); setBusy(false)
-    } catch { setErr('Network error — try again.'); setBusy(false) }
+    } catch { setErr('Network error, try again.'); setBusy(false) }
   }
-  return <div style={{ fontFamily: FONT, minHeight: '100vh', background: '#0E1424', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, position: 'relative', overflow: 'hidden' }}>
+  const featuresLink = <a href="/features" style={{ display: 'inline-block', marginTop: 16, fontSize: 13, fontWeight: 700, color: PINK, textDecoration: 'none' }}>Take a closer look at our features →</a>
+  return <div style={{ fontFamily: FONT, minHeight: '100vh', background: '#FAFAFB', color: '#111827', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, position: 'relative', overflow: 'hidden' }}>
     <style>{TM_ANIM}</style>
     <Confetti />
-    <div className="tmUp" style={{ position: 'relative', zIndex: 1, maxWidth: 460, width: '100%', background: '#fff', color: '#111827', borderRadius: 22, padding: '40px 34px', textAlign: 'center', boxShadow: '0 30px 70px rgba(0,0,0,.45)' }}>
+    <div className="tmUp" style={{ position: 'relative', zIndex: 1, maxWidth: 460, width: '100%', background: '#fff', color: '#111827', borderRadius: 22, padding: '40px 34px', textAlign: 'center', border: '1px solid #ECECEF', boxShadow: '0 24px 60px rgba(17,24,39,.14)' }}>
       {sent ? <>
         <div style={{ width: 56, height: 56, borderRadius: 99, background: '#16A34A', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, fontWeight: 800, margin: '0 auto 16px' }}>✓</div>
         <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.4, margin: '0 0 10px' }}>You’re on the list</h1>
-        <p style={{ fontSize: 14.5, color: '#6B7280', margin: '0 0 22px', lineHeight: 1.55 }}>We’ll email you the moment Shiftly opens up — and set it up for your {est.short} from day one.</p>
-        <button onClick={onRestart} style={{ ...primaryBtn(false), width: '100%' }}>Try another type</button>
+        <p style={{ fontSize: 14.5, color: '#6B7280', margin: '0 0 18px', lineHeight: 1.55 }}>We’ll email you the moment Shiftly opens up, and set it up for your {est.short} from day one.</p>
+        {featuresLink}
+        <button onClick={onRestart} style={{ ...primaryBtn(false), width: '100%', marginTop: 18 }}>Try another type</button>
       </> : <>
         <div style={{ fontSize: 12, fontWeight: 800, color: PINK, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>That’s the whole loop</div>
         <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.5, margin: '0 0 12px', lineHeight: 1.12 }}>Fair shifts, in a couple of clicks.</h1>
-        <p style={{ fontSize: 14.5, color: '#6B7280', margin: '0 0 22px', lineHeight: 1.55 }}>That’s exactly how Shiftly builds your real rota — fair, covered and compliant. Join the waitlist and we’ll set you up for your {est.short} the moment we go live.</p>
+        <p style={{ fontSize: 14.5, color: '#6B7280', margin: '0 0 22px', lineHeight: 1.55 }}>That’s exactly how Shiftly builds your real rota: fair, covered and compliant. Join the waitlist and we’ll set you up for your {est.short} the moment we go live.</p>
         <input value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} type="email" placeholder="you@business.com" autoFocus style={{ width: '100%', boxSizing: 'border-box', fontSize: 15, fontWeight: 600, fontFamily: 'inherit', padding: '13px 15px', borderRadius: 11, border: '1px solid #E5E7EB', outline: 'none', textAlign: 'center' }} />
         {err && <div style={{ fontSize: 12.5, color: '#B91C1C', marginTop: 8 }}>{err}</div>}
         <button onClick={submit} disabled={busy} style={{ ...primaryBtn(busy), width: '100%', fontSize: 15, marginTop: 12 }}>{busy ? 'Saving…' : 'Join the waitlist →'}</button>
-        <button onClick={onRestart} style={{ width: '100%', marginTop: 10, background: 'none', border: 'none', color: '#9CA3AF', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 6 }}>Try another type of place</button>
+        {featuresLink}
+        <div><button onClick={onRestart} style={{ marginTop: 6, background: 'none', border: 'none', color: '#9CA3AF', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 6 }}>Try another type of place</button></div>
       </>}
     </div>
   </div>
 }
 
 function Picker({ onPick }) {
-  return <div style={{ fontFamily: FONT, background: '#FAFAFB', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, color: '#111827' }}>
-    <div style={{ maxWidth: 760, width: '100%', textAlign: 'center' }}>
+  return <HeatGlow as="div" palette={SHIFTLY_PALETTE} style={{ fontFamily: FONT, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+    <div className="tmUp" style={{ maxWidth: 600, width: '100%', background: '#fff', color: '#111827', borderRadius: 24, padding: '40px 36px', textAlign: 'center', boxShadow: '0 30px 80px rgba(17,24,39,.30)' }}>
       <div style={{ fontSize: 12, fontWeight: 800, color: PINK, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>Try it free · no sign-up</div>
-      <h1 style={{ fontSize: 34, fontWeight: 800, letterSpacing: -0.6, margin: '0 0 12px', lineHeight: 1.1 }}>See Shiftly build a rota — in under a minute.</h1>
-      <p style={{ fontSize: 15.5, color: '#6B7280', maxWidth: 520, margin: '0 auto 30px', lineHeight: 1.55 }}>Pick a kind of place and we’ll walk you through building a real week’s rota — the same way you would for your own business.</p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
-        {ESTS.map((e) => <button key={e.id} onClick={() => onPick(e)} style={{ ...panel, textAlign: 'left', cursor: 'pointer', border: '1px solid #ECECEF', padding: 22, transition: 'transform .12s, box-shadow .12s' }}
-          onMouseEnter={(ev) => { ev.currentTarget.style.transform = 'translateY(-3px)'; ev.currentTarget.style.boxShadow = `0 10px 24px ${PINK}22` }}
-          onMouseLeave={(ev) => { ev.currentTarget.style.transform = 'none'; ev.currentTarget.style.boxShadow = panel.boxShadow }}>
-          <div style={{ fontSize: 17, fontWeight: 800, textTransform: 'capitalize', marginBottom: 5 }}>{e.short}</div>
-          <div style={{ fontSize: 12.5, color: '#6B7280', lineHeight: 1.45 }}>{e.tag}</div>
-          <div style={{ marginTop: 14, fontSize: 12.5, fontWeight: 700, color: PINK }}>Walk me through it →</div>
+      <h1 style={{ fontSize: 31, fontWeight: 800, letterSpacing: -0.6, margin: '0 0 12px', lineHeight: 1.12 }}>See Shiftly build a rota, in under a minute.</h1>
+      <p style={{ fontSize: 15, color: '#6B7280', maxWidth: 460, margin: '0 auto 26px', lineHeight: 1.55 }}>Pick a kind of place and we’ll walk you through building a real week’s rota, the same way you would for your own business.</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+        {ESTS.map((e) => <button key={e.id} onClick={() => onPick(e)} style={{ fontFamily: 'inherit', background: '#FAFAFB', borderRadius: 14, textAlign: 'left', cursor: 'pointer', border: '1px solid #ECECEF', padding: 16, transition: 'transform .12s, box-shadow .12s, border-color .12s' }}
+          onMouseEnter={(ev) => { ev.currentTarget.style.transform = 'translateY(-3px)'; ev.currentTarget.style.boxShadow = `0 10px 24px ${PINK}22`; ev.currentTarget.style.borderColor = PINK }}
+          onMouseLeave={(ev) => { ev.currentTarget.style.transform = 'none'; ev.currentTarget.style.boxShadow = 'none'; ev.currentTarget.style.borderColor = '#ECECEF' }}>
+          <div style={{ fontSize: 16, fontWeight: 800, textTransform: 'capitalize', marginBottom: 5 }}>{e.short}</div>
+          <div style={{ fontSize: 12, color: '#6B7280', lineHeight: 1.4 }}>{e.tag}</div>
+          <div style={{ marginTop: 12, fontSize: 12, fontWeight: 700, color: PINK }}>Walk me through it →</div>
         </button>)}
       </div>
-      <div style={{ marginTop: 26, fontSize: 12.5, color: '#9CA3AF' }}>Takes about a minute · nothing to install · no card</div>
+      <div style={{ marginTop: 22, fontSize: 12.5, color: '#9CA3AF' }}>Takes about a minute · nothing to install · no card</div>
     </div>
-  </div>
+  </HeatGlow>
 }
 
 function Result({ result, staff, team }) {
@@ -326,7 +343,7 @@ function Result({ result, staff, team }) {
   return <div className="tmUp">
     <div style={{ marginBottom: 14 }}>
       <div style={{ fontSize: 18, fontWeight: 800 }}>✓ The rota is ready</div>
-      <div style={{ fontSize: 13, color: '#6B7280', marginTop: 2 }}>{total} shifts assigned{result.stats?.wall_time ? ` · built in ${result.stats.wall_time}s` : ''} — fair, covered, keyholder on every open and close.</div>
+      <div style={{ fontSize: 13, color: '#6B7280', marginTop: 2 }}>{total} shifts assigned{result.stats?.wall_time ? ` · built in ${result.stats.wall_time}s` : ''}. Fair, covered, keyholder on every open and close.</div>
     </div>
     <div style={panel}>
       <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 14 }}>{team} · weekly rota</div>
@@ -352,16 +369,11 @@ function Result({ result, staff, team }) {
       </div>
     </div>
     {result.compliance?.length > 0 && <div style={{ ...panel, marginTop: 16 }}>
-      <div style={{ fontSize: 15, fontWeight: 800 }}>Built fair — automatically</div>
-      <div style={{ fontSize: 12.5, color: '#6B7280', margin: '3px 0 14px' }}>Anyone can fill a grid. Every Shiftly rota is built to the rules — here’s how this one did:</div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 10 }}>
-        {result.compliance.map((r) => <div key={r.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '11px 13px', borderRadius: 10, background: r.ok ? '#F0FDF4' : '#FFFBEB', border: `1px solid ${r.ok ? '#BBF7D0' : '#FDE68A'}` }}>
-          <span style={{ width: 20, height: 20, borderRadius: 99, flexShrink: 0, background: r.ok ? '#16A34A' : '#F59E0B', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800 }}>{r.ok ? '✓' : '!'}</span>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#111827', lineHeight: 1.35 }}>{r.label}</div>
-            {!r.ok && r.detail && <div style={{ fontSize: 11.5, color: '#92660B', marginTop: 2 }}>{r.detail}</div>}
-          </div>
-        </div>)}
+      <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 5 }}>Fairness check</div>
+      <div style={{ fontSize: 15, fontWeight: 800 }}>Built fair, automatically</div>
+      <div style={{ fontSize: 12.5, color: '#6B7280', margin: '3px 0 16px' }}>Every rule, met, on this exact rota:</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {result.compliance.map((r) => <RuleRow key={r.key} marker={r.ok ? '✓' : '!'} color={r.ok ? '#16A34A' : '#F59E0B'} label={r.label} detail={r.ok ? '' : r.detail} tip={TIP[r.key]} />)}
       </div>
     </div>}
   </div>

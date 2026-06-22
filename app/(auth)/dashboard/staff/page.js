@@ -264,7 +264,7 @@ function Money({ value, onChange, step = '0.25', suffix = '' }) {
     {suffix && <span style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 12, fontWeight: 600, color: lit ? PINK : '#9CA3AF', pointerEvents: 'none', transition: 'color .12s' }}>{suffix}</span>}
   </div>
 }
-export function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg }) {
+export function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg, hidePay = false }) {
   if (!s) return <div style={{ color: '#9CA3AF', fontSize: 13, textAlign: 'center', marginTop: 70, lineHeight: 1.6 }}>Select a staff member to<br />edit their details here.</div>
   return <>
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -281,7 +281,7 @@ export function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg }
         <div style={{ flex: 1 }}><FieldLabel>Contracted</FieldLabel><Stepper value={s.contracted} onChange={(v) => patch({ contracted: v })} min={0} max={60} suffix="h" /></div>
         <div style={{ flex: 1 }}><FieldLabel>Max / week</FieldLabel><Stepper value={s.max} onChange={(v) => patch({ max: v })} min={0} max={60} suffix="h" /></div>
       </div>
-      <div>
+      {!hidePay && <div>
         <FieldLabel>Pay basis</FieldLabel>
         <div style={{ display: 'inline-flex', background: '#F1F1F4', borderRadius: 9, padding: 3, gap: 2, marginBottom: 14, marginTop: 2 }}>
           {[['hourly', 'Hourly'], ['salary', 'Salary'], ['annualised', 'Annualised']].map(([k, lbl]) => {
@@ -301,7 +301,7 @@ export function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg }
             <div style={{ flex: 1 }}><FieldLabel>Hours / year</FieldLabel><input value={s.annualised_hours || ''} onChange={(e) => patch({ annualised_hours: parseFloat(e.target.value) || 0 })} type="number" step="20" placeholder="1820" style={inputStyle()} /></div>
           </div>
         )}
-      </div>
+      </div>}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div><div style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>Keyholder</div><div style={{ fontSize: 11, color: '#9CA3AF' }}>Can open & close</div></div>
         <Switch on={s.keyholder} onClick={() => patch({ keyholder: !s.keyholder })} accent={accent} />
