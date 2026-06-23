@@ -466,7 +466,7 @@ export function AvailabilityGrid({ groups, cfg, selectedId, onSelect, selectMode
   const block = { height: 34, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10.5, fontWeight: 700, whiteSpace: 'nowrap' }
   const total = groups.reduce((n, g) => n + g.staff.length, 0)
   return <div style={{ overflowX: 'auto' }}>
-    <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760, tableLayout: 'fixed' }}>
+    <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, minWidth: 760, tableLayout: 'fixed' }}>
       <colgroup><col style={{ width: 170 }} />{DAYS.map((d) => <col key={d} />)}</colgroup>
       <thead><tr><th style={{ ...GRID_TH, textAlign: 'left', position: 'sticky', left: 0, background: '#fff', minWidth: 170 }} />{DAYS.map((d, i) => <th key={d} style={{ ...GRID_TH, color: cfg.openDays.includes(i) ? '#374151' : '#C4C4CC' }}>{d}</th>)}</tr></thead>
       <tbody>

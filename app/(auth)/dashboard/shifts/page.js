@@ -472,7 +472,7 @@ export function TeamRotaGrid({ groups, cfg, selectedId, onSelect, selectMode, se
   // match the rota builder grid exactly: name col 160, table minWidth 800, cell padding 4px.
   const cell = { padding: '4px 4px', verticalAlign: 'middle' }
   return <div style={{ overflowX: 'auto' }}>
-    <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 800, tableLayout: 'fixed' }}>
+    <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, minWidth: 800, tableLayout: 'fixed' }}>
       <colgroup><col style={{ width: 160 }} />{DAYS.map((d) => <col key={d} />)}</colgroup>
       <thead><tr><th style={{ ...RTH_STAFF, minWidth: 160 }} />{DAYS.map((d) => <th key={d} style={RTH}><div style={{ fontWeight: 800, color: '#374151' }}>{d}</div></th>)}</tr></thead>
       <tbody>
@@ -513,8 +513,8 @@ export function TeamRotaGrid({ groups, cfg, selectedId, onSelect, selectMode, se
                 </td>
                 {ALL.map((d) => <td key={d} style={{ ...cell, background: active ? rowBg : 'transparent', borderTopRightRadius: active && first && d === 6 ? 10 : 0, borderBottomRightRadius: active && last && d === 6 ? 10 : 0 }}>
                   {s.days.includes(d)
-                    ? <div style={{ background: blk.background, borderRadius: 10, padding: '7px 10px', boxShadow: blk.shadow, height: 38, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-                        <div style={{ color: blk.color, fontWeight: 700, fontSize: 11, lineHeight: 1.25, whiteSpace: 'nowrap' }}>{fmt(s.start)}–{fmt(s.end)}</div>
+                    ? <div style={{ background: blk.background, borderRadius: 9, padding: '6px 5px', boxShadow: blk.shadow, height: 38, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                        <div style={{ color: blk.color, fontWeight: 700, fontSize: 10.5, lineHeight: 1.2, whiteSpace: 'nowrap' }}>{fmt(s.start)}–{fmt(s.end)}</div>
                         {first && s.keyholder && <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: blk.subColor, fontSize: 9.5 }}><KeyMark size={10} color={blk.subColor} />keyholder</div>}
                       </div>
                     : null}
