@@ -74,6 +74,52 @@ html {
   font-display: swap;
 }
 
+/* Cal Sans UI / Text — the @calcom/cal-sans-ui family (self-hosted woff2, OFL).
+   "UI" is the variable display/heading face; "Text" is the reading companion.
+   Self-hosted with absolute /fonts paths to sidestep next/font + Turbopack. */
+@font-face {
+  font-family: 'Cal Sans UI';
+  src: url('/fonts/CalSansUI-var.woff2') format('woff2');
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Cal Sans Text';
+  src: url('/fonts/CalSansText-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Cal Sans Text';
+  src: url('/fonts/CalSansText-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Cal Sans Text';
+  src: url('/fonts/CalSansText-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Cal Sans Text';
+  src: url('/fonts/CalSansText-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Cal Sans Text';
+  src: url('/fonts/CalSansText-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Base Typography - Cal Sans for headings/logo, Inter for body */
 .font-cal {
   font-family: 'Cal Sans', system-ui, sans-serif;

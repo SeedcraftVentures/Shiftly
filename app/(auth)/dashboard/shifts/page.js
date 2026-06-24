@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback, Fragment } from 'react'
 import { TEAM_COLORS } from '../staff/utils/staffHelpers'
 import { rotaBlock } from '@/lib/rotaColors'
-import { Tip } from '@/app/components/ui/kit'
+import { Tip, PageHeader } from '@/app/components/ui/kit'
 
 // ════════════════════════════════════════════════════════════════════════════
 //  SHIFTS PAGE (live) — locked lab design wired to /api/teams + /api/location + /api/shifts
@@ -13,7 +13,7 @@ import { Tip } from '@/app/components/ui/kit'
 
 const PINK = '#FF1F7D'
 const AMBER = '#F59E0B'
-const FONT = "'Plus Jakarta Sans', sans-serif"
+const FONT = "'Cal Sans Text', 'Plus Jakarta Sans', sans-serif"
 const FIX_BTN = { fontFamily: 'inherit', fontSize: 11.5, fontWeight: 600, color: '#111827', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 7, padding: '5px 10px', cursor: 'pointer' }
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const DAY_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -273,14 +273,14 @@ export function Inspector({ shift, patch, onDelete, saveState, onSave, accent, c
   }
   const segWrap = { display: 'flex', background: '#F1F1F4', borderRadius: 9, padding: 3, gap: 2, marginTop: 9 }
   return <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-    <div>
+    <div data-tour="shift-name">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9 }}>
         <Label>Shift name</Label>
         {!readOnly && <button onClick={onDelete} style={{ fontSize: 12, fontWeight: 600, color: '#EF4444', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Delete</button>}
       </div>
       <Tip text="Rename your shift, or keep the auto name" on={tips} style={{ display: 'block' }}><FieldInput value={shift.name} onChange={(e) => patch({ name: e.target.value })} /></Tip>
     </div>
-    <div>
+    <div data-tour="shift-pin">
       <Label>Pin to</Label>
       <Tip text="Pin it to your opening time, your closing time, or leave it free" on={tips} style={{ display: 'block' }}><div style={segWrap}>
         <Seg active={anchor === 'open'} onClick={() => setAnchor('open')} accent={accent}>Open</Seg>
@@ -288,7 +288,7 @@ export function Inspector({ shift, patch, onDelete, saveState, onSave, accent, c
         <Seg active={anchor === 'close'} onClick={() => setAnchor('close')} accent={accent}>Close</Seg>
       </div></Tip>
     </div>
-    <div>
+    <div data-tour="shift-length">
       <Label>Length</Label>
       <div style={segWrap}>
         {[4, 8, 12].map((n) => <Seg key={n} active={lenMode === String(n)} onClick={() => setLen(n)} accent={accent}>{n}h</Seg>)}
@@ -299,10 +299,10 @@ export function Inspector({ shift, patch, onDelete, saveState, onSave, accent, c
       <Label>{fmt(shift.start)} – {fmt(shift.end)} · {curLen}h{anchor !== 'none' && <span style={{ color: accent, fontWeight: 700 }}> · {anchor === 'open' ? 'opens' : 'closes'}</span>}</Label>
       <div style={{ marginTop: 11 }}><TimeRange start={shift.start} end={shift.end} onChange={(start, end) => { setLenMode('custom'); patch({ start, end }) }} accent={accent} domain={cfg.slider} /></div>
     </div>
-    <div><Label>Runs on</Label><div style={{ marginTop: 9 }}><DayPicker days={shift.days} onChange={(days) => patch({ days })} openDays={cfg.openDays} accent={accent} /></div></div>
+    <div data-tour="shift-days"><Label>Runs on</Label><div style={{ marginTop: 9 }}><DayPicker days={shift.days} onChange={(days) => patch({ days })} openDays={cfg.openDays} accent={accent} /></div></div>
     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12, alignItems: 'end' }}>
-      <div><Label>Staff needed</Label><div style={{ marginTop: 9 }}><Stepper value={shift.staff} onChange={(staff) => patch({ staff })} min={1} max={20} /></div></div>
-      <div><Label>Keyholder</Label>
+      <div data-tour="shift-staff"><Label>Staff needed</Label><div style={{ marginTop: 9 }}><Stepper value={shift.staff} onChange={(staff) => patch({ staff })} min={1} max={20} /></div></div>
+      <div data-tour="shift-keyholder"><Label>Keyholder</Label>
         <Tip text="Whether this shift must be covered by someone who can lock up" on={tips} style={{ display: 'block' }}><div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 44, marginTop: 9, borderRadius: 9, background: '#fff', border: '1px solid #E5E7EB' }}>
           <Switch on={shift.keyholder} onClick={() => patch({ keyholder: !shift.keyholder })} accent={accent} />
         </div></Tip>
@@ -629,11 +629,10 @@ export default function ShiftsPage() {
   const teamPct = coveragePct(teamShifts, cfg)
 
   return <div style={{ fontFamily: FONT, background: '#FAFAFB', minHeight: '100vh', color: '#111827' }}>
-    <div style={{ maxWidth: 1240, margin: '0 auto', padding: '20px 24px 0' }}>
-      <h1 style={{ fontSize: 26, fontWeight: 800, color: '#111827', margin: 0, letterSpacing: -0.3 }}>Shifts</h1>
-      <p style={{ fontSize: 13.5, color: '#6B7280', margin: '5px 0 0' }}>The shift patterns each team runs every week.</p>
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 0' }}>
+      <PageHeader title="Shifts" subtitle="The shift patterns each team runs every week." style={{ marginBottom: 0 }} />
     </div>
-    <div style={{ maxWidth: 1240, margin: '0 auto', padding: '14px 24px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '14px 24px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
       <div style={{ display: 'inline-flex', background: '#F1F1F4', borderRadius: 11, padding: 4, gap: 2 }}>
         {tabs.map((t) => {
           const active = t.id === teamId
@@ -644,7 +643,7 @@ export default function ShiftsPage() {
     </div>
 
     {isAll ? (
-      <div style={{ maxWidth: 1240, margin: '0 auto', padding: '4px 24px 40px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '4px 24px 40px', display: 'flex', flexDirection: 'column', gap: 18 }}>
         <AllMatrix teams={teams} shifts={shifts} expanded={expanded} setExpanded={setExpanded} onApply={applySuggestion} cfg={cfg} okTeams={okTeams} onToggleOk={toggleOk} />
         {/* full rota — every team's shifts in one grid */}
         <div style={panel}>
@@ -653,7 +652,7 @@ export default function ShiftsPage() {
         </div>
       </div>
     ) : (
-      <div style={{ maxWidth: 1240, margin: '0 auto', padding: '2px 24px 40px', display: 'grid', gridTemplateColumns: '320px 1fr', gap: 18, alignItems: 'start' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2px 24px 40px', display: 'grid', gridTemplateColumns: '320px 1fr', gap: 18, alignItems: 'start' }}>
         {/* inspector stays on the left; the rota grid is the list, with coverage + gaps under it */}
         <div style={{ ...panel, position: 'sticky', top: 16 }}>
           <Inspector key={selected?.id || 'none'} shift={selected} patch={(p) => patch(selected.id, p)} onDelete={() => removeShift(selected.id)} saveState={saveState} onSave={() => saveShift(selected)} accent={accent} cfg={cfg} />

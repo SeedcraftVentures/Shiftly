@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback, useRef, Fragment } from 'react'
-import { Field, Input, Select, TimeRange, Switch, Button, T } from '@/app/components/ui/kit'
+import { Field, Input, Select, TimeRange, Switch, Button, T, PageHeader } from '@/app/components/ui/kit'
 import { rotaBlock } from '@/lib/rotaColors'
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -11,7 +11,7 @@ import { rotaBlock } from '@/lib/rotaColors'
 
 const PINK = '#FF1F7D'
 const AMBER = '#F59E0B'
-const FONT = "'Plus Jakarta Sans', sans-serif"
+const FONT = "'Cal Sans Text', 'Plus Jakarta Sans', sans-serif"
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const DAY_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const DAY_INDEX = { Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4, Saturday: 5, Sunday: 6 }
@@ -413,12 +413,11 @@ export default function RotaBuilder() {
 
   const inspectorAccent = editCell ? TEAM_COLORS[Math.max(0, teams.findIndex((t) => t.id === editCell.staff.team_id)) % TEAM_COLORS.length] : PINK
   const card = { background: '#fff', border: '1px solid #ECECEF', borderRadius: 14, padding: 22, marginBottom: 18, boxShadow: T.shadow.md }
-  const inner = { maxWidth: 1040, margin: '0 auto', padding: '0 24px' }
+  const inner = { maxWidth: 1200, margin: '0 auto', padding: '0 24px' }
 
-  return <div style={{ fontFamily: FONT, background: '#FAFAFB', minHeight: '100vh', color: '#111827', paddingTop: 20, paddingBottom: 50 }}>
+  return <div style={{ fontFamily: FONT, background: '#FAFAFB', minHeight: '100vh', color: '#111827', paddingTop: 32, paddingBottom: 50 }}>
     <div style={inner}>
-      <h1 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 4px' }}>Rota Builder</h1>
-      <p style={{ fontSize: 13, color: '#6B7280', margin: '0 0 22px' }}>Generate a schedule that meets contracted hours and respects availability.</p>
+      <PageHeader title="Rota Builder" subtitle="Generate a schedule that meets contracted hours and respects availability." />
 
       {/* controls */}
       <div style={card}>

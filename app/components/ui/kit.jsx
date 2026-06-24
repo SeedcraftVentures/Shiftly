@@ -11,7 +11,11 @@ export const T = {
   pink: '#FF1F7D', amber: '#F59E0B', green: '#16A34A', red: '#EF4444',
   ink: '#111827', body: '#374151', muted: '#6B7280', faint: '#9CA3AF',
   line: '#ECECEF', hair: '#F4F4F6', track: '#EFEFF2', surface: '#FAFAFB',
-  font: "'Plus Jakarta Sans', sans-serif",
+  // Cal Sans Text (self-hosted, OFL) is the app typeface — body + headings. Jakarta
+  // remains as a fallback. `fontHead` is the heading token (same family today, but
+  // a distinct token so headings can diverge later without touching every page).
+  font: "'Cal Sans Text', 'Plus Jakarta Sans', sans-serif",
+  fontHead: "'Cal Sans Text', 'Plus Jakarta Sans', sans-serif",
   // ── type scale — six named roles, reference by role not px. (~1.25 ratio off 16px
   //    body.) Dense UI guidance: `small` (13) for metadata/labels/dense rows, `body`
   //    (16) for real content; headings h3→display. Collapse ad-hoc sizes onto these. ──
@@ -42,6 +46,26 @@ export function Tip({ text, children, on = true, style }) {
     {children}
     {show && <span style={{ position: 'absolute', bottom: 'calc(100% + 9px)', left: '50%', transform: 'translateX(-50%)', background: '#111827', color: '#fff', fontSize: 11.5, fontWeight: 600, lineHeight: 1.4, padding: '7px 10px', borderRadius: 8, width: 'max-content', maxWidth: 230, textAlign: 'center', zIndex: 80, boxShadow: '0 6px 18px rgba(0,0,0,.22)', pointerEvents: 'none' }}>{text}<span style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', borderWidth: '5px 5px 0', borderStyle: 'solid', borderColor: '#111827 transparent transparent' }} /></span>}
   </span>
+}
+
+// ── Page shell + header ─────────────────────────────────────────────────────────
+// One source of truth for page rhythm so every route shares the same baseline:
+// 32px top padding, 1200px max-width, H1 24/600 in the heading font, 4px to the
+// subtitle, 24px to the first content block. Use on EVERY dashboard page.
+export const PAGE = { maxWidth: 1200, margin: '0 auto', padding: '32px 24px 48px' }
+export function PageShell({ children, style }) {
+  return <div style={{ fontFamily: T.font, ...PAGE, ...style }}>{children}</div>
+}
+export function PageHeader({ title, subtitle, actions, style }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14, marginBottom: 24, ...style }}>
+      <div style={{ minWidth: 0 }}>
+        <h1 style={{ fontFamily: T.fontHead, fontSize: 24, fontWeight: 600, color: T.ink, margin: 0, letterSpacing: '-0.015em' }}>{title}</h1>
+        {subtitle != null && <p style={{ fontFamily: T.font, fontSize: 14, fontWeight: 400, color: T.muted, margin: '4px 0 0' }}>{subtitle}</p>}
+      </div>
+      {actions}
+    </div>
+  )
 }
 
 // ── Card ──────────────────────────────────────────────────────────────────────

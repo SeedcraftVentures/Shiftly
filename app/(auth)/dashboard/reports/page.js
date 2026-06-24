@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { T, Card, Button, Segmented } from '@/app/components/ui/kit'
+import { T, Card, Button, Segmented, PAGE, PageHeader } from '@/app/components/ui/kit'
 import { TEAM_COLORS } from '@/app/(auth)/dashboard/staff/utils/staffHelpers'
 import { fmtMoney, basisLabel } from '@/lib/pay'
 
@@ -59,14 +59,12 @@ export default function ReportsPage() {
   const avgRate = period.totalHours ? period.totalCost / period.totalHours : 0
 
   return (
-    <div style={{ fontFamily: T.font, maxWidth: 980, margin: '0 auto', padding: '28px 28px 56px' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14, marginBottom: 20 }}>
-        <div>
-          <h1 style={{ fontSize: 26, fontWeight: 800, color: T.ink, margin: 0, letterSpacing: -0.3 }}>Reports</h1>
-          <p style={{ fontSize: 13.5, color: T.muted, margin: '5px 0 0' }}>{projected ? 'Projected labour cost from your published rotas — the next 4 weeks.' : `Labour cost for ${rangeLabel}.`}</p>
-        </div>
-        <Segmented options={[{ value: 'actual', label: 'Actual' }, { value: 'projected', label: 'Projected' }]} value={projected ? 'projected' : 'actual'} onChange={(v) => setProjected(v === 'projected')} accent={T.pink} />
-      </div>
+    <div style={{ fontFamily: T.font, ...PAGE }}>
+      <PageHeader
+        title="Reports"
+        subtitle={projected ? 'Projected labour cost from your published rotas — the next 4 weeks.' : `Labour cost for ${rangeLabel}.`}
+        actions={<Segmented options={[{ value: 'actual', label: 'Actual' }, { value: 'projected', label: 'Projected' }]} value={projected ? 'projected' : 'actual'} onChange={(v) => setProjected(v === 'projected')} accent={T.pink} />}
+      />
 
       {projected ? (
         <Card pad={14} style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, background: T.pink + '0C', border: `1px solid ${T.pink}30` }}>

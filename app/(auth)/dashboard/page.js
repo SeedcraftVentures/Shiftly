@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
-import { T, Card, Button, Tag, ProgressBar, fmtTime } from '@/app/components/ui/kit'
+import { T, Card, Button, Tag, ProgressBar, fmtTime, PAGE, PageHeader } from '@/app/components/ui/kit'
 import { TEAM_COLORS, cfgFromLocation, mapStaffForCoverage, readiness, scheduleCoverage, coverageBottlenecks, locationKeyholderGaps } from '@/app/(auth)/dashboard/staff/utils/staffHelpers'
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -112,7 +112,10 @@ export default function DashboardPage() {
   const thisWeek = useMemo(() => {
     if (!data) return null
     const wk = mondayStr(0)
-    const rota = data.rotas.find((r) => r.week_start === wk)
+    // Snap to nearest Monday so this matches the Living Hours banner exactly — a rota
+    // saved a day off (e.g. a Sunday week_start) still counts as this week's rota,
+    // instead of the two cards disagreeing ("4 weeks published" vs "no rota yet").
+    const rota = data.rotas.find((r) => nearestMonday(r.week_start) === wk)
     return { wk, rota }
   }, [data])
 
@@ -129,16 +132,11 @@ export default function DashboardPage() {
   const cov = coverage.status === 'short' ? SHORT : COVERED
 
   return (
-    <div style={{ fontFamily: T.font, maxWidth: 1080, margin: '0 auto', padding: '20px 28px 56px' }}>
-      {/* header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14, marginBottom: 24 }}>
-        <div>
-          <h1 style={{ fontSize: 26, fontWeight: 800, color: T.ink, margin: 0, letterSpacing: -0.3 }}>{greeting()}, {firstName}</h1>
-          <p style={{ fontSize: 13.5, color: T.muted, margin: '5px 0 0' }}>
-            {DAYNAMES[new Date().getDay()]}{data.locName ? <> · <span style={{ fontWeight: 600, color: T.body }}>{data.locName}</span></> : null}
-          </p>
-        </div>
-      </div>
+    <div style={{ fontFamily: T.font, ...PAGE }}>
+      <PageHeader
+        title={`${greeting()}, ${firstName}`}
+        subtitle={<>{DAYNAMES[new Date().getDay()]}{data.locName ? <> · <span style={{ fontWeight: 600, color: T.body }}>{data.locName}</span></> : null}</>}
+      />
 
       {/* Living Hours — persists 4 weeks ahead; turns green with a tick once met */}
       {horizon && (() => {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { T, Card, Button, Tag, Segmented } from '@/app/components/ui/kit'
+import { T, Card, Button, Tag, Segmented, PAGE, PageHeader } from '@/app/components/ui/kit'
 import { TEAM_COLORS } from '@/app/(auth)/dashboard/staff/utils/staffHelpers'
 import { rotaBlock } from '@/lib/rotaColors'
 
@@ -243,9 +243,8 @@ export default function ArchivePage() {
   }
 
   // ── archive list ──
-  return <div style={{ fontFamily: T.font, maxWidth: 880, margin: '0 auto', padding: '28px 28px 56px' }}>
-    <h1 style={{ fontSize: 26, fontWeight: 800, color: T.ink, margin: '0 0 4px', letterSpacing: -0.3 }}>Archive</h1>
-    <p style={{ fontSize: 13.5, color: T.muted, margin: '0 0 22px' }}>Every rota you've built. Open any past week to look back at it.</p>
+  return <div style={{ fontFamily: T.font, ...PAGE }}>
+    <PageHeader title="Archive" subtitle="Every rota you've built. Open any past week to look back at it." />
 
     <Card pad={14} style={{ marginBottom: 18, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
       <Segmented options={[{ value: 'all', label: 'All' }, { value: 'Published', label: 'Published' }, { value: 'Draft', label: 'Drafts' }]} value={status} onChange={setStatus} accent={T.pink} />
