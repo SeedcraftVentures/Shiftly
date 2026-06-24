@@ -499,7 +499,7 @@ function Picker({ onPick }) {
   return <HeatGlow as="div" palette={SHIFTLY_PALETTE} style={{ fontFamily: FONT, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
     <div className="tmUp" style={{ maxWidth: 660, width: '100%', background: '#fff', color: '#111827', borderRadius: 26, padding: '52px 48px', textAlign: 'center', boxShadow: '0 30px 80px rgba(17,24,39,.30)' }}>
       <div style={{ fontSize: 12.5, fontWeight: 800, color: PINK, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 14 }}>Try it free · no sign-up</div>
-      <h1 style={{ fontFamily: "'Cal Sans', system-ui, sans-serif", fontSize: 44, fontWeight: 600, letterSpacing: -0.5, margin: '0 0 14px', lineHeight: 1.08 }}>See Shiftly build a rota, in under a minute.</h1>
+      <h1 style={{ fontFamily: "'Cal Sans', system-ui, sans-serif", fontSize: 44, fontWeight: 600, letterSpacing: -0.5, margin: '0 0 14px', lineHeight: 1.08 }}>See Shiftly build a rota, in ninety seconds.</h1>
       <p style={{ fontSize: 16, color: '#6B7280', maxWidth: 480, margin: '0 auto 30px', lineHeight: 1.55 }}>Pick a kind of place and we’ll walk you through building a real week’s rota, the same way you would for your own business.</p>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
         {ESTS.map((e) => <button key={e.id} onClick={() => onPick(e)} style={{ fontFamily: 'inherit', background: '#FAFAFB', borderRadius: 14, textAlign: 'left', cursor: 'pointer', border: '1px solid #ECECEF', padding: 16, transition: 'transform .12s, box-shadow .12s, border-color .12s' }}
@@ -510,7 +510,7 @@ function Picker({ onPick }) {
           <div style={{ marginTop: 12, fontSize: 12, fontWeight: 700, color: PINK }}>Walk me through it →</div>
         </button>)}
       </div>
-      <div style={{ marginTop: 22, fontSize: 12.5, color: '#9CA3AF' }}>Takes about a minute · nothing to install · no card</div>
+      <div style={{ marginTop: 22, fontSize: 12.5, color: '#9CA3AF' }}>Takes about 90 seconds · nothing to install · no card</div>
     </div>
   </HeatGlow>
 }
