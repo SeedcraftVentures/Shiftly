@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { PageHeader } from '@/app/components/ui/kit'
 
 // ════════════════════════════════════════════════════════════════════════════
 //  RULES PAGE — universal scheduling rules (per location). One flat list, equal
@@ -9,7 +10,7 @@ import { useState, useEffect, useCallback } from 'react'
 // ════════════════════════════════════════════════════════════════════════════
 
 const PINK = '#FF1F7D'
-const FONT = "'Plus Jakarta Sans', sans-serif"
+const FONT = "'Cal Sans Text', 'Plus Jakarta Sans', sans-serif"
 
 const RULES = [
   { key: 'enforce_keyholder', type: 'toggle', label: 'Keyholder on open & close', desc: 'Opening and closing shifts are only assigned to staff marked as keyholders.' },
@@ -67,10 +68,9 @@ export default function RulesPage() {
   if (loading) return <div style={{ fontFamily: FONT, padding: 60, textAlign: 'center', color: '#9CA3AF' }}>Loading rules…</div>
 
   const inner = { maxWidth: 760, margin: '0 auto', padding: '0 24px' }
-  return <div style={{ fontFamily: FONT, background: '#FAFAFB', minHeight: '100vh', color: '#111827', paddingTop: 30, paddingBottom: 50 }}>
+  return <div style={{ fontFamily: FONT, background: '#FAFAFB', minHeight: '100vh', color: '#111827', paddingTop: 32, paddingBottom: 50 }}>
     <div style={inner}>
-      <h1 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 4px' }}>Rules</h1>
-      <p style={{ fontSize: 13, color: '#6B7280', margin: '0 0 8px' }}>Scheduling rules applied to every rota you generate.</p>
+      <PageHeader title="Rules" subtitle="Scheduling rules applied to every rota you generate." style={{ marginBottom: 8 }} />
       <p style={{ fontSize: 12.5, color: '#9CA3AF', margin: '0 0 22px' }}>Every rule carries equal weight. The rota always generates — if a rule can’t be fully met, it’s flagged for you in the Rota Builder.</p>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { T, Card, Button, Tag, Segmented } from '@/app/components/ui/kit'
+import { T, Card, Button, Tag, Segmented, PAGE, PageHeader } from '@/app/components/ui/kit'
 import { TEAM_COLORS } from '@/app/(auth)/dashboard/staff/utils/staffHelpers'
 import { periodCost, effectiveHourlyRate, basisLabel, fmtMoney } from '@/lib/pay'
 
@@ -80,17 +80,15 @@ export default function PayrollPage() {
   }
 
   return (
-    <div style={{ fontFamily: T.font, maxWidth: 980, margin: '0 auto', padding: '28px 28px 56px' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14, marginBottom: 20 }}>
-        <div>
-          <h1 style={{ fontSize: 26, fontWeight: 800, color: T.ink, margin: 0, letterSpacing: -0.3 }}>Payroll</h1>
-          <p style={{ fontSize: 13.5, color: T.muted, margin: '5px 0 0' }}>{projected ? 'Projected from your published rotas — the next 4 weeks.' : `Gross pay for ${rangeLabel}.`}</p>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+    <div style={{ fontFamily: T.font, ...PAGE }}>
+      <PageHeader
+        title="Payroll"
+        subtitle={projected ? 'Projected from your published rotas — the next 4 weeks.' : `Gross pay for ${rangeLabel}.`}
+        actions={<div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {rows.length > 0 && <Button variant="secondary" size="md" onClick={downloadCsv}>Download CSV</Button>}
           <Segmented options={[{ value: 'actual', label: 'Actual' }, { value: 'projected', label: 'Projected' }]} value={projected ? 'projected' : 'actual'} onChange={(v) => setProjected(v === 'projected')} accent={T.pink} />
-        </div>
-      </div>
+        </div>}
+      />
 
       {projected ? (
         <Card pad={14} style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, background: T.pink + '0C', border: `1px solid ${T.pink}30` }}>

@@ -298,7 +298,7 @@ export default function AvailabilityGrid({
     <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #E5E7EB', overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ padding: '12px 18px', borderBottom: '1px solid #F3F4F6', display: 'flex', alignItems: 'center', gap: 8 }}>
-      <span style={{ fontSize: 14, fontWeight: 700, color: '#111827', fontFamily: "'Cal Sans', 'Plus Jakarta Sans', sans-serif" }}>Availability</span>
+      <span style={{ fontSize: 14, fontWeight: 700, color: '#111827', fontFamily: "'Cal Sans', 'Cal Sans Text', 'Plus Jakarta Sans', sans-serif" }}>Availability</span>
         <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 9px', borderRadius: 99, background: '#FFF0F5', color: '#FF1F7D' }}>
           {filteredStaff.length} staff
         </span>

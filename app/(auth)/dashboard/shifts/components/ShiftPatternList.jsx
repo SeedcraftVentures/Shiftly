@@ -3,7 +3,7 @@
 import { useRef, useEffect } from 'react'
 import ShiftRow from './ShiftRow'
 
-const FONT_HEADING = "'Cal Sans', 'Plus Jakarta Sans', sans-serif"
+const FONT_HEADING = "'Cal Sans', 'Cal Sans Text', 'Plus Jakarta Sans', sans-serif"
 
 export default function ShiftPatternList({
   teams, shifts, filteredShifts, openShiftId,

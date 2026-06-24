@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback, Fragment } from 'react'
 import { TEAM_COLORS, coverageBottlenecks, availableHours, locationKeyholderGaps } from './utils/staffHelpers'
+import { PageHeader } from '@/app/components/ui/kit'
 
 // ════════════════════════════════════════════════════════════════════════════
 //  STAFF PAGE (live) — locked lab design wired to /api/teams + /api/location + /api/shifts + /api/staff
@@ -11,7 +12,7 @@ import { TEAM_COLORS, coverageBottlenecks, availableHours, locationKeyholderGaps
 
 const PINK = '#FF1F7D'
 const AMBER = '#F59E0B'
-const FONT = "'Plus Jakarta Sans', sans-serif"
+const FONT = "'Cal Sans Text', 'Plus Jakarta Sans', sans-serif"
 const FIX_BTN = { fontFamily: 'inherit', fontSize: 11.5, fontWeight: 600, color: '#111827', background: '#F3F4F6', border: '1px solid #E5E7EB', borderRadius: 7, padding: '5px 10px', cursor: 'pointer' }
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const DAY_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -275,12 +276,12 @@ export function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg, 
     {!readOnly && <div style={{ marginBottom: 18 }}><SaveStatus state={saveState} /></div>}
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginTop: readOnly ? 14 : 0 }}>
       <div style={{ display: 'flex', gap: 12 }}>
-        <div style={{ flex: 1, minWidth: 0 }}><FieldLabel>Name</FieldLabel><FieldInput value={s.name} onChange={(e) => patch({ name: e.target.value })} /></div>
-        <div style={{ flex: 1, minWidth: 0 }}><FieldLabel>Role</FieldLabel><FieldInput value={s.role || ''} onChange={(e) => patch({ role: e.target.value })} /></div>
+        <div data-tour="staff-name" style={{ flex: 1, minWidth: 0 }}><FieldLabel>Name</FieldLabel><FieldInput value={s.name} onChange={(e) => patch({ name: e.target.value })} /></div>
+        <div data-tour="staff-role" style={{ flex: 1, minWidth: 0 }}><FieldLabel>Role</FieldLabel><FieldInput value={s.role || ''} onChange={(e) => patch({ role: e.target.value })} /></div>
       </div>
       <div style={{ display: 'flex', gap: 12 }}>
-        <div style={{ flex: 1 }}><FieldLabel>Contracted</FieldLabel><Stepper value={s.contracted} onChange={(v) => patch({ contracted: v })} min={0} max={60} suffix="h" /></div>
-        <div style={{ flex: 1 }}><FieldLabel>Max / week</FieldLabel><Stepper value={s.max} onChange={(v) => patch({ max: v })} min={0} max={60} suffix="h" /></div>
+        <div data-tour="staff-contracted" style={{ flex: 1 }}><FieldLabel>Contracted</FieldLabel><Stepper value={s.contracted} onChange={(v) => patch({ contracted: v })} min={0} max={60} suffix="h" /></div>
+        <div data-tour="staff-max" style={{ flex: 1 }}><FieldLabel>Max / week</FieldLabel><Stepper value={s.max} onChange={(v) => patch({ max: v })} min={0} max={60} suffix="h" /></div>
       </div>
       {!hidePay && <div>
         <FieldLabel>Pay basis</FieldLabel>
@@ -303,11 +304,11 @@ export function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg, 
           </div>
         )}
       </div>}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div data-tour="staff-keyholder" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div><div style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>Keyholder</div><div style={{ fontSize: 11, color: '#9CA3AF' }}>Can open & close</div></div>
         <Switch on={s.keyholder} onClick={() => patch({ keyholder: !s.keyholder })} accent={accent} />
       </div>
-      <AvailabilityEditor s={s} patch={patch} accent={accent} cfg={cfg} />
+      <div data-tour="staff-availability"><AvailabilityEditor s={s} patch={patch} accent={accent} cfg={cfg} /></div>
       {availableHours(s, cfg) < s.contracted && <div style={{ fontSize: 12, color: '#B91C1C', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 9, padding: '10px 12px', lineHeight: 1.45 }}>
         ⚠ Available <b>{availableHours(s, cfg)}h</b> but contracted <b>{s.contracted}h</b> — {first(s.name) || 'they'} can’t reach their contract. Widen availability or lower the contracted hours.
       </div>}
@@ -466,7 +467,7 @@ export function AvailabilityGrid({ groups, cfg, selectedId, onSelect, selectMode
   const block = { height: 34, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10.5, fontWeight: 700, whiteSpace: 'nowrap' }
   const total = groups.reduce((n, g) => n + g.staff.length, 0)
   return <div style={{ overflowX: 'auto' }}>
-    <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 760, tableLayout: 'fixed' }}>
+    <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, minWidth: 760, tableLayout: 'fixed' }}>
       <colgroup><col style={{ width: 170 }} />{DAYS.map((d) => <col key={d} />)}</colgroup>
       <thead><tr><th style={{ ...GRID_TH, textAlign: 'left', position: 'sticky', left: 0, background: '#fff', minWidth: 170 }} />{DAYS.map((d, i) => <th key={d} style={{ ...GRID_TH, color: cfg.openDays.includes(i) ? '#374151' : '#C4C4CC' }}>{d}</th>)}</tr></thead>
       <tbody>
@@ -613,11 +614,10 @@ export default function StaffPage() {
   const khFlag = khGaps.noKeyholder || khGaps.openMissing.length > 0 || khGaps.closeMissing.length > 0
 
   return <div style={{ fontFamily: FONT, background: '#FAFAFB', minHeight: '100vh', color: '#111827' }}>
-    <div style={{ maxWidth: 1240, margin: '0 auto', padding: '20px 24px 0' }}>
-      <h1 style={{ fontSize: 26, fontWeight: 800, color: '#111827', margin: 0, letterSpacing: -0.3 }}>Staff</h1>
-      <p style={{ fontSize: 13.5, color: '#6B7280', margin: '5px 0 0' }}>Your team members, their contracts and availability.</p>
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px 0' }}>
+      <PageHeader title="Staff" subtitle="Your team members, their contracts and availability." style={{ marginBottom: 0 }} />
     </div>
-    <div style={{ maxWidth: 1240, margin: '0 auto', padding: '14px 24px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+    <div style={{ maxWidth: 1200, margin: '0 auto', padding: '14px 24px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
       <div style={{ display: 'inline-flex', background: '#F1F1F4', borderRadius: 11, padding: 4, gap: 2 }}>
         {tabs.map((t) => {
           const active = t.id === teamId
@@ -645,7 +645,7 @@ export default function StaffPage() {
     </div>}
 
     {isAll ? (
-      <div style={{ maxWidth: 1240, margin: '0 auto', padding: '4px 24px 40px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '4px 24px 40px', display: 'flex', flexDirection: 'column', gap: 18 }}>
         <AllTeams teams={teams} staff={staff} shifts={shifts} onFix={applyFix} cfg={cfg} />
         {/* whole-location availability — same idea as Shifts' all-teams full rota */}
         <div style={panel}>
@@ -657,7 +657,7 @@ export default function StaffPage() {
       </div>
     ) : (
       // mirrors Shifts: inspector sticky-left; availability grid + key + coverage on the right
-      <div style={{ maxWidth: 1260, margin: '0 auto', padding: '2px 24px 40px', display: 'grid', gridTemplateColumns: '380px 1fr', gap: 18, alignItems: 'start' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2px 24px 40px', display: 'grid', gridTemplateColumns: '380px 1fr', gap: 18, alignItems: 'start' }}>
         <div style={{ ...panel, position: 'sticky', top: 16 }}>
           <Inspector key={selected?.id || 'none'} s={selected} patch={(p) => patch(selected.id, p)} onDelete={() => removeStaff(selected.id)} saveState={saveState} onSave={() => saveStaff(selected)} accent={accent} cfg={cfg} />
         </div>

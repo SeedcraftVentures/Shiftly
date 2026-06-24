@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 import { DAYS, GANTT_START, GANTT_END, GANTT_HOURS, decimalToLabel, getTeamGaps } from '../utils/shifthelpers'
 
-const FONT_HEADING = "'Cal Sans', 'Plus Jakarta Sans', sans-serif"
+const FONT_HEADING = "'Cal Sans', 'Cal Sans Text', 'Plus Jakarta Sans', sans-serif"
 
 function KeyBadgeLight() {
   return (

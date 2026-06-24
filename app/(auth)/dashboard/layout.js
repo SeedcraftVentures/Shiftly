@@ -14,7 +14,7 @@ export default function DashboardLayout({ children }) {
 
   return (
     <OnboardingCheck>
-      <div className={`min-h-screen bg-[#FF1F7D] p-3 transition-[padding] duration-200 ${collapsed ? 'lg:pl-[4.75rem]' : 'lg:pl-52'}`}>
+      <div style={{ fontFamily: "'Cal Sans Text', 'Plus Jakarta Sans', sans-serif" }} className={`min-h-screen bg-[#FF1F7D] p-3 transition-[padding] duration-200 ${collapsed ? 'lg:pl-[4.75rem]' : 'lg:pl-52'}`}>
         <Navigation collapsed={collapsed} onToggleCollapse={toggleCollapse} />
         <div className="min-h-[calc(100vh-1.5rem)] bg-[#F8F9FA] rounded-[1.25rem] lg:ml-1 mt-14 lg:mt-0 flex flex-col relative">
           {/* notifications overlay the top-right corner (in line with each page's title)
