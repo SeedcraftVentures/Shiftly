@@ -134,7 +134,9 @@ export default function LandingPage() {
           </RevealSection>
         </div>
 
-        <RevealSection delay={1} className="max-w-6xl mx-auto mt-16">
+        {/* hero shot renders instantly (no scroll-reveal) — it's above the fold and
+            the LCP element, so it should paint immediately, not fade in after ~1s */}
+        <div className="max-w-6xl mx-auto mt-16">
           <div className="rounded-t-2xl shadow-2xl overflow-hidden border border-white/20 border-b-0 bg-gray-100">
             <div className="bg-gray-100 px-4 py-3 flex items-center gap-2 border-b border-gray-200">
               <div className="flex gap-1.5">
@@ -149,15 +151,15 @@ export default function LandingPage() {
               </div>
             </div>
             <Image
-              src="/screenshots/rota.png"
+              src="/screenshots/hero-new.png"
               alt="Shiftly rota builder showing a generated weekly schedule"
               width={1400}
-              height={800}
+              height={853}
               className="w-full h-auto"
               priority
             />
           </div>
-        </RevealSection>
+        </div>
       </HeatGlow>
 
       {/* ═══════════ PAIN SECTION ═══════════ */}
