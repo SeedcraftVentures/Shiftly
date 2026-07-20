@@ -127,7 +127,7 @@ export const SHIFTLY_PALETTE: GlowPalette = {
 
 /* ---------- SVG noise ---------- */
 /**
- * Inline SVG noise data URL. Self-contained — no external file.
+ * Inline SVG noise data URL. Self-contained, no external file.
  * Encoded once here so the component has no asset dependency.
  */
 const NOISE_SVG =
@@ -180,7 +180,7 @@ export function HeatGlow({
 
   return (
     <Tag className={className} style={wrapperStyle} {...rest}>
-      {/* 1. Highlight layer — warm bottom-right + soft white top-left. */}
+      {/* 1. Highlight layer, warm bottom-right + soft white top-left. */}
       <div
         aria-hidden="true"
         style={{
@@ -191,7 +191,7 @@ export function HeatGlow({
           ].join(", "),
         }}
       />
-      {/* 2. Noise layer — SVG turbulence, overlay-blended. */}
+      {/* 2. Noise layer. SVG turbulence, overlay-blended. */}
       <div
         aria-hidden="true"
         style={{

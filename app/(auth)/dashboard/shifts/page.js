@@ -6,7 +6,7 @@ import { rotaBlock } from '@/lib/rotaColors'
 import { Tip, PageHeader } from '@/app/components/ui/kit'
 
 // ════════════════════════════════════════════════════════════════════════════
-//  SHIFTS PAGE (live) — locked lab design wired to /api/teams + /api/location + /api/shifts
+//  SHIFTS PAGE (live), locked lab design wired to /api/teams + /api/location + /api/shifts
 //  One team per screen via tabs + All teams matrix · left inspector · week-at-a-glance
 //  Open/close hours come from the Location (set in onboarding); open/close is auto-derived.
 // ════════════════════════════════════════════════════════════════════════════
@@ -37,7 +37,7 @@ function activePreset(days, openDays) {
   if (s === norm(WEEKEND.filter((d) => openDays.includes(d)))) return 'weekend'
   return null
 }
-// keyholder mark — clean line key, no emoji
+// keyholder mark, clean line key, no emoji
 function KeyMark({ size = 13, color = PINK }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, display: 'block' }}><title>Keyholder</title><circle cx="8" cy="15" r="5" /><path d="M11.6 11.4 21 2" /><path d="M16.5 6.5 19.5 9.5" /></svg>
 }
@@ -79,7 +79,7 @@ function dayCoverage(shifts, d, cfg) {
   return total ? (total - gap) / total : 1
 }
 // the pin is an EXPLICIT, stored choice (not derived from times) so "No pin" is real even for a
-// full-length shift. It maps to/from the existing anchor_type column — no schema change.
+// full-length shift. It maps to/from the existing anchor_type column, no schema change.
 const withPin = (s) => ({ ...s, pin: s.pin || (s.anchor_type === 'open' ? 'open' : s.anchor_type === 'close' ? 'close' : 'none') })
 const pinToAnchor = (pin) => (pin === 'open' ? 'open' : pin === 'close' ? 'close' : 'fixed')
 // default shift name follows the pin (team is already shown above the grid, so no prefix);
@@ -90,7 +90,7 @@ const isAutoName = (name) => !name || name === 'New shift' || ['Open', 'Close', 
 const gridLabel = (s) => (s.pin === 'open' ? 'Open' : s.pin === 'close' ? 'Close' : (s.name || 'Custom'))
 const sameSet = (a, b) => [...a].sort((x, y) => x - y).join() === [...b].sort((x, y) => x - y).join()
 const scopeLabel = (days, cfg) => sameSet(days, cfg.openDays) ? 'Full-week' : sameSet(days, WEEKDAYS.filter((d) => cfg.openDays.includes(d))) ? 'Weekday' : sameSet(days, WEEKEND.filter((d) => cfg.openDays.includes(d))) ? 'Weekend' : days.map((d) => DAYS[d]).join(' ')
-// smart gaps — suggest structural shifts (full-week/weekday/weekend open or close) plus genuine
+// smart gaps, suggest structural shifts (full-week/weekday/weekend open or close) plus genuine
 // interior windows, instead of one giant per-day shift.
 function smartGaps(shifts, cfg) {
   const EPS = 0.01, openMissing = [], closeMissing = [], mids = []
@@ -118,7 +118,7 @@ function GapChip({ sug, onApply, accent }) {
 export function GapStrip({ shifts, onApply, accent, cfg, ok, onToggleOk }) {
   const gaps = smartGaps(shifts, cfg)
   if (!gaps.length) return <div style={{ fontSize: 12.5, fontWeight: 600, color: '#16A34A' }}>✓ Every open hour is covered.</div>
-  // a deliberately-partial week (e.g. a team that doesn't work mornings) can be marked intentional —
+  // a deliberately-partial week (e.g. a team that doesn't work mornings) can be marked intentional.
   // it calms the coverage % and quietens these suggestions, with an escape hatch to show them again.
   if (ok) return <div style={{ fontSize: 12.5, color: '#9CA3AF', lineHeight: 1.6 }}>✓ Marked as intentional — nothing to fill.{onToggleOk && <><br /><button onClick={onToggleOk} style={{ fontFamily: FONT, fontSize: 12, fontWeight: 600, color: accent, background: 'none', border: 'none', padding: '8px 0 0', cursor: 'pointer' }}>Show suggestions anyway</button></>}</div>
   return <div>
@@ -154,7 +154,7 @@ function Seg({ active, onClick, accent = PINK, children }) {
   return <button type="button" onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
     style={{ flex: 1, fontFamily: 'inherit', fontSize: 12, fontWeight: 700, padding: '8px 0', borderRadius: 7, border: 'none', cursor: 'pointer', background: active ? '#fff' : (h ? 'rgba(255,255,255,.55)' : 'transparent'), color: active ? accent : (h ? '#6B7280' : '#9CA3AF'), boxShadow: active ? '0 1px 2px rgba(0,0,0,.08)' : 'none', transition: 'all .12s' }}>{children}</button>
 }
-// day / preset pill — solid accent when active, accent outline on hover (matches day buttons)
+// day / preset pill, solid accent when active, accent outline on hover (matches day buttons)
 function DayBtn({ active, disabled, onClick, accent = PINK, style, children }) {
   const [h, setH] = useState(false)
   const lit = h && !disabled
@@ -400,7 +400,7 @@ function WeekGlance({ shifts, teamName, teamId, onApply, accent, cfg }) {
   </div>
 }
 
-// ── all-teams — one container, thin collapsible rows (matches the Staff all-teams) ──
+// ── all-teams, one container, thin collapsible rows (matches the Staff all-teams) ──
 function AllMatrix({ teams, shifts, expanded, setExpanded, onApply, cfg, okTeams, onToggleOk }) {
   const panel = { background: '#fff', border: '1px solid #ECECEF', borderRadius: 14, padding: '4px 18px', boxShadow: '0 3px 10px rgba(17,24,39,.06), 0 1px 2px rgba(17,24,39,.04)' }
   return <div style={panel}>
@@ -485,7 +485,7 @@ export function TeamRotaGrid({ groups, cfg, selectedId, onSelect, selectMode, se
             </div>
           </td></tr>}
           {g.shifts.length === 0 && <tr><td colSpan={8} style={{ textAlign: 'center', color: '#9CA3AF', fontSize: 13, padding: '20px 0' }}>No shifts yet — add one to see the week build up.</td></tr>}
-          {/* one row per staff member — people read a rota as one line per person, so a 2-staff
+          {/* one row per staff member, people read a rota as one line per person, so a 2-staff
               shift shows two rows. Rows of the same shift share a colour, group rounding and the
               left accent bar, so they read as one shift. */}
           {g.shifts.map((s, idx) => {
@@ -541,7 +541,7 @@ export default function ShiftsPage() {
   const [selectMode, setSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState(() => new Set())
   // teams whose deliberately-partial coverage the manager has marked intentional (shared by the
-  // all-teams matrix and the single-team view). Stored locally — no schema/scheduler change.
+  // all-teams matrix and the single-team view). Stored locally, no schema/scheduler change.
   const [okTeams, setOkTeams] = useState(() => new Set())
   useEffect(() => { try { setOkTeams(new Set(JSON.parse(localStorage.getItem('shiftly_coverage_ok') || '[]'))) } catch { } }, [])
   const toggleOk = useCallback((id) => setOkTeams((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); try { localStorage.setItem('shiftly_coverage_ok', JSON.stringify([...n])) } catch { } return n }), [])
@@ -569,7 +569,7 @@ export default function ShiftsPage() {
   const isAll = teamId === 'all'
   const teamShifts = useMemo(() => shifts.filter((s) => s.team_id === teamId), [shifts, teamId])
   const selected = shifts.find((s) => s.id === selectedId)
-  // switching teams clears multi-select, but NOT the selected shift — adding a shift from the
+  // switching teams clears multi-select, but NOT the selected shift, adding a shift from the
   // all-teams tab jumps you to that team with its inspector already open.
   useEffect(() => { setSelectMode(false); setSelectedIds(new Set()) }, [teamId])
   useEffect(() => { setSaveState('clean') }, [selectedId])
@@ -645,7 +645,7 @@ export default function ShiftsPage() {
     {isAll ? (
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '4px 24px 40px', display: 'flex', flexDirection: 'column', gap: 18 }}>
         <AllMatrix teams={teams} shifts={shifts} expanded={expanded} setExpanded={setExpanded} onApply={applySuggestion} cfg={cfg} okTeams={okTeams} onToggleOk={toggleOk} />
-        {/* full rota — every team's shifts in one grid */}
+        {/* full rota, every team's shifts in one grid */}
         <div style={panel}>
           <div style={{ fontSize: 13, fontWeight: 800, color: '#111827', marginBottom: 14 }}>Full rota <span style={{ color: '#9CA3AF', fontWeight: 600 }}>· all teams</span></div>
           <TeamRotaGrid groups={teams.map((t) => ({ name: t.name, color: t.color, shifts: shifts.filter((s) => s.team_id === t.id) }))} cfg={cfg} />

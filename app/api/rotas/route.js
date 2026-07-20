@@ -44,7 +44,7 @@ export async function POST(request) {
     const status = body.status === 'Published' ? 'Published' : 'Draft'
     if (!weekStart || !Array.isArray(assignments)) return NextResponse.json({ error: 'weekStart and assignments are required' }, { status: 400 })
 
-    // one rota per location+week — replace any existing (assignments cascade-delete)
+    // one rota per location+week, replace any existing (assignments cascade-delete)
     await supabaseAdmin.from('Rotas').delete().eq('location_id', locationId).eq('week_start', weekStart)
 
     const now = new Date().toISOString()

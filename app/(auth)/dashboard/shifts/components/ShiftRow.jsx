@@ -182,7 +182,7 @@ function NumInput({ value, onChange, min = 1, max = 20 }) {
   )
 }
 
-// ── Segmented toggle — Paid / Unpaid ──────────────────────────────────────────
+// ── Segmented toggle. Paid / Unpaid ──────────────────────────────────────────
 
 function SegmentedToggle({ value, options, onChange, disabled, activeColor }) {
   return (
@@ -403,7 +403,7 @@ export default function ShiftRow({
             </div>
           </div>
 
-          {/* Row 2: Equation — Start → Length → Break + toggle → End */}
+          {/* Row 2: Equation. Start → Length → Break + toggle → End */}
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 14 }}>
 
             <div style={{ flex: 1, minWidth: 0 }}>

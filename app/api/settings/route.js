@@ -10,7 +10,7 @@ const DAY_INDEX = Object.fromEntries(DAY_NAMES.map((d, i) => [d, i]))
 const tzToDec = (t) => { if (!t) return null; const [h, m] = String(t).slice(0, 5).split(':').map(Number); return (h || 0) + (m || 0) / 60 }
 const decToTz = (d) => { const h = Math.floor(d), m = Math.round((d - h) * 60); return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00+00` }
 
-// GET /api/settings — org + the ACTIVE location + its per-day hours (both opening & operating).
+// GET /api/settings, org + the ACTIVE location + its per-day hours (both opening & operating).
 export async function GET() {
   try {
     const { userId } = await auth()
@@ -44,7 +44,7 @@ export async function GET() {
   }
 }
 
-// PATCH /api/settings — partial save. body: { organization?, location?, hours? }
+// PATCH /api/settings, partial save. body: { organization?, location?, hours? }
 export async function PATCH(request) {
   try {
     const { userId } = await auth()

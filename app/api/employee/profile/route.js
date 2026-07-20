@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-// Gated for the pilot — the employee app / Inbox isn't live yet. GET returns empty so any
+// Gated for the pilot, the employee app / Inbox isn't live yet. GET returns empty so any
 // manager-side polling (notification bell, pending counts) doesn't error; writes are blocked.
 // These will be rebuilt with proper org scoping for a later release.
 export const dynamic = 'force-dynamic'

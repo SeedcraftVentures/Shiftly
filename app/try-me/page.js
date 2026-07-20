@@ -120,9 +120,9 @@ function buildCfg(openDays, hours) {
 const TOURS = {
   shifts: [
     { sel: '[data-tour="tm-grid"]', text: 'Here are the shifts a typical place runs. Click your opening shift to open it on the left.', wait: 'shift' },
-    { sel: '[data-tour="shift-name"]', text: 'Give the shift a name — or keep the auto one.' },
+    { sel: '[data-tour="shift-name"]', text: 'Give the shift a name, or keep the auto one.' },
     { sel: '[data-tour="shift-pin"]', text: 'Pin it to your opening time, your closing time, or leave it free.' },
-    { sel: '[data-tour="shift-length"]', text: 'Set how long it is — 4, 8 or 12 hours, or go fully custom.' },
+    { sel: '[data-tour="shift-length"]', text: 'Set how long it is: 4, 8 or 12 hours, or go fully custom.' },
     { sel: '[data-tour="shift-days"]', text: 'Choose which days of the week it runs.' },
     { sel: '[data-tour="shift-staff"]', text: 'Say how many people you need on it.' },
     { sel: '[data-tour="shift-keyholder"]', text: 'And flag it if a keyholder has to be on to lock up.' },
@@ -135,16 +135,16 @@ const TOURS = {
     { sel: '[data-tour="staff-contracted"]', text: 'The hours they’re contracted to each week.' },
     { sel: '[data-tour="staff-max"]', text: 'And the most they’re happy to work.' },
     { sel: '[data-tour="staff-keyholder"]', text: 'Can they open up and lock up?' },
-    { sel: '[data-tour="staff-availability"]', text: 'When they can work. Watch — let’s give a day custom hours…', before: 'availOpen' },
+    { sel: '[data-tour="staff-availability"]', text: 'When they can work. Watch, let’s give a day custom hours…', before: 'availOpen' },
     { sel: '[data-tour="staff-availability"]', text: '…then set it back to all day, so the rota stays nice and simple.', before: 'availClose' },
     { sel: '[data-tour="tm-next"]', text: 'Team’s set. Now the rules that keep every rota fair.', last: true },
   ],
   rules: [
-    { sel: '[data-tour="tm-rules"]', text: 'Toggle on the protections you care about — Shiftly enforces every one when it builds.' },
+    { sel: '[data-tour="tm-rules"]', text: 'Toggle on the protections you care about. Shiftly enforces every one when it builds.' },
     { sel: '[data-tour="tm-next"]', text: 'Now watch Shiftly turn all of that into a fair week, in seconds.', last: true },
   ],
   done: [
-    { sel: '[data-tour="tm-next"]', text: 'That’s your week — fair, covered and compliant. Make it yours →', last: true },
+    { sel: '[data-tour="tm-next"]', text: 'That’s your week: fair, covered and compliant. Make it yours →', last: true },
   ],
 }
 
@@ -181,7 +181,7 @@ export default function TryMe() {
       const res = await fetch('/api/try-me/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ business: cfg.business, shifts, staff }) })
       const data = await res.json()
       if (!res.ok || data.error) { setError(data.error || 'Could not build a rota.') }
-      else { await new Promise((r) => setTimeout(r, 1100)); setResult(data); setStep(3); setTourIdx(0) } // hold the build a beat longer — feels less instant
+      else { await new Promise((r) => setTimeout(r, 1100)); setResult(data); setStep(3); setTourIdx(0) } // hold the build a beat longer, feels less instant
     } catch { setError('Network error, try again.') } finally { setGenerating(false) }
   }
 
@@ -275,7 +275,7 @@ export default function TryMe() {
         {result ? <Result result={result} staff={staff} team={est.team} /> : <BuildingPanel />}
       </div>}
 
-      {/* footer nav — the persistent Back / Next the coachmark points at */}
+      {/* footer nav: the persistent Back / Next the coachmark points at */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, margin: '20px 0 8px' }}>
         <button onClick={tourBack} disabled={step === 0 && tourIdx === 0} style={{ ...ghostBtn, opacity: step === 0 && tourIdx === 0 ? 0.45 : 1 }}>‹ Back</button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -320,7 +320,7 @@ function Coachmark({ tStep, depKey, onPrimary, onBack, canBack, primaryLabel, di
   else bubble = { top: rect.bottom + 22, left: clamp(rect.left, 12, vw - W - 12) }
 
   return <div style={{ position: 'fixed', inset: 0, zIndex: 70, pointerEvents: 'none' }}>
-    {/* dim everything but the target — skipped on the final "move on" step so the
+    {/* dim everything but the target, skipped on the final "move on" step so the
         whole page is visible and tooltips are easy to read */}
     {dim && <div style={{ position: 'absolute', ...box, borderRadius: 12, boxShadow: '0 0 0 9999px rgba(17,24,39,.5)', transition: 'all .25s' }} />}
     {/* pulsing pink ring on the target */}
@@ -362,7 +362,7 @@ function RulesStep() {
   return <div className="tmUp" style={panel}>
     <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 4 }}>The rules</div>
     <div style={{ fontSize: 16, fontWeight: 800 }}>What keeps every rota fair</div>
-    <div style={{ fontSize: 13, color: '#6B7280', margin: '3px 0 16px' }}>Switch on the protections you care about — Shiftly enforces every one when it builds.</div>
+    <div style={{ fontSize: 13, color: '#6B7280', margin: '3px 0 16px' }}>Switch on the protections you care about. Shiftly enforces every one when it builds.</div>
     <div data-tour="tm-rules" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {RULES.map((r) => <div key={r.key} style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#fff', border: `1.5px solid ${PINK}33`, borderRadius: 12, padding: '14px 16px' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -386,7 +386,7 @@ function ErrorPanel({ error, onRetry }) {
   return <div style={{ ...panel, padding: '16px 18px', background: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C', fontSize: 13.5 }}>{error} <button onClick={onRetry} style={{ marginLeft: 8, fontFamily: 'inherit', fontWeight: 700, color: '#B91C1C', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Try again</button></div>
 }
 
-// ── result grid — matches the app's rota grid (RefinedRotaGrid) ───────────────
+// ── result grid: matches the app's rota grid (RefinedRotaGrid) ───────────────
 const RTH = { fontSize: 11, fontWeight: 700, color: '#6B7280', padding: '6px 6px 10px', textAlign: 'center' }
 const RTH_STAFF = { ...RTH, textAlign: 'left', position: 'sticky', left: 0, background: '#fff', minWidth: 150 }
 const RTD = { padding: '4px 4px', verticalAlign: 'top' }
@@ -448,7 +448,7 @@ function Confetti() {
     {pieces.map((p, i) => <span key={i} style={{ position: 'absolute', top: -24, left: `${p.left}%`, width: p.w, height: p.w * 0.55, background: p.c, borderRadius: 2, transform: `rotate(${p.rot}deg)`, animation: `tmFall ${p.dur}s linear ${p.delay}s infinite` }} />)}
   </div>
 }
-// a single quick burst (plays once) — fired behind the cards when the rota lands
+// a single quick burst (plays once), fired behind the cards when the rota lands
 function ConfettiBurst() {
   const cols = [PINK, '#6366F1', '#14B8A6', '#F59E0B', '#FFA8C7', '#C20D5C']
   const pieces = Array.from({ length: 96 }, (_, i) => ({ left: (i * 31) % 100, delay: (i % 8) * 0.05, dur: 2.3 + (i % 6) * 0.22, c: cols[i % cols.length], w: 6 + (i % 6), rot: (i * 53) % 360 }))

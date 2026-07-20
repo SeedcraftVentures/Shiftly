@@ -53,8 +53,8 @@ export function getDayLabel(days) {
 // ── Break / hours helpers ─────────────────────────────────────────────────────
 
 // Paid hours = the scheduled shift length (end - start), always.
-// An unpaid break means staff are on-site longer — it does NOT reduce pay.
-// A paid break is within the scheduled time — no effect on either.
+// An unpaid break means staff are on-site longer, it does NOT reduce pay.
+// A paid break is within the scheduled time, no effect on either.
 export function getPaidHours(start, end) {
   return end - start
 }
@@ -95,7 +95,7 @@ export function applyTimeChange(shift, fixedLock, field, val, openTime, closeTim
       if (field === 'start') start = clamp(val_)
       else if (field === 'length') start = clamp(end - val_)
     } else {
-      // length locked — window shifts
+      // length locked, window shifts
       const len = end - start
       if (field === 'start') { start = clamp(val_); end = clamp(start + len) }
       else if (field === 'end') { end = clamp(val_); start = clamp(end - len) }

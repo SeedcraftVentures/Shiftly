@@ -101,7 +101,7 @@ function AvailCell({ status, isLocked, isSelected, onClick }) {
   )
 }
 
-// ── Shift Detail Gantt — SS#6 style ──────────────────────────────────────────
+// ── Shift Detail Gantt. SS#6 style ──────────────────────────────────────────
 
 function ShiftDetailGantt({ selectedDay, selectedStaffId, staff, shifts, teams, onSelectDay }) {
   const selectedMember = staff.find(s => s.id === selectedStaffId)
@@ -120,7 +120,7 @@ function ShiftDetailGantt({ selectedDay, selectedStaffId, staff, shifts, teams, 
   }
   const memberAvail = getMemberAvail()
 
-  // Availability bar styles — SS#6: clean color fill, no team color
+  // Availability bar styles. SS#6: clean color fill, no team color
   const availBar = {
     available: { bg: '#DCFCE7', border: '#BBF7D0', color: '#16A34A', label: '✓ Available' },
     preferred: { bg: '#DCFCE7', border: '#BBF7D0', color: '#16A34A', label: '✓ Available ★' },
@@ -182,7 +182,7 @@ function ShiftDetailGantt({ selectedDay, selectedStaffId, staff, shifts, teams, 
         ))}
       </div>
 
-      {/* Shift rows — SS#6 style */}
+      {/* Shift rows. SS#6 style */}
       {teamShiftRows.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '16px 0', fontSize: 12, color: '#9CA3AF', fontStyle: 'italic' }}>
           No shifts on {DAYS[selectedDay]}
@@ -201,7 +201,7 @@ function ShiftDetailGantt({ selectedDay, selectedStaffId, staff, shifts, teams, 
 
               return (
                 <div key={shift.id} style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
-                  {/* Shift label — team colour text, like SS#6 */}
+                  {/* Shift label, team colour text, like SS#6 */}
                   <div style={{ width: 116, flexShrink: 0, paddingRight: 8 }}>
                     <div style={{ fontSize: 10, fontWeight: 600, color: team.color }}>{shift.name}</div>
                     <div style={{ fontSize: 9, color: '#9CA3AF' }}>
@@ -219,7 +219,7 @@ function ShiftDetailGantt({ selectedDay, selectedStaffId, staff, shifts, teams, 
                         top: 0, bottom: 0, width: 1, background: '#F3F4F6',
                       }} />
                     ))}
-                    {/* Availability bar — fills full shift width in availability color (SS#6 style) */}
+                    {/* Availability bar, fills full shift width in availability color (SS#6 style) */}
                     <div style={{
                       position: 'absolute',
                       left: `${left}%`, width: `${width}%`,
@@ -433,7 +433,7 @@ export default function AvailabilityGrid({
           </div>
         </div>
 
-        {/* Shift Detail Gantt — always shown */}
+        {/* Shift Detail Gantt, always shown */}
         <div style={{ marginTop: 14 }}>
           <ShiftDetailGantt
             selectedDay={selectedDay}

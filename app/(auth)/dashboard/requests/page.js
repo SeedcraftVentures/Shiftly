@@ -2,7 +2,7 @@
 
 import { T, Card } from '@/app/components/ui/kit'
 
-// Inbox is gated for the pilot — the employee app (requests, swaps, announcements)
+// Inbox is gated for the pilot, the employee app (requests, swaps, announcements)
 // isn't part of this release. Shown as "coming soon" rather than exposing half-wired flows.
 export default function InboxPage() {
   return (

@@ -78,7 +78,7 @@ export default function RulesSection({ selectedTeamId }) {
 
   useEffect(() => { loadRules() }, [loadRules])
 
-  // Use POST for both create and update — the API handles upsert logic
+  // Use POST for both create and update, the API handles upsert logic
   const saveRule = async (rule) => {
     setSaving(rule.type)
     try {

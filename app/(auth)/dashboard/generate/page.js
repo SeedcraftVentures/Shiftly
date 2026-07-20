@@ -5,7 +5,7 @@ import { Field, Input, Select, TimeRange, Switch, Button, T, PageHeader } from '
 import { rotaBlock } from '@/lib/rotaColors'
 
 // ════════════════════════════════════════════════════════════════════════════
-//  ROTA BUILDER (live) — pick week → Generate (OR-Tools) → grid → save/publish.
+//  ROTA BUILDER (live), pick week → Generate (OR-Tools) → grid → save/publish.
 //  No templates. Reads real Shift Patterns + Staff availability + Location Rules.
 // ════════════════════════════════════════════════════════════════════════════
 
@@ -38,8 +38,8 @@ function initials(name) { return (name || '?').split(' ').map((w) => w[0]).slice
 const toHHMM = (d) => { const h = Math.floor(d), m = Math.round((d - h) * 60); return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}` }
 function dateForDay(weekStart, weekNum, dayIdx) { const x = new Date(weekStart + 'T00:00:00Z'); x.setUTCDate(x.getUTCDate() + (weekNum - 1) * 7 + dayIdx); return x }
 
-// ── REFINED rota grid — one rota, team sections, per-staff colour, drag/remove/add ──
-// ── week picker (custom, on-brand — replaces the native date input) ──────────
+// ── REFINED rota grid, one rota, team sections, per-staff colour, drag/remove/add ──
+// ── week picker (custom, on-brand, replaces the native date input) ──────────
 const mondayOf = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x }
 const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 const parseYMD = (s) => { const [y, m, dd] = String(s).split('-').map(Number); return new Date(y, (m || 1) - 1, dd || 1) }
@@ -130,7 +130,7 @@ function AddCell({ onAdd }) {
   return <button onClick={onAdd} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)} title="Add a shift" style={{ width: '100%', minHeight: 44, borderRadius: 10, cursor: 'pointer', border: `1.5px dashed ${hover ? '#FBCFE8' : 'transparent'}`, background: hover ? '#FFF5F9' : 'transparent', color: hover ? '#FF1F7D' : '#E2E2E6', fontSize: 18, fontWeight: 700, transition: 'all .12s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+</button>
 }
 
-// Right-hand inspector to create OR edit a one-off shift for one person on one day —
+// Right-hand inspector to create OR edit a one-off shift for one person on one day.
 // same fields as the Shifts tab editor (name · hours · keyholder), minus the day picker.
 function ShiftInspector({ staff, day, existing, accent = PINK, onClose, onSave, onRemove }) {
   const editing = !!existing
@@ -337,7 +337,7 @@ export default function RotaBuilder() {
   }, [result, staff, teams, weekCount])
 
   // Keyholder compliance recomputed LIVE from the current grid. The server value freezes at
-  // generation (and is empty for saved rotas), so editing the grid left it stale — exactly the
+  // generation (and is empty for saved rotas), so editing the grid left it stale, exactly the
   // "the grid shows a keyholder but the banner disagrees" bug. Judged on ACTUAL TIMES: a keyholder
   // present when the first person arrives and the last leaves counts, with no Open/Close pin needed.
   const liveCompliance = useMemo(() => {
@@ -369,7 +369,7 @@ export default function RotaBuilder() {
     const byStaff = {}
     for (const a of result.assignments) (byStaff[a.staff_id] ||= []).push(a)
 
-    // Max consecutive days — across ALL weeks (a run that crosses the week boundary still counts).
+    // Max consecutive days, across ALL weeks (a run that crosses the week boundary still counts).
     const maxConsec = Number(rules.max_consecutive_days ?? 5)
     const consec = []
     for (const [sid, list] of Object.entries(byStaff)) {
@@ -507,7 +507,7 @@ export default function RotaBuilder() {
       </>}
 
       {(() => {
-        // Only DRAFTS belong here — somewhere to resume an unpublished build.
+        // Only DRAFTS belong here, somewhere to resume an unpublished build.
         // Published rotas live in the Archive, so they don't compete for attention.
         const drafts = saved.filter((r) => r.status !== 'Published')
         if (drafts.length === 0) return null

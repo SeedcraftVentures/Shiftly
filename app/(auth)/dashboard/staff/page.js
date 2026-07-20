@@ -5,7 +5,7 @@ import { TEAM_COLORS, coverageBottlenecks, availableHours, locationKeyholderGaps
 import { PageHeader } from '@/app/components/ui/kit'
 
 // ════════════════════════════════════════════════════════════════════════════
-//  STAFF PAGE (live) — locked lab design wired to /api/teams + /api/location + /api/shifts + /api/staff
+//  STAFF PAGE (live), locked lab design wired to /api/teams + /api/location + /api/shifts + /api/staff
 //  Availability = one per-day control persisted as JSON {day: true | [start,end]} on Staff.
 //  Right glance answers "can our staff cover the shifts?" (capacity vs coverage).
 // ════════════════════════════════════════════════════════════════════════════
@@ -180,14 +180,14 @@ function TimeRange({ start, end, onChange, accent = PINK, domain }) {
 }
 
 // ── icons (no emoji) ─────────────────────────────────────────────────────────────
-// keyholder mark — a clean line key, replacing the 🔑 emoji everywhere
+// keyholder mark, a clean line key, replacing the 🔑 emoji everywhere
 function KeyMark({ size = 13, color = PINK, title = 'Keyholder' }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, display: 'block' }}><title>{title}</title><circle cx="8" cy="15" r="5" /><path d="M11.6 11.4 21 2" /><path d="M16.5 6.5 19.5 9.5" /></svg>
 }
 function Pencil({ size = 11, color = '#9CA3AF' }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" /></svg>
 }
-// collapsed "set hours" summary — neutral, with a pencil so it's clearly editable
+// collapsed "set hours" summary, neutral, with a pencil so it's clearly editable
 function HoursChip({ w, accent, onClick }) {
   const [h, setH] = useState(false)
   return <button onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} title="Edit hours" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'inherit', fontSize: 11.5, fontWeight: 700, color: h ? '#111827' : '#4B5563', background: h ? '#fff' : '#F1F1F4', border: `1px solid ${h ? '#D1D5DB' : 'transparent'}`, borderRadius: 7, padding: '4px 9px', cursor: 'pointer', transition: 'all .12s', whiteSpace: 'nowrap' }}>
@@ -427,7 +427,7 @@ function AllTeams({ teams, staff, shifts, onFix, cfg }) {
     <div style={{ background: everyTeamReady ? '#16A34A12' : AMBER + '12', borderRadius: 12, padding: '12px 16px', marginBottom: 14, fontSize: 13, fontWeight: 600, color: everyTeamReady ? '#16A34A' : '#92660B' }}>
       {everyTeamReady ? '✓ Every team can cover its shifts. You’re ready to generate a rota.' : '⚠ Some teams can’t fully cover their shifts. Expand a team to fix the shortfalls.'}
     </div>
-    {/* one container, thin collapsible rows — same treatment as the Shifts all-teams matrix */}
+    {/* one container, thin collapsible rows, same treatment as the Shifts all-teams matrix */}
     <div style={panel}>
       {teams.map((t, idx) => {
         const ts = staff.filter((s) => s.team_id === t.id), tsh = shifts.filter((s) => s.team_id === t.id)
@@ -457,7 +457,7 @@ function AllTeams({ teams, staff, shifts, onFix, cfg }) {
   </div>
 }
 
-// ── availability grid — one row per person, days across, cell = their availability that day ──
+// ── availability grid, one row per person, days across, cell = their availability that day ──
 const GRID_TH = { fontSize: 11, fontWeight: 700, padding: '6px 6px 10px', textAlign: 'center' }
 export function AvailabilityGrid({ groups, cfg, selectedId, onSelect, selectMode, selectedIds, onToggle }) {
   const [hoverId, setHoverId] = useState(null)
@@ -567,7 +567,7 @@ export default function StaffPage() {
   const teamStaff = useMemo(() => staff.filter((s) => s.team_id === teamId), [staff, teamId])
   const teamShifts = useMemo(() => shifts.filter((s) => s.team_id === teamId), [shifts, teamId])
   const selected = staff.find((s) => s.id === selectedId)
-  // switching teams clears multi-select but NOT the selected person — adding/clicking from the
+  // switching teams clears multi-select but NOT the selected person, adding/clicking from the
   // all-teams view jumps you into that team with their inspector already open.
   useEffect(() => { setSelectMode(false); setSelectedIds(new Set()) }, [teamId])
   useEffect(() => { setSaveState('clean') }, [selectedId])
@@ -647,7 +647,7 @@ export default function StaffPage() {
     {isAll ? (
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '4px 24px 40px', display: 'flex', flexDirection: 'column', gap: 18 }}>
         <AllTeams teams={teams} staff={staff} shifts={shifts} onFix={applyFix} cfg={cfg} />
-        {/* whole-location availability — same idea as Shifts' all-teams full rota */}
+        {/* whole-location availability, same idea as Shifts' all-teams full rota */}
         <div style={panel}>
           <div style={{ fontSize: 14, fontWeight: 800, marginBottom: 3 }}>All availability <span style={{ color: '#9CA3AF', fontWeight: 600 }}>· whole location</span></div>
           <div style={{ fontSize: 11.5, color: '#9CA3AF', marginBottom: 12 }}>Everyone’s week at a glance — click anyone to jump into their team and edit.</div>

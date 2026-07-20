@@ -5,7 +5,7 @@ import { useState, useMemo } from 'react'
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const DAY_SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
-// Shift type colours — matches manager rota view palette
+// Shift type colours, matches manager rota view palette
 const SHIFT_COLOURS = [
   { bg: 'bg-pink-100', border: 'border-pink-300', text: 'text-pink-800' },
   { bg: 'bg-blue-100', border: 'border-blue-300', text: 'text-blue-800' },

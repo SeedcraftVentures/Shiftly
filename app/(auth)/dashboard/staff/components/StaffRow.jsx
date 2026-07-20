@@ -31,7 +31,7 @@ function KeyholderIcon({ size = 11 }) {
   )
 }
 
-// ── Pill Toggle — universal on/off ────────────────────────────────────────────
+// ── Pill Toggle, universal on/off ────────────────────────────────────────────
 
 function PillToggle({ active, onClick, children, activeColor = '#FF1F7D', disabled = false, size = 'md' }) {
   const h = { sm: 26, md: 32 }[size]

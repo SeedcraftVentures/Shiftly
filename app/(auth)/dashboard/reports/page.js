@@ -6,7 +6,7 @@ import { TEAM_COLORS } from '@/app/(auth)/dashboard/staff/utils/staffHelpers'
 import { fmtMoney, basisLabel } from '@/lib/pay'
 
 // ════════════════════════════════════════════════════════════════════════════
-//  REPORTS (live) — labour cost from Rota Assignments × pay basis (same maths as
+//  REPORTS (live), labour cost from Rota Assignments × pay basis (same maths as
 //  payroll). 8-week trend + per-team and per-basis breakdowns for the period.
 // ════════════════════════════════════════════════════════════════════════════
 

@@ -42,7 +42,7 @@ export default function TemplatesSection({ selectedTeamId }) {
   // Dirty state tracking
   const savedRef = useRef(null)
 
-  // From team record (set during onboarding — no hardcoding)
+  // From team record (set during onboarding, no hardcoding)
   // open_time/close_time are stored as strings in the DB; parse to numbers
   const openTime = Number(teamData?.open_time) || 9
   const closeTime = Number(teamData?.close_time) || 17

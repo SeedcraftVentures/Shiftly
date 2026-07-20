@@ -58,7 +58,7 @@ export function useShifts() {
   // ── CRUD ────────────────────────────────────────────────────────────────────
 
   const addShift = useCallback(async (filterTeamId) => {
-    // Team ids are UUIDs in the new schema — do NOT parseInt them.
+    // Team ids are UUIDs in the new schema, do NOT parseInt them.
     const teamId = filterTeamId !== 'all'
       ? filterTeamId
       : teamsWithColor[0]?.id

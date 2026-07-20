@@ -6,9 +6,9 @@ import { useRouter } from 'next/navigation'
 const FONT_HEADING = "'Plus Jakarta Sans', sans-serif"
 const FONT_BODY = "'Plus Jakarta Sans', sans-serif"
 const PINK = '#FF1F7D'
-const OPERATING = '#6366F1' // operating-hours accent — matches the Settings/Shifts pages
+const OPERATING = '#6366F1' // operating-hours accent, matches the Settings/Shifts pages
 
-// Team palette — matches the app's shared TEAM_COLORS so wizard previews line up with the dashboard.
+// Team palette, matches the app's shared TEAM_COLORS so wizard previews line up with the dashboard.
 const PALETTE = ['#FF1F7D', '#6366F1', '#14B8A6', '#F59E0B', '#0EA5E9', '#8B5CF6', '#EC4899', '#10B981']
 const PALETTE_LIGHT = ['#FFE7F1', '#EEF0FE', '#E6FBF6', '#FEF6E7', '#E8F6FE', '#F3EDFE', '#FDEBF4', '#E7FBF1']
 

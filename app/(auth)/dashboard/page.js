@@ -7,12 +7,12 @@ import { T, Card, Button, Tag, ProgressBar, fmtTime, PAGE, PageHeader } from '@/
 import { TEAM_COLORS, cfgFromLocation, mapStaffForCoverage, readiness, scheduleCoverage, coverageBottlenecks, locationKeyholderGaps } from '@/app/(auth)/dashboard/staff/utils/staffHelpers'
 
 // ════════════════════════════════════════════════════════════════════════════
-//  DASHBOARD (live) — wired to the NEW schema: /api/rotas (name/week_start/status),
+//  DASHBOARD (live), wired to the NEW schema: /api/rotas (name/week_start/status),
 //  live coverage via getCoverageMetrics over /api/shifts + /api/staff. No templates.
 // ════════════════════════════════════════════════════════════════════════════
 
 const DAYNAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-// keyholder mark — clean line key, no emoji
+// keyholder mark, clean line key, no emoji
 function KeyMark({ size = 13, color = '#92660B' }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, display: 'block' }}><title>Keyholder</title><circle cx="8" cy="15" r="5" /><path d="M11.6 11.4 21 2" /><path d="M16.5 6.5 19.5 9.5" /></svg>
 }
@@ -25,7 +25,7 @@ function mondayStr(offsetWeeks = 0) {
   d.setDate(d.getDate() - dow + offsetWeeks * 7)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
-// Snap any date to its nearest Monday — tolerant of rotas saved a day off (e.g. a Sunday).
+// Snap any date to its nearest Monday, tolerant of rotas saved a day off (e.g. a Sunday).
 function nearestMonday(dateStr) {
   const [y, m, dd] = dateStr.split('-').map(Number)
   const d = new Date(y, m - 1, dd)
@@ -112,7 +112,7 @@ export default function DashboardPage() {
   const thisWeek = useMemo(() => {
     if (!data) return null
     const wk = mondayStr(0)
-    // Snap to nearest Monday so this matches the Living Hours banner exactly — a rota
+    // Snap to nearest Monday so this matches the Living Hours banner exactly, a rota
     // saved a day off (e.g. a Sunday week_start) still counts as this week's rota,
     // instead of the two cards disagreeing ("4 weeks published" vs "no rota yet").
     const rota = data.rotas.find((r) => nearestMonday(r.week_start) === wk)
@@ -138,7 +138,7 @@ export default function DashboardPage() {
         subtitle={<>{DAYNAMES[new Date().getDay()]}{data.locName ? <> · <span style={{ fontWeight: 600, color: T.body }}>{data.locName}</span></> : null}</>}
       />
 
-      {/* Living Hours — persists 4 weeks ahead; turns green with a tick once met */}
+      {/* Living Hours, persists 4 weeks ahead; turns green with a tick once met */}
       {horizon && (() => {
         const met = horizon.published >= 4
         const accent = met ? T.green : T.pink
@@ -163,7 +163,7 @@ export default function DashboardPage() {
         )
       })()}
 
-      {/* hero — reads left→right: do shifts cover hours? → can we cover shifts? → build it */}
+      {/* hero, reads left→right: do shifts cover hours? → can we cover shifts? → build it */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginBottom: 16 }}>
         {/* THIS WEEK (right) */}
         <Card pad={22} style={{ order: 3 }}>
@@ -190,7 +190,7 @@ export default function DashboardPage() {
           )}
         </Card>
 
-        {/* COVERAGE — can we cover the shifts? (middle) */}
+        {/* COVERAGE, can we cover the shifts? (middle) */}
         <Card pad={22} style={{ order: 2, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: T.faint, letterSpacing: 0.5, textTransform: 'uppercase' }}>Can we cover the shifts?</span>
@@ -226,7 +226,7 @@ export default function DashboardPage() {
           <button onClick={() => router.push('/dashboard/staff')} style={{ marginTop: 14, alignSelf: 'flex-start', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: T.font, fontSize: 12.5, fontWeight: 700, color: T.pink }}>Review staffing →</button>
         </Card>
 
-        {/* SCHEDULE COVERAGE — do the shifts cover the open hours? (left) */}
+        {/* SCHEDULE COVERAGE, do the shifts cover the open hours? (left) */}
         <Card pad={22} style={{ order: 1, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: T.faint, letterSpacing: 0.5, textTransform: 'uppercase' }}>Do shifts cover your hours?</span>
@@ -261,7 +261,7 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* quick actions — above recent rotas */}
+      {/* quick actions, above recent rotas */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 16 }}>
         <ActionTile title="Edit shifts" sub="Shift patterns" onClick={() => router.push('/dashboard/shifts')} />
         <ActionTile title="Manage staff" sub="Team & availability" onClick={() => router.push('/dashboard/staff')} />

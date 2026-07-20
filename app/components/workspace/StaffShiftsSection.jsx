@@ -306,7 +306,7 @@ export default function StaffShiftsSection({ selectedTeamId, shiftLengths, trigg
 
     return (
       <div key={id} className="relative p-4 rounded-xl border-2 border-pink-300 bg-white shadow-sm">
-        {/* Close button — top right */}
+        {/* Close button, top right */}
         <button onClick={() => cancelEdit(id)} className="absolute top-3 right-3 p-1.5 text-gray-400 hover:text-gray-600 transition-colors" title="Close">
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
         </button>

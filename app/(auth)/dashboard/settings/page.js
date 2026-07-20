@@ -7,7 +7,7 @@ import { TEAM_COLORS } from '@/app/(auth)/dashboard/staff/utils/staffHelpers'
 const WEEKDAYS = [0, 1, 2, 3, 4], WEEKEND = [5, 6], ALLDAYS = [0, 1, 2, 3, 4, 5, 6]
 
 // ════════════════════════════════════════════════════════════════════════════
-//  SETTINGS (live) — configure the things onboarding set: organisation, the active
+//  SETTINGS (live), configure the things onboarding set: organisation, the active
 //  location, and its opening AND operating hours (two different windows), plus
 //  organisation-wide location management.
 // ════════════════════════════════════════════════════════════════════════════
@@ -128,7 +128,7 @@ export default function SettingsPage() {
       const res = await fetch('/api/settings', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
       if (res.ok) {
         setSaved(section); setTimeout(() => setSaved(''), 2500)
-        // org/location names live in the persistent nav too — tell it to re-fetch
+        // org/location names live in the persistent nav too, tell it to re-fetch
         if (payload.organization || payload.location) window.dispatchEvent(new Event('shiftly:locations-updated'))
       }
     } finally { setSaving('') }

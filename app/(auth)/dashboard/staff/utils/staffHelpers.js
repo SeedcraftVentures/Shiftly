@@ -241,13 +241,13 @@ export function assignTeamColors(teams) {
   }))
 }
 
-// ── Team palette — SINGLE source of truth for team colours. ────────────────────
+// ── Team palette. SINGLE source of truth for team colours. ────────────────────
 // Used by Staff, Shifts, Rota Builder and the Dashboard, keyed by team order in
 // the /api/teams response so every surface shows the same colour for a team.
 export const TEAM_COLORS = ['#FF1F7D', '#6366F1', '#14B8A6', '#F59E0B', '#0EA5E9', '#8B5CF6', '#EC4899', '#10B981']
 export const teamColor = (i) => TEAM_COLORS[i % TEAM_COLORS.length]
 
-// ── Coverage engine — SINGLE source for "can our staff cover the shifts?" ───────
+// ── Coverage engine. SINGLE source for "can our staff cover the shifts?" ───────
 // The Staff page and the Dashboard MUST answer this identically. Key rule: required
 // hours count OPEN DAYS only (stale closed-day shift entries don't inflate demand),
 // and the headline verdict is `maxCapacity >= required` (coverableAtMax).
@@ -293,7 +293,7 @@ export function readiness(staff, shifts, cfg) {
   }
 }
 
-// Total hours a staff member is actually available across the open week — the ceiling on
+// Total hours a staff member is actually available across the open week, the ceiling on
 // what they can ever work. Used to fail-safe: availability must cover contracted hours.
 export function availableHours(s, cfg) {
   let h = 0
@@ -304,7 +304,7 @@ export function availableHours(s, cfg) {
   return Math.round(h * 10) / 10
 }
 
-// ── Coverage bottlenecks — catch the "looks covered per day, but no valid weekly rota
+// ── Coverage bottlenecks, catch the "looks covered per day, but no valid weekly rota
 // fits inside everyone's max hours" case (e.g. one person available every day while
 // teammates are weekday-/weekend-only, so that person would have to work too many days).
 // Returns [{ name, essential, maxDays }] for staff who'd be over-worked.
@@ -337,7 +337,7 @@ export function coverageBottlenecks(staff, shifts, cfg) {
 }
 
 // Location-wide keyholder check: a keyholder must be AVAILABLE to open and to close each
-// open day (one to open, one to close, across ALL teams — possibly the same person). Pass
+// open day (one to open, one to close, across ALL teams, possibly the same person). Pass
 // ALL the location's staff + ALL shifts. Returns { noKeyholder, openMissing[], closeMissing[] }.
 export function locationKeyholderGaps(staff, shifts, cfg) {
   const keyholders = (staff || []).filter((s) => s.keyholder)
@@ -358,7 +358,7 @@ export function locationKeyholderGaps(staff, shifts, cfg) {
   return { noKeyholder: false, openMissing, closeMissing }
 }
 
-// ── Schedule coverage — the OTHER coverage question: do the SHIFTS span the hours? ──
+// ── Schedule coverage, the OTHER coverage question: do the SHIFTS span the hours? ──
 // Location-wide (union of every team's shifts) vs the operating window per open day,
 // plus a keyholder-present-at-open/close check pooled across ALL keyholders (any team).
 // This is independent of staffing: it asks whether the rota itself is complete.

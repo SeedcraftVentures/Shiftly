@@ -20,7 +20,7 @@ function SparkleIcon({ size = 12 }) {
   )
 }
 
-// ── Toggle pill — reused from design system ───────────────────────────────────
+// ── Toggle pill, reused from design system ───────────────────────────────────
 
 function PillToggle({ active, onClick, children, activeColor = '#FF1F7D', disabled = false }) {
   return (

@@ -100,13 +100,13 @@ export default function CalendarRangePicker({ startDate, endDate, onSelect, shif
       // First tap or reset
       onSelect(dateStr, null)
     } else if (dateStr < startDate) {
-      // Tapped before start — reset to this date
+      // Tapped before start, reset to this date
       onSelect(dateStr, null)
     } else if (dateStr === startDate) {
-      // Tapped same day — single day selection
+      // Tapped same day, single day selection
       onSelect(dateStr, dateStr)
     } else {
-      // Second tap — complete the range
+      // Second tap, complete the range
       onSelect(startDate, dateStr)
     }
   }

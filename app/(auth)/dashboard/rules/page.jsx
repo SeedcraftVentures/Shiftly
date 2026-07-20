@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { PageHeader } from '@/app/components/ui/kit'
 
 // ════════════════════════════════════════════════════════════════════════════
-//  RULES PAGE — universal scheduling rules (per location). One flat list, equal
+//  RULES PAGE, universal scheduling rules (per location). One flat list, equal
 //  weight. The rota always builds; if a rule can't be fully met it's flagged in
 //  the Rota Builder (not blocked here).
 // ════════════════════════════════════════════════════════════════════════════

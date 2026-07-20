@@ -32,7 +32,7 @@ export async function GET() {
       })
     }
 
-    // New user — will be sent through onboarding.
+    // New user, will be sent through onboarding.
     return NextResponse.json({ type: 'new' })
   } catch (error) {
     console.error('Error checking user type:', error)

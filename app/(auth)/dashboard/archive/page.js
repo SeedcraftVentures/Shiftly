@@ -6,7 +6,7 @@ import { TEAM_COLORS } from '@/app/(auth)/dashboard/staff/utils/staffHelpers'
 import { rotaBlock } from '@/lib/rotaColors'
 
 // ════════════════════════════════════════════════════════════════════════════
-//  ARCHIVE — browse every saved rota, jump to a week, open any past rota read-only.
+//  ARCHIVE, browse every saved rota, jump to a week, open any past rota read-only.
 // ════════════════════════════════════════════════════════════════════════════
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']

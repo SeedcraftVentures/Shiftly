@@ -6,7 +6,7 @@ import { TEAM_COLORS } from '@/app/(auth)/dashboard/staff/utils/staffHelpers'
 import { periodCost, effectiveHourlyRate, basisLabel, fmtMoney } from '@/lib/pay'
 
 // ════════════════════════════════════════════════════════════════════════════
-//  PAYROLL (live) — gross pay per staff for a period, from Rota Assignments × pay
+//  PAYROLL (live), gross pay per staff for a period, from Rota Assignments × pay
 //  basis (lib/pay). Period-navigable so you can pull up any past week.
 // ════════════════════════════════════════════════════════════════════════════
 

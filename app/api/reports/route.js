@@ -10,7 +10,7 @@ const addDays = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d
 const daysBetween = (a, b) => Math.round((new Date(b + 'T00:00:00Z') - new Date(a + 'T00:00:00Z')) / 86400000)
 
 // GET /api/reports?start=YYYY-MM-DD&weeks=N
-// Labour-cost reporting from Rota Assignments × pay basis (lib/pay — same maths as
+// Labour-cost reporting from Rota Assignments × pay basis (lib/pay, same maths as
 // payroll). Returns an 8-week trend ending at the selected period, plus per-team and
 // per-basis breakdowns for the period.
 export async function GET(request) {

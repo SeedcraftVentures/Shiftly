@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 
 // ════════════════════════════════════════════════════════════════════════════
-//  SHIFTLY UI KIT — the single source of truth for shared components + tokens.
+//  SHIFTLY UI KIT, the single source of truth for shared components + tokens.
 //  Import these everywhere instead of re-styling. Iterate here, it updates app-wide.
 // ════════════════════════════════════════════════════════════════════════════
 
@@ -11,19 +11,19 @@ export const T = {
   pink: '#FF1F7D', amber: '#F59E0B', green: '#16A34A', red: '#EF4444',
   ink: '#111827', body: '#374151', muted: '#6B7280', faint: '#9CA3AF',
   line: '#ECECEF', hair: '#F4F4F6', track: '#EFEFF2', surface: '#FAFAFB',
-  // Cal Sans Text (self-hosted, OFL) is the app typeface — body + headings. Jakarta
+  // Cal Sans Text (self-hosted, OFL) is the app typeface, body + headings. Jakarta
   // remains as a fallback. `fontHead` is the heading token (same family today, but
   // a distinct token so headings can diverge later without touching every page).
   font: "'Cal Sans Text', 'Plus Jakarta Sans', sans-serif",
   fontHead: "'Cal Sans Text', 'Plus Jakarta Sans', sans-serif",
-  // ── type scale — six named roles, reference by role not px. (~1.25 ratio off 16px
+  // ── type scale, six named roles, reference by role not px. (~1.25 ratio off 16px
   //    body.) Dense UI guidance: `small` (13) for metadata/labels/dense rows, `body`
   //    (16) for real content; headings h3→display. Collapse ad-hoc sizes onto these. ──
   fz: { display: 39, h1: 31, h2: 25, h3: 20, body: 16, small: 13 },
   lh: { tight: 1.15, snug: 1.3, normal: 1.5 },
-  // ── spacing — 8-pt grid with a 4px sub-step. Every gap/padding/margin comes from here. ──
+  // ── spacing, 8-pt grid with a 4px sub-step. Every gap/padding/margin comes from here. ──
   space: { xs: 4, sm: 8, snug: 12, md: 16, lg: 24, xl: 32, xxl: 48, huge: 64 },
-  // ── shape & elevation scale — the cohesion backbone. Reach for these, not raw px.
+  // ── shape & elevation scale, the cohesion backbone. Reach for these, not raw px.
   //    Radii are all multiples of 4 (4/8/12/16/20). ──
   r: { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, pill: 999 },
   shadow: {
@@ -83,14 +83,14 @@ export function Field({ label, children, style }) {
 export function Input({ prefix, accent = T.pink, style, ...props }) {
   const [f, setF] = useState(false)
   const [h, setH] = useState(false)
-  const lit = f || h // pink outline whenever interactive (hover or focus) — the app-wide convention
+  const lit = f || h // pink outline whenever interactive (hover or focus), the app-wide convention
   return <div style={{ position: 'relative' }} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}>
     {prefix && <span style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', fontSize: 14, fontWeight: 700, color: lit ? accent : T.faint, pointerEvents: 'none', transition: 'color .12s' }}>{prefix}</span>}
     <input {...props} onFocus={(e) => { setF(true); props.onFocus?.(e) }} onBlur={(e) => { setF(false); props.onBlur?.(e) }}
       style={{ width: '100%', boxSizing: 'border-box', minHeight: 44, fontFamily: T.font, fontSize: 14, fontWeight: 600, color: T.ink, padding: prefix ? '12px 13px 12px 25px' : '12px 13px', borderRadius: T.r.sm, border: `1px solid ${lit ? accent : '#E5E7EB'}`, outline: 'none', boxShadow: f ? T.ring(accent) : 'none', transition: 'border-color .12s, box-shadow .12s', ...style }} />
   </div>
 }
-// ── Select — native select with the same pink hover/focus convention + chevron ──
+// ── Select, native select with the same pink hover/focus convention + chevron ──
 export function Select({ value, onChange, children, accent = T.pink, style, ...props }) {
   const [f, setF] = useState(false)
   const [h, setH] = useState(false)
@@ -120,7 +120,7 @@ export function Button({ variant = 'primary', size = 'md', shape = 'rounded', fu
   }[size]
   const radius = shape === 'pill' ? T.r.pill : (size === 'lg' ? T.r.md : T.r.sm)
 
-  // filled buttons carry a soft colour-matched shadow AT REST, lifting stronger on hover —
+  // filled buttons carry a soft colour-matched shadow AT REST, lifting stronger on hover.
   // resting depth is what stops the large ones reading flat/bulky.
   const restLift = (hex) => `0 4px 12px ${hex}2E, 0 1px 2px ${hex}1F`
   const fill = (bg, fg, ring) => ({ background: bg, color: fg, border: 'none', boxShadow: disabled ? 'none' : (focus ? `${T.ring(ring)}, ${T.lift(ring)}` : (hover ? T.lift(ring) : restLift(ring))) })
@@ -153,7 +153,7 @@ export function Button({ variant = 'primary', size = 'md', shape = 'rounded', fu
   </button>
 }
 
-// ── Chip — borderless. Soft-grey at rest, accent tint on hover, SOLID accent when selected.
+// ── Chip, borderless. Soft-grey at rest, accent tint on hover, SOLID accent when selected.
 // Doubles as a one-click action (never active) or a selectable choice (active toggles).
 export function Chip({ active = false, onClick, accent = T.pink, icon, children }) {
   const [h, setH] = useState(false)
@@ -176,7 +176,7 @@ export function Switch({ on, onChange, accent = T.pink, size = 1 }) {
   </button>
 }
 
-// ── Stepper — type-able count/number. Same pink hover/focus convention as Input;
+// ── Stepper, type-able count/number. Same pink hover/focus convention as Input;
 //    rounded, separated buttons, suffix as a sibling. `full` fills the parent width.
 export function Stepper({ value, onChange, min = 0, max = 99, step = 1, suffix = '', unit, full = false, accent = T.pink }) {
   const sfx = suffix || unit || ''
@@ -207,7 +207,7 @@ export function Stepper({ value, onChange, min = 0, max = 99, step = 1, suffix =
   </div>
 }
 
-// ── Slider — single handle, for ranges like contracted hours. Drag or click the track.
+// ── Slider, single handle, for ranges like contracted hours. Drag or click the track.
 export function Slider({ value, onChange, min = 0, max = 48, step = 1, accent = T.pink, suffix = '', format }) {
   const trackRef = useRef(null), drag = useRef(false)
   const span = max - min || 1
