@@ -96,3 +96,38 @@ to those signatures is a breaking change for B.
       after the migration.
 - [ ] **Instance A:** confirm working directory, exact file list, and the §5 RLS answer.
 - [ ] **Both:** push branches, then delete the stale already-merged remote branches.
+
+---
+
+## 8. Release plan (decided by owner, 2026-07-20)
+
+**Decisions taken:**
+- **Host is Vercel.** `netlify.toml` was stale and actively misleading (it caused a wrong
+  "main auto-deploys via Netlify" inference during reconciliation). Deleted. Vercel needs no
+  config file. The earlier caution about not merging unverified work into `main` still stands,
+  just for the ordinary reason that `main` is the deploy branch.
+- **The job board ships SEPARATELY**, after this release. `jobs-board` keeps developing on its
+  own branch and is NOT merged into the first release.
+- **Phase B is IN scope.** The employee endpoints and the staff invite/claim flow get built
+  before release, so the Inbox is genuinely two-sided and the marketing copy promising an
+  employee app is not an overclaim.
+
+**Release 1 = `apple-redesign`:** Apple redesign + dark mode, dead-code removal, tour/try-me/
+typography, Inbox (Wave 5), RLS/security (merged from `shiftly-rebuild`), plus Phase B.
+
+**Sequence:**
+1. **Phase 0, prove it works.** Nothing here has ever been run: ~10 commits of UI plus a rebuilt
+   Inbox, syntax-verified only, on a machine where Clerk auth was broken until today. Full manual
+   click-through before any new feature work. Blocking.
+   - Known broken, fix first: NotificationBell realtime is dead under RLS (anon key is blocked on
+     `Notifications`), so it must poll `/api/notifications` instead of subscribing.
+2. **Phase 1, parallel lanes.** Instance B: Phase B (`app/api/employee/*` + fix the staff
+   invite/claim flow in `app/api/staff/invite/route.js`). Instance A: job board sections 6.1 to
+   6.9 and the remaining em dash sweep (~109 in the authed app; B swept only the 26 inside files
+   it merged, to stay out of A's lane).
+3. **Phase 2, integration.** Cut `develop`, merge `apple-redesign` in, QA. Job board stays out.
+4. **Phase 3, release.** `develop` -> `main` -> Vercel -> smoke test.
+
+**Known gaps, stated rather than hidden:** there are no automated tests, so everything rests on
+manual click-through. The Inbox has never been exercised against real data. Announcements need
+connected staff to have an audience, which Phase B provides.
