@@ -71,7 +71,7 @@ export default function NotificationBell({ variant = 'desktop' }) {
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'notifications',
+          table: 'Notifications',
           filter: `recipient_user_id=eq.${user.id}`,
         },
         (payload) => {
@@ -144,7 +144,7 @@ export default function NotificationBell({ variant = 'desktop' }) {
         }}
         className={`relative p-2 rounded-lg transition-colors ${
           isTopbar
-            ? 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+            ? 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-[#98989D] dark:hover:text-white dark:hover:bg-white/10'
             : 'text-white/80 hover:text-white hover:bg-white/10'
         }`}
       >
@@ -171,14 +171,14 @@ export default function NotificationBell({ variant = 'desktop' }) {
               ? 'fixed inset-x-0 top-14 sm:absolute sm:top-full sm:right-0 sm:left-auto sm:w-96 sm:mt-2'
               : 'fixed top-0 right-0 sm:absolute sm:top-full sm:right-0 sm:w-96 sm:mt-2'
           }`}>
-            <div className={`bg-white shadow-2xl border border-gray-200 flex flex-col overflow-hidden ${
+            <div className={`bg-white dark:bg-[#1C1C1E] shadow-2xl border border-gray-200 dark:border-white/10 flex flex-col overflow-hidden ${
               isTopbar
                 ? 'rounded-2xl max-h-[70vh]'
                 : 'h-screen sm:h-auto sm:max-h-[80vh] sm:rounded-2xl'
             }`}>
               {/* Header */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                <h2 className="text-lg font-bold text-gray-900 font-cal">Notifications</h2>
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/10">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white font-cal">Notifications</h2>
                 <div className="flex items-center gap-2">
                   {unreadCount > 0 && (
                     <button
@@ -191,7 +191,7 @@ export default function NotificationBell({ variant = 'desktop' }) {
                   )}
                   <button
                     onClick={() => setOpen(false)}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                    className="text-gray-400 hover:text-gray-600 dark:text-[#98989D] dark:hover:text-white transition-colors"
                   >
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -204,17 +204,17 @@ export default function NotificationBell({ variant = 'desktop' }) {
               <div className="flex-1 overflow-y-auto">
                 {loading ? (
                   <div className="flex items-center justify-center py-12">
-                    <div className="w-8 h-8 border-2 border-gray-200 border-t-pink-500 rounded-full animate-spin" />
+                    <div className="w-8 h-8 border-2 border-gray-200 dark:border-white/15 border-t-pink-500 rounded-full animate-spin" />
                   </div>
                 ) : notifications.length === 0 ? (
                   <div className="text-center py-12 px-6">
-                    <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <svg className="w-7 h-7 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="w-14 h-14 bg-gray-100 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <svg className="w-7 h-7 text-gray-400 dark:text-[#98989D]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                       </svg>
                     </div>
-                    <p className="text-gray-500 text-sm">No notifications yet</p>
-                    <p className="text-gray-400 text-xs mt-1">You'll see updates here when things happen</p>
+                    <p className="text-gray-500 dark:text-[#98989D] text-sm">No notifications yet</p>
+                    <p className="text-gray-400 dark:text-[#68686E] text-xs mt-1">You'll see updates here when things happen</p>
                   </div>
                 ) : (
                   <div>
@@ -224,8 +224,8 @@ export default function NotificationBell({ variant = 'desktop' }) {
                         onClick={() => {
                           if (!notif.read) markRead(notif.id)
                         }}
-                        className={`w-full text-left px-5 py-3.5 border-b border-gray-50 hover:bg-gray-50 transition-colors ${
-                          !notif.read ? 'bg-pink-50/50' : ''
+                        className={`w-full text-left px-5 py-3.5 border-b border-gray-50 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors ${
+                          !notif.read ? 'bg-pink-50/50 dark:bg-pink-500/10' : ''
                         }`}
                       >
                         <div className="flex gap-3">
@@ -234,7 +234,7 @@ export default function NotificationBell({ variant = 'desktop' }) {
                           </span>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-2">
-                              <p className={`text-sm ${!notif.read ? 'font-semibold text-gray-900' : 'font-medium text-gray-700'}`}>
+                              <p className={`text-sm ${!notif.read ? 'font-semibold text-gray-900 dark:text-white' : 'font-medium text-gray-700 dark:text-[#D9D9DE]'}`}>
                                 {notif.title}
                               </p>
                               {!notif.read && (
@@ -242,9 +242,9 @@ export default function NotificationBell({ variant = 'desktop' }) {
                               )}
                             </div>
                             {notif.message && (
-                              <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{notif.message}</p>
+                              <p className="text-xs text-gray-500 dark:text-[#98989D] mt-0.5 line-clamp-2">{notif.message}</p>
                             )}
-                            <p className="text-xs text-gray-400 mt-1">{timeAgo(notif.created_at)}</p>
+                            <p className="text-xs text-gray-400 dark:text-[#68686E] mt-1">{timeAgo(notif.created_at)}</p>
                           </div>
                         </div>
                       </button>

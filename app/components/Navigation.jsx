@@ -31,7 +31,7 @@ const MAIN_ITEMS = [
   { id: 'nav-staff', name: 'Staff', path: '/dashboard/staff', icon: 'staff' },
   { id: 'nav-rules', name: 'Rules', path: '/dashboard/rules', icon: 'rules' },
   { id: 'nav-generate', name: 'Rota Builder', path: '/dashboard/generate', icon: 'generate', dividerAfter: true },
-  { id: 'nav-requests', name: 'Inbox', path: '/dashboard/requests', icon: 'inbox', locked: true },
+  { id: 'nav-requests', name: 'Inbox', path: '/dashboard/requests', icon: 'inbox' },
   { id: 'nav-payroll', name: 'Payroll', path: '/dashboard/payroll', icon: 'payroll' },
   { id: 'nav-reports', name: 'Reports', path: '/dashboard/reports', icon: 'reports' },
   { id: 'nav-archive', name: 'Archive', path: '/dashboard/archive', icon: 'archive' },
@@ -132,32 +132,32 @@ export default function Navigation({ collapsed = false, onToggleCollapse }) {
         {switcherOpen && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setSwitcherOpen(false)} />
-            <div className={`absolute z-50 top-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 ${rail ? 'left-full ml-2 -mt-1 top-0 w-[268px]' : (mobile ? 'left-0 right-0' : 'left-0 w-[268px]')}`}>
-              {/* ORGANISATION header — the umbrella */}
-              <div className="flex items-center gap-2.5 px-2.5 py-2.5 rounded-xl bg-gray-50 mb-1.5">
+            <div className={`absolute z-50 top-full mt-2 bg-white dark:bg-[#1C1C1E] rounded-2xl shadow-2xl border border-gray-100 dark:border-white/10 p-2 ${rail ? 'left-full ml-2 -mt-1 top-0 w-[268px]' : (mobile ? 'left-0 right-0' : 'left-0 w-[268px]')}`}>
+              {/* ORGANISATION header, the umbrella */}
+              <div className="flex items-center gap-2.5 px-2.5 py-2.5 rounded-xl bg-gray-50 dark:bg-white/5 mb-1.5">
                 <div className="w-9 h-9 rounded-lg flex items-center justify-center font-extrabold text-sm flex-shrink-0" style={{ background: PINK, color: '#fff' }}>{initials(orgName)}</div>
                 <div className="min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 leading-tight">Organisation</p>
-                  <p className="text-gray-900 font-bold text-sm truncate leading-tight">{orgName}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-[#98989D] leading-tight">Organisation</p>
+                  <p className="text-gray-900 dark:text-white font-bold text-sm truncate leading-tight">{orgName}</p>
                 </div>
               </div>
 
-              {/* LOCATIONS — the billable venues within it */}
+              {/* LOCATIONS, the billable venues within it */}
               <div className="flex items-center justify-between px-3 pt-1 pb-1">
-                <span className="text-[11px] font-bold uppercase tracking-wide text-gray-400">Locations</span>
-                <span className="text-[11px] font-semibold text-gray-300">{locations.length}</span>
+                <span className="text-[11px] font-bold uppercase tracking-wide text-gray-400 dark:text-[#98989D]">Locations</span>
+                <span className="text-[11px] font-semibold text-gray-300 dark:text-[#68686E]">{locations.length}</span>
               </div>
               <div className="max-h-[260px] overflow-y-auto">
-                {locations.length === 0 && <p className="px-3 py-3 text-sm text-gray-400">No locations yet</p>}
+                {locations.length === 0 && <p className="px-3 py-3 text-sm text-gray-400 dark:text-[#98989D]">No locations yet</p>}
                 {locations.map((l) => {
                   const on = l.id === activeId
                   return (
                     <button key={l.id} onClick={() => switchLocation(l.id)}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left transition ${on ? 'bg-pink-50' : 'hover:bg-gray-50'}`}>
+                      className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left transition ${on ? 'bg-pink-50 dark:bg-pink-500/15' : 'hover:bg-gray-50 dark:hover:bg-white/5'}`}>
                       <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: PINK + '14', color: PINK }}><Icon k="pin" cls="w-4 h-4" /></div>
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm truncate leading-tight ${on ? 'font-bold text-gray-900' : 'font-semibold text-gray-800'}`}>{l.name}</p>
-                        {l.address && <p className="text-gray-400 text-xs truncate leading-tight">{l.address}</p>}
+                        <p className={`text-sm truncate leading-tight ${on ? 'font-bold text-gray-900 dark:text-white' : 'font-semibold text-gray-800 dark:text-[#D9D9DE]'}`}>{l.name}</p>
+                        {l.address && <p className="text-gray-400 dark:text-[#68686E] text-xs truncate leading-tight">{l.address}</p>}
                       </div>
                       {on && <svg className="w-4 h-4 flex-shrink-0" style={{ color: PINK }} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>}
                     </button>
@@ -165,16 +165,16 @@ export default function Navigation({ collapsed = false, onToggleCollapse }) {
                 })}
               </div>
 
-              <div className="my-1.5 border-t border-gray-100" />
-              <button title="Per-location billing — coming soon" onClick={() => setSwitcherOpen(false)}
-                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-gray-50 text-left transition">
+              <div className="my-1.5 border-t border-gray-100 dark:border-white/10" />
+              <button title="Per-location billing, coming soon" onClick={() => setSwitcherOpen(false)}
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 text-left transition">
                 <span className="flex items-center gap-2.5 font-semibold text-sm" style={{ color: PINK }}>
                   <span className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: PINK + '14' }}>
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                   </span>
                   Add location
                 </span>
-                <span className="text-[10px] font-bold uppercase tracking-wide text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">Soon</span>
+                <span className="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-[#98989D] bg-gray-100 dark:bg-white/10 rounded-full px-2 py-0.5">Soon</span>
               </button>
             </div>
           </>
