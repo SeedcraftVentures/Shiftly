@@ -1,12 +1,12 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { T, Card, Button, Tag, Segmented, PAGE, PageHeader } from '@/app/components/ui/kit'
+import { useTheme, Card, Button, Tag, Segmented, PAGE, PageHeader } from '@/app/components/ui/kit'
 import { TEAM_COLORS } from '@/app/(auth)/dashboard/staff/utils/staffHelpers'
 import { rotaBlock } from '@/lib/rotaColors'
 
 // ════════════════════════════════════════════════════════════════════════════
-//  ARCHIVE — browse every saved rota, jump to a week, open any past rota read-only.
+//  ARCHIVE - browse every saved rota, jump to a week, open any past rota read-only.
 // ════════════════════════════════════════════════════════════════════════════
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -17,6 +17,8 @@ const mondayOfDate = (s) => { const d = new Date(s + 'T00:00:00Z'); const dow = 
 
 // Read-only rendering of a saved rota (team sections · staff rows · day columns).
 function ArchiveGrid({ data, teamColor }) {
+  const { T } = useTheme()
+  const dark = T.name === 'dark'
   const byTeam = useMemo(() => {
     const m = {}
     for (const a of data.assignments || []) {
@@ -32,7 +34,7 @@ function ArchiveGrid({ data, teamColor }) {
   return <Card pad={22} style={{ overflowX: 'auto' }}>
     <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 800, tableLayout: 'fixed' }}>
       <colgroup><col style={{ width: 160 }} />{DAYS.map((d) => <col key={d} />)}</colgroup>
-      <thead><tr><th /><>{DAYS.map((d) => <th key={d} style={{ fontSize: 11, fontWeight: 800, color: '#374151', padding: '4px 4px 12px', textAlign: 'center' }}>{d}</th>)}</></tr></thead>
+      <thead><tr><th /><>{DAYS.map((d) => <th key={d} style={{ fontSize: 11, fontWeight: 800, color: T.body, padding: '4px 4px 12px', textAlign: 'center' }}>{d}</th>)}</></tr></thead>
       <tbody>
         {byTeam.map((team, ti) => {
           const color = teamColor[team.id] || T.pink
@@ -41,17 +43,21 @@ function ArchiveGrid({ data, teamColor }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ width: 8, height: 8, borderRadius: 99, background: color }} />
                 <span style={{ fontSize: 12, fontWeight: 800, color, letterSpacing: 0.4, textTransform: 'uppercase' }}>{team.name}</span>
-                <div style={{ flex: 1, height: 1, background: '#F0F0F2' }} />
+                <div style={{ flex: 1, height: 1, background: T.hair }} />
               </div>
             </td></tr>
             {team.staff.map((s, idx) => {
               const blk = rotaBlock(color, idx)
+              const alphas = ['FF', 'C4', '96', '70']
+              const blockBg = dark ? color + alphas[idx % alphas.length] : blk.background
+              const blockFg = dark ? '#fff' : blk.color
+              const blockSub = dark ? 'rgba(255,255,255,0.82)' : blk.subColor
               return <tr key={s.id}>
-                <td style={{ padding: '4px 4px', verticalAlign: 'top' }}><span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 600, color: '#111827' }}><span style={{ width: 9, height: 9, borderRadius: 99, background: color, flexShrink: 0 }} />{s.name}</span></td>
+                <td style={{ padding: '4px 4px', verticalAlign: 'top' }}><span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 600, color: T.ink }}><span style={{ width: 9, height: 9, borderRadius: 99, background: color, flexShrink: 0 }} />{s.name}</span></td>
                 {[0, 1, 2, 3, 4, 5, 6].map((d) => <td key={d} style={{ padding: '4px 4px', verticalAlign: 'top' }}>
-                  {(s.blocks[d] || []).map((a, i) => <div key={i} style={{ background: blk.background, borderRadius: 10, padding: '7px 10px', marginBottom: 4, boxShadow: blk.shadow }}>
-                    <div style={{ color: blk.color, fontWeight: 700, fontSize: 11, lineHeight: 1.25 }}>{a.shift_name}</div>
-                    <div style={{ color: blk.subColor, fontSize: 9.5 }}>{fmt(a.start_time)}–{fmt(a.end_time)}</div>
+                  {(s.blocks[d] || []).map((a, i) => <div key={i} style={{ background: blockBg, borderRadius: 10, padding: '7px 10px', marginBottom: 4, boxShadow: dark ? 'none' : blk.shadow }}>
+                    <div style={{ color: blockFg, fontWeight: 700, fontSize: 11, lineHeight: 1.25 }}>{a.shift_name}</div>
+                    <div style={{ color: blockSub, fontSize: 9.5 }}>{fmt(a.start_time)}-{fmt(a.end_time)}</div>
                   </div>)}
                 </td>)}
               </tr>
@@ -77,7 +83,7 @@ function printRota(data, teamColor) {
     body += `<tr><td class="team" colspan="8" style="color:${t.color}">${esc(t.name)}</td></tr>`
     for (const s of Object.values(t.staff)) {
       body += `<tr><td class="name">${esc(s.name)}</td>` + [0, 1, 2, 3, 4, 5, 6].map((d) =>
-        `<td>${(s.blocks[d] || []).map((a) => `<div class="blk">${esc(a.shift_name)}</div><div class="tm">${fmt(a.start_time)}–${fmt(a.end_time)}</div>`).join('')}</td>`).join('') + `</tr>`
+        `<td>${(s.blocks[d] || []).map((a) => `<div class="blk">${esc(a.shift_name)}</div><div class="tm">${fmt(a.start_time)}-${fmt(a.end_time)}</div>`).join('')}</td>`).join('') + `</tr>`
     }
   }
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(data.name || 'Rota')}</title><style>
@@ -156,7 +162,7 @@ async function shareRotaImage(data, teamColor) {
           ctx.save(); ctx.shadowColor = t.color + '40'; ctx.shadowBlur = 5; ctx.shadowOffsetY = 1.5
           ctx.fillStyle = blk.background; rrect(bx, by, bw, BLOCKH, 8); ctx.fill(); ctx.restore()
           ctx.fillStyle = blk.color; ctx.font = `700 11px ${FONT}`; ctx.fillText(trunc(a.shift_name, bw - 14), bx + 7, by + 5)
-          ctx.fillStyle = blk.subColor; ctx.font = `500 10px ${FONT}`; ctx.fillText(`${fmt(a.start_time)}–${fmt(a.end_time)}`, bx + 7, by + 18)
+          ctx.fillStyle = blk.subColor; ctx.font = `500 10px ${FONT}`; ctx.fillText(`${fmt(a.start_time)}-${fmt(a.end_time)}`, bx + 7, by + 18)
           by += BLOCKH + BGAP
         }
       }
@@ -169,7 +175,7 @@ async function shareRotaImage(data, teamColor) {
   const filename = `rota-${data.week_start}.png`
   const file = new File([blob], filename, { type: 'image/png' })
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ files: [file], title: data.name || 'Rota', text: `Rota — w/c ${prettyDate(data.week_start)}` }); return }
+    try { await navigator.share({ files: [file], title: data.name || 'Rota', text: `Rota, w/c ${prettyDate(data.week_start)}` }); return }
     catch (e) { if (e?.name === 'AbortError') return }
   }
   const url = URL.createObjectURL(blob)
@@ -177,6 +183,7 @@ async function shareRotaImage(data, teamColor) {
 }
 
 export default function ArchivePage() {
+  const { T } = useTheme()
   const [rotas, setRotas] = useState([])
   const [teams, setTeams] = useState([])
   const [loading, setLoading] = useState(true)
@@ -250,7 +257,7 @@ export default function ArchivePage() {
       <Segmented options={[{ value: 'all', label: 'All' }, { value: 'Published', label: 'Published' }, { value: 'Draft', label: 'Drafts' }]} value={status} onChange={setStatus} accent={T.pink} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: 12.5, color: T.muted, fontWeight: 600 }}>Jump to week of</span>
-        <input type="date" value={jump} onChange={(e) => setJump(e.target.value)} style={{ fontFamily: T.font, fontSize: 13, fontWeight: 600, color: T.ink, padding: '8px 10px', borderRadius: 9, border: `1px solid #E5E7EB`, outline: 'none' }} />
+        <input type="date" value={jump} onChange={(e) => setJump(e.target.value)} style={{ fontFamily: T.font, fontSize: 13, fontWeight: 600, color: T.ink, background: T.card, padding: '8px 10px', borderRadius: 9, border: `1px solid ${T.border}`, outline: 'none' }} />
         {jump && <button onClick={() => setJump('')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12.5, fontWeight: 700, color: T.pink }}>Clear</button>}
       </div>
     </Card>

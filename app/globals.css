@@ -6,6 +6,7 @@
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;
   --background-end-rgb: 255, 255, 255;
+  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -15,6 +16,29 @@
     --background-end-rgb: 0, 0, 0;
   }
 }
+
+/* ── theme-aware scrollbars ─────────────────────────────────────────────────
+   Our theme is driven by data-theme on <html>, so color-scheme follows it.
+   That alone gives native dark scrollbars + dark form controls in dark mode;
+   the custom rules below slim the scrollbar so it feels refined in both themes. */
+:root[data-theme="dark"] { color-scheme: dark; }
+
+* { scrollbar-width: thin; }
+:root { scrollbar-color: rgba(0, 0, 0, 0.22) transparent; }
+:root[data-theme="dark"] { scrollbar-color: rgba(255, 255, 255, 0.22) transparent; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 999px;
+  border: 2.5px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.34); background-clip: padding-box; }
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); background-clip: padding-box; }
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.32); background-clip: padding-box; }
+::-webkit-scrollbar-corner { background: transparent; }
 
 body {
   color: rgb(var(--foreground-rgb));

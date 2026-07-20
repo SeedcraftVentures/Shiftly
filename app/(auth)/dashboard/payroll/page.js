@@ -1,16 +1,15 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { T, Card, Button, Tag, Segmented, PAGE, PageHeader } from '@/app/components/ui/kit'
+import { useTheme, Card, Button, Tag, Segmented, PAGE, PageHeader } from '@/app/components/ui/kit'
 import { TEAM_COLORS } from '@/app/(auth)/dashboard/staff/utils/staffHelpers'
 import { periodCost, effectiveHourlyRate, basisLabel, fmtMoney } from '@/lib/pay'
 
 // ════════════════════════════════════════════════════════════════════════════
-//  PAYROLL (live) — gross pay per staff for a period, from Rota Assignments × pay
+//  PAYROLL (live) - gross pay per staff for a period, from Rota Assignments x pay
 //  basis (lib/pay). Period-navigable so you can pull up any past week.
 // ════════════════════════════════════════════════════════════════════════════
 
-const BASIS_COLOR = { hourly: T.muted, salary: '#6366F1', annualised: '#14B8A6' }
 const prettyDate = (s) => { try { return new Date(s + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) } catch { return s } }
 function mondayStr(offsetWeeks = 0) {
   const d = new Date(); d.setHours(0, 0, 0, 0)
@@ -21,6 +20,7 @@ function mondayStr(offsetWeeks = 0) {
 const shiftStr = (s, days) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().slice(0, 10) }
 
 function Stat({ label, value, sub }) {
+  const { T } = useTheme()
   return <Card pad={18}>
     <p style={{ fontSize: 26, fontWeight: 800, color: T.ink, margin: 0, lineHeight: 1 }}>{value}</p>
     <p style={{ fontSize: 12.5, color: T.muted, margin: '7px 0 0', fontWeight: 600 }}>{label}</p>
@@ -29,6 +29,8 @@ function Stat({ label, value, sub }) {
 }
 
 export default function PayrollPage() {
+  const { T } = useTheme()
+  const BASIS_COLOR = { hourly: T.muted, salary: '#6366F1', annualised: '#14B8A6' }
   const [weekStart, setWeekStart] = useState(() => mondayStr(0))
   const [weeks, setWeeks] = useState(1)
   const [projected, setProjected] = useState(false)
@@ -64,7 +66,7 @@ export default function PayrollPage() {
     return teams.filter((t) => byTeam[t.id]?.length).map((t) => ({ team: t, color: teamColor[t.id], rows: byTeam[t.id], gross: byTeam[t.id].reduce((a, r) => a + r.gross, 0), hours: byTeam[t.id].reduce((a, r) => a + r.hours, 0) }))
   }, [rows, teams, teamColor])
 
-  const rangeLabel = effWeeks === 1 ? `w/c ${prettyDate(effStart)}` : `${prettyDate(effStart)} – ${prettyDate(shiftStr(effStart, effWeeks * 7 - 1))}`
+  const rangeLabel = effWeeks === 1 ? `w/c ${prettyDate(effStart)}` : `${prettyDate(effStart)} to ${prettyDate(shiftStr(effStart, effWeeks * 7 - 1))}`
 
   const downloadCsv = () => {
     const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
@@ -83,7 +85,7 @@ export default function PayrollPage() {
     <div style={{ fontFamily: T.font, ...PAGE }}>
       <PageHeader
         title="Payroll"
-        subtitle={projected ? 'Projected from your published rotas — the next 4 weeks.' : `Gross pay for ${rangeLabel}.`}
+        subtitle={projected ? 'Projected from your published rotas, the next 4 weeks.' : `Gross pay for ${rangeLabel}.`}
         actions={<div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {rows.length > 0 && <Button variant="secondary" size="md" onClick={downloadCsv}>Download CSV</Button>}
           <Segmented options={[{ value: 'actual', label: 'Actual' }, { value: 'projected', label: 'Projected' }]} value={projected ? 'projected' : 'actual'} onChange={(v) => setProjected(v === 'projected')} accent={T.pink} />

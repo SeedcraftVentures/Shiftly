@@ -1,16 +1,15 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { T, Card, Button, Segmented, PAGE, PageHeader } from '@/app/components/ui/kit'
+import { useTheme, Card, Button, Segmented, PAGE, PageHeader } from '@/app/components/ui/kit'
 import { TEAM_COLORS } from '@/app/(auth)/dashboard/staff/utils/staffHelpers'
 import { fmtMoney, basisLabel } from '@/lib/pay'
 
 // ════════════════════════════════════════════════════════════════════════════
-//  REPORTS (live) — labour cost from Rota Assignments × pay basis (same maths as
+//  REPORTS (live) - labour cost from Rota Assignments x pay basis (same maths as
 //  payroll). 8-week trend + per-team and per-basis breakdowns for the period.
 // ════════════════════════════════════════════════════════════════════════════
 
-const BASIS_COLOR = { hourly: T.muted, salary: '#6366F1', annualised: '#14B8A6' }
 const prettyDate = (s) => { try { return new Date(s + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) } catch { return s } }
 function mondayStr(offsetWeeks = 0) {
   const d = new Date(); d.setHours(0, 0, 0, 0)
@@ -21,6 +20,7 @@ function mondayStr(offsetWeeks = 0) {
 const shiftStr = (s, days) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().slice(0, 10) }
 
 function Stat({ label, value, sub }) {
+  const { T } = useTheme()
   return <Card pad={18}>
     <p style={{ fontSize: 26, fontWeight: 800, color: T.ink, margin: 0, lineHeight: 1 }}>{value}</p>
     <p style={{ fontSize: 12.5, color: T.muted, margin: '7px 0 0', fontWeight: 600 }}>{label}</p>
@@ -29,6 +29,8 @@ function Stat({ label, value, sub }) {
 }
 
 export default function ReportsPage() {
+  const { T } = useTheme()
+  const BASIS_COLOR = { hourly: T.muted, salary: '#6366F1', annualised: '#14B8A6' }
   const [weekStart, setWeekStart] = useState(() => mondayStr(0))
   const [weeks, setWeeks] = useState(1)
   const [projected, setProjected] = useState(false)
@@ -50,7 +52,7 @@ export default function ReportsPage() {
   const teamColor = useMemo(() => Object.fromEntries(teams.map((t, i) => [t.id, TEAM_COLORS[i % TEAM_COLORS.length]])), [teams])
   const teamName = useMemo(() => Object.fromEntries(teams.map((t) => [t.id, t.name])), [teams])
 
-  const rangeLabel = effWeeks === 1 ? `w/c ${prettyDate(effStart)}` : `${prettyDate(effStart)} – ${prettyDate(shiftStr(effStart, effWeeks * 7 - 1))}`
+  const rangeLabel = effWeeks === 1 ? `w/c ${prettyDate(effStart)}` : `${prettyDate(effStart)} to ${prettyDate(shiftStr(effStart, effWeeks * 7 - 1))}`
   const series = data?.series || []
   const period = data?.period || { totalCost: 0, totalHours: 0, byTeam: [], byBasis: {} }
   const maxCost = Math.max(1, ...series.map((s) => s.cost))
@@ -62,7 +64,7 @@ export default function ReportsPage() {
     <div style={{ fontFamily: T.font, ...PAGE }}>
       <PageHeader
         title="Reports"
-        subtitle={projected ? 'Projected labour cost from your published rotas — the next 4 weeks.' : `Labour cost for ${rangeLabel}.`}
+        subtitle={projected ? 'Projected labour cost from your published rotas, the next 4 weeks.' : `Labour cost for ${rangeLabel}.`}
         actions={<Segmented options={[{ value: 'actual', label: 'Actual' }, { value: 'projected', label: 'Projected' }]} value={projected ? 'projected' : 'actual'} onChange={(v) => setProjected(v === 'projected')} accent={T.pink} />}
       />
 
@@ -100,7 +102,7 @@ export default function ReportsPage() {
               return (
                 <div key={w.weekStart} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                   <span style={{ fontSize: 10.5, fontWeight: 700, color: inPeriod ? T.ink : T.faint }}>{w.cost ? fmtMoney(w.cost, '£', 0) : ''}</span>
-                  <div title={`${prettyDate(w.weekStart)} · ${fmtMoney(w.cost)}`} style={{ width: '100%', maxWidth: 46, height: Math.max(3, h), borderRadius: 7, background: inPeriod ? `linear-gradient(180deg, ${T.pink}, ${T.pink}cc)` : '#ECECF0', transition: 'height .3s' }} />
+                  <div title={`${prettyDate(w.weekStart)} · ${fmtMoney(w.cost)}`} style={{ width: '100%', maxWidth: 46, height: Math.max(3, h), borderRadius: 7, background: inPeriod ? `linear-gradient(180deg, ${T.pink}, ${T.pink}cc)` : T.track, transition: 'height .3s' }} />
                   <span style={{ fontSize: 10, color: T.faint }}>{prettyDate(w.weekStart).replace(/ /, ' ')}</span>
                 </div>
               )

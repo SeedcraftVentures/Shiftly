@@ -1,13 +1,38 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { T, Card, Button, Input, Field, Label, Switch, Segmented, Tag, TimeRange } from '@/app/components/ui/kit'
+import { Card, Button, Input, Field, Label, Switch, Segmented, Tag, TimeRange, useTheme } from '@/app/components/ui/kit'
 import { TEAM_COLORS } from '@/app/(auth)/dashboard/staff/utils/staffHelpers'
 
 const WEEKDAYS = [0, 1, 2, 3, 4], WEEKEND = [5, 6], ALLDAYS = [0, 1, 2, 3, 4, 5, 6]
 
+// Appearance control, the home of the app-wide light/dark switch.
+function ThemeChoice() {
+  const { T, theme, setTheme } = useTheme()
+  const opt = (m, label, icon) => {
+    const on = theme === m
+    return (
+      <button key={m} onClick={() => setTheme(m)} style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: T.font, fontSize: 13.5, fontWeight: 700, letterSpacing: '-0.01em', padding: '9px 16px', borderRadius: T.r.pill, border: 'none', cursor: 'pointer', color: on ? T.ink : T.muted, background: on ? T.card : 'transparent', boxShadow: on ? T.shadow.sm : 'none', transition: 'all .2s' }}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">{icon}</svg>{label}
+      </button>
+    )
+  }
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+      <div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>Theme</div>
+        <div style={{ fontSize: 13, color: T.muted, marginTop: 3 }}>Choose a light or dark interface. Applies across the whole app.</div>
+      </div>
+      <div style={{ display: 'inline-flex', padding: 3, borderRadius: T.r.pill, background: T.segBg, flexShrink: 0 }}>
+        {opt('light', 'Light', <><circle cx="12" cy="12" r="4.5" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></>)}
+        {opt('dark', 'Dark', <path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z" />)}
+      </div>
+    </div>
+  )
+}
+
 // ════════════════════════════════════════════════════════════════════════════
-//  SETTINGS (live) — configure the things onboarding set: organisation, the active
+//  SETTINGS (live), configure the things onboarding set: organisation, the active
 //  location, and its opening AND operating hours (two different windows), plus
 //  organisation-wide location management.
 // ════════════════════════════════════════════════════════════════════════════
@@ -17,6 +42,7 @@ const CURRENCIES = [{ value: 'GBP', label: '£ GBP' }, { value: 'USD', label: '$
 const LOCATION_TYPES = ['Restaurant', 'Café', 'Bar', 'Takeaway', 'Hotel', 'Retail', 'Other']
 
 function Section({ title, desc, children, onSave, saving, saved, flush }) {
+  const { T } = useTheme()
   return (
     <Card pad={24} style={{ marginBottom: flush ? 0 : 18, height: flush ? '100%' : undefined }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 18 }}>
@@ -37,6 +63,7 @@ function Section({ title, desc, children, onSave, saving, saved, flush }) {
 }
 
 function TeamRow({ team, color, counts, top, onRename, onDelete }) {
+  const { T } = useTheme()
   const [name, setName] = useState(team.name)
   const [busy, setBusy] = useState(false)
   const c = counts || { staff: 0, shifts: 0 }
@@ -48,7 +75,7 @@ function TeamRow({ team, color, counts, top, onRename, onDelete }) {
       <div style={{ flex: 1, minWidth: 0 }}><Input value={name} onChange={(e) => setName(e.target.value)} onBlur={doSave} onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }} /></div>
       <span style={{ fontSize: 12, color: T.faint, whiteSpace: 'nowrap' }}>{c.staff} staff · {c.shifts} shift{c.shifts === 1 ? '' : 's'}</span>
       {dirty && <Button size="sm" accent={T.pink} onClick={doSave} disabled={busy}>Save</Button>}
-      <button onClick={() => onDelete(team)} title="Delete team" style={{ width: 36, height: 36, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: T.r.sm, border: `1px solid ${T.line}`, background: '#fff', color: T.red, cursor: 'pointer' }}>
+      <button onClick={() => onDelete(team)} title="Delete team" style={{ width: 36, height: 36, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: T.r.sm, border: `1px solid ${T.line}`, background: T.card, color: T.red, cursor: 'pointer' }}>
         <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
       </button>
     </div>
@@ -56,6 +83,7 @@ function TeamRow({ team, color, counts, top, onRename, onDelete }) {
 }
 
 export default function SettingsPage() {
+  const { T } = useTheme()
   const [loading, setLoading] = useState(true)
   const [s, setS] = useState(null) // { organization, location, hours }
   const [locations, setLocations] = useState([])
@@ -128,7 +156,7 @@ export default function SettingsPage() {
       const res = await fetch('/api/settings', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
       if (res.ok) {
         setSaved(section); setTimeout(() => setSaved(''), 2500)
-        // org/location names live in the persistent nav too — tell it to re-fetch
+        // org/location names live in the persistent nav too, tell it to re-fetch
         if (payload.organization || payload.location) window.dispatchEvent(new Event('shiftly:locations-updated'))
       }
     } finally { setSaving('') }
@@ -140,7 +168,7 @@ export default function SettingsPage() {
 
   if (loading || !s) {
     return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: T.font }}>
-      <div style={{ width: 38, height: 38, border: '4px solid #EEE', borderTopColor: T.pink, borderRadius: 99, animation: 'spin 1s linear infinite' }} />
+      <div style={{ width: 38, height: 38, border: `4px solid ${T.track}`, borderTopColor: T.pink, borderRadius: 99, animation: 'spin 1s linear infinite' }} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   }
@@ -151,9 +179,14 @@ export default function SettingsPage() {
       <h1 style={{ fontSize: 26, fontWeight: 800, color: T.ink, margin: '0 0 4px', letterSpacing: -0.3 }}>Settings</h1>
       <p style={{ fontSize: 13.5, color: T.muted, margin: '0 0 24px' }}>Configure your organisation and {loc?.name || 'this location'}.</p>
 
+      {/* ── Appearance ── */}
+      <Section title="Appearance" desc="How Shiftly looks on this device.">
+        <ThemeChoice />
+      </Section>
+
       {/* ── Organisation + This location (side by side) ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginBottom: 18 }}>
-        <Section flush title="Organisation" desc="Your business — the umbrella over every location." onSave={() => save('org', { organization: s.organization })} saving={saving === 'org'} saved={saved === 'org'}>
+        <Section flush title="Organisation" desc="Your business, the umbrella over every location." onSave={() => save('org', { organization: s.organization })} saving={saving === 'org'} saved={saved === 'org'}>
           <Field label="Organisation name"><Input value={s.organization.name} onChange={(e) => setOrg({ name: e.target.value })} /></Field>
           <Field label="Industry" style={{ marginTop: 14 }}><Input value={s.organization.industry} onChange={(e) => setOrg({ industry: e.target.value })} placeholder="e.g. Hospitality" /></Field>
           <Field label="Default currency" style={{ marginTop: 14 }}><Segmented options={CURRENCIES} value={s.organization.currency} onChange={(v) => setOrg({ currency: v })} accent={T.pink} /></Field>
@@ -169,9 +202,9 @@ export default function SettingsPage() {
 
       {/* ── Teams (above hours) ── */}
       {loc && (
-        <Section title="Teams" desc={`Teams within ${loc?.name || 'this location'} — e.g. kitchen, bar, front of house. Staff and shifts are organised by team.`}>
+        <Section title="Teams" desc={`Teams within ${loc?.name || 'this location'}, e.g. kitchen, bar, front of house. Staff and shifts are organised by team.`}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {teams.length === 0 && <p style={{ fontSize: 13, color: T.faint, margin: '0 0 4px' }}>No teams yet — add your first below.</p>}
+            {teams.length === 0 && <p style={{ fontSize: 13, color: T.faint, margin: '0 0 4px' }}>No teams yet, add your first below.</p>}
             {teams.map((t, i) => <TeamRow key={t.id} team={t} color={TEAM_COLORS[i % TEAM_COLORS.length]} counts={teamCounts[t.id]} top={i > 0} onRename={renameTeam} onDelete={deleteTeam} />)}
           </div>
           <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
@@ -184,7 +217,7 @@ export default function SettingsPage() {
       {/* ── Hours: opening vs operating ── */}
       {loc && (
         <Section title="Opening & operating hours" onSave={() => save('hours', { hours: s.hours })} saving={saving === 'hours'} saved={saved === 'hours'}
-          desc="Two different windows. Opening hours are when customers can visit. Operating hours are when staff are on site — prep, deliveries, close-down — usually a little wider.">
+          desc="Two different windows. Opening hours are when customers can visit. Operating hours are when staff are on site, prep, deliveries, close-down, usually a little wider.">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {DAYS.map((dn, i) => {
               const d = s.hours[i] || { open: false }
@@ -199,7 +232,7 @@ export default function SettingsPage() {
                         <button onClick={() => setCopyOpen(copyOpen === i ? null : i)} style={{ fontFamily: T.font, fontSize: 12, fontWeight: 700, color: T.pink, background: T.pink + '12', border: 'none', borderRadius: T.r.xs, padding: '6px 11px', cursor: 'pointer' }}>Copy to ▾</button>
                         {copyOpen === i && (<>
                           <div onClick={() => setCopyOpen(null)} style={{ position: 'fixed', inset: 0, zIndex: 30 }} />
-                          <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 6, zIndex: 31, background: '#fff', border: `1px solid ${T.line}`, borderRadius: T.r.md, boxShadow: T.shadow.lg, padding: 6, width: 170 }}>
+                          <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 6, zIndex: 31, background: T.card, border: `1px solid ${T.line}`, borderRadius: T.r.md, boxShadow: T.shadow.lg, padding: 6, width: 170 }}>
                             {[['All weekdays', WEEKDAYS], ['Weekend', WEEKEND], ['Every day', ALLDAYS]].map(([lbl, tgt]) => (
                               <button key={lbl} onClick={() => copyHours(i, tgt)} onMouseEnter={(e) => (e.currentTarget.style.background = T.surface)} onMouseLeave={(e) => (e.currentTarget.style.background = 'none')} style={{ width: '100%', textAlign: 'left', fontFamily: T.font, fontSize: 13, fontWeight: 600, color: T.body, background: 'none', border: 'none', borderRadius: T.r.sm, padding: '9px 10px', cursor: 'pointer', transition: 'background .1s' }}>{lbl}</button>
                             ))}
@@ -249,7 +282,7 @@ export default function SettingsPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
               <Field label="Location name"><Input placeholder="e.g. Camden branch" /></Field>
               <Field label="Type">
-                <select style={{ width: '100%', boxSizing: 'border-box', fontFamily: T.font, fontSize: 14, fontWeight: 600, color: T.ink, padding: '11px 13px', borderRadius: T.r.sm, border: '1px solid #E5E7EB', outline: 'none', background: '#fff' }}>
+                <select style={{ width: '100%', boxSizing: 'border-box', fontFamily: T.font, fontSize: 14, fontWeight: 600, color: T.ink, padding: '11px 13px', borderRadius: T.r.sm, border: `1px solid ${T.border}`, outline: 'none', background: T.card }}>
                   {LOCATION_TYPES.map((t) => <option key={t}>{t}</option>)}
                 </select>
               </Field>
@@ -258,7 +291,7 @@ export default function SettingsPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
               <Button accent={T.pink} disabled>Add location</Button>
               <Button variant="ghost" size="md" onClick={() => setAddOpen(false)}>Cancel</Button>
-              <span style={{ fontSize: 12, color: T.muted }}>Adding a location starts a new per-location subscription — wired up with billing.</span>
+              <span style={{ fontSize: 12, color: T.muted }}>Adding a location starts a new per-location subscription, wired up with billing.</span>
             </div>
           </div>
         ) : (

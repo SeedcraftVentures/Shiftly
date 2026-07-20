@@ -7,7 +7,7 @@ export default function DashboardTopBar() {
   // bar carries just notifications.
   return (
     <div className="flex items-center justify-end px-6 py-4">
-      <div className="flex items-center bg-pink-50 border border-pink-100 rounded-full px-1.5 py-1">
+      <div className="flex items-center bg-pink-50 border border-pink-100 dark:bg-white/5 dark:border-white/10 rounded-full px-1.5 py-1">
         <NotificationBell variant="topbar" />
       </div>
     </div>

@@ -3,19 +3,16 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
-import { T, Card, Button, Tag, ProgressBar, fmtTime, PAGE, PageHeader } from '@/app/components/ui/kit'
+import { Card, Button, Pill, Ring, Icon, Ic, fmtTime, useTheme, EASE } from '@/app/components/ui/kit'
 import { TEAM_COLORS, cfgFromLocation, mapStaffForCoverage, readiness, scheduleCoverage, coverageBottlenecks, locationKeyholderGaps } from '@/app/(auth)/dashboard/staff/utils/staffHelpers'
 
 // ════════════════════════════════════════════════════════════════════════════
-//  DASHBOARD (live) — wired to the NEW schema: /api/rotas (name/week_start/status),
-//  live coverage via getCoverageMetrics over /api/shifts + /api/staff. No templates.
+//  DASHBOARD (live), Apple-esque. Same data/derivations as before (coverage via
+//  the Staff engine, Living Hours horizon, this-week rota), now rendered with the
+//  shared kit's rings / frosted cards / pills to match the lab reference exactly.
 // ════════════════════════════════════════════════════════════════════════════
 
 const DAYNAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-// keyholder mark — clean line key, no emoji
-function KeyMark({ size = 13, color = '#92660B' }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, display: 'block' }}><title>Keyholder</title><circle cx="8" cy="15" r="5" /><path d="M11.6 11.4 21 2" /><path d="M16.5 6.5 19.5 9.5" /></svg>
-}
 const DSHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] // index 0 = Mon (coverage convention)
 const greeting = () => { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening' }
 const prettyDate = (s) => { try { return new Date(s + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) } catch { return s } }
@@ -25,7 +22,7 @@ function mondayStr(offsetWeeks = 0) {
   d.setDate(d.getDate() - dow + offsetWeeks * 7)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
-// Snap any date to its nearest Monday — tolerant of rotas saved a day off (e.g. a Sunday).
+// Snap any date to its nearest Monday, tolerant of rotas saved a day off (e.g. a Sunday).
 function nearestMonday(dateStr) {
   const [y, m, dd] = dateStr.split('-').map(Number)
   const d = new Date(y, m - 1, dd)
@@ -33,11 +30,9 @@ function nearestMonday(dateStr) {
   d.setDate(d.getDate() + (dow <= 3 ? -dow : 7 - dow))
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
-// Verdict mirrors the Staff page's CapacityLine: covered when max capacity ≥ required.
-const COVERED = { label: 'Covered', color: T.green }
-const SHORT = { label: 'Short on cover', color: T.red }
 
 export default function DashboardPage() {
+  const { T } = useTheme()
   const { user, isLoaded } = useUser()
   const router = useRouter()
   const [checking, setChecking] = useState(true)
@@ -73,9 +68,7 @@ export default function DashboardPage() {
       })
   }, [checking])
 
-  // ── derived ────────────────────────────────────────────────────────────────
-  // Coverage uses the SAME engine + inputs as the Staff page (open-day-aware
-  // required hours; verdict = max capacity ≥ required), so verdicts match exactly.
+  // ── derived (unchanged engine + inputs, so verdicts match the Staff page) ────
   const coverage = useMemo(() => {
     if (!data) return null
     const cfg = cfgFromLocation(data.location)
@@ -88,12 +81,11 @@ export default function DashboardPage() {
     const req = teamRows.reduce((a, x) => a + x.r.req, 0)
     const maxh = teamRows.reduce((a, x) => a + x.r.maxh, 0)
     const bottlenecks = teamRows.flatMap((x) => x.bottlenecks.map((b) => ({ ...b, team: x.team.name })))
-    const khGaps = locationKeyholderGaps(mapped, data.shifts || [], cfg) // location-wide, all teams
+    const khGaps = locationKeyholderGaps(mapped, data.shifts || [], cfg)
     const anyShort = teamRows.some((x) => !x.r.coverableAtMax || x.bottlenecks.length > 0)
     return { teamRows, bottlenecks, khGaps, req: Math.round(req), maxh: Math.round(maxh), readiness: req === 0 ? 1 : Math.min(1, maxh / req), status: anyShort ? 'short' : 'ok' }
   }, [data])
 
-  // The OTHER question: do the shifts span the operating hours (location-wide)?
   const schedule = useMemo(() => {
     if (!data) return null
     const cfg = cfgFromLocation(data.location)
@@ -101,10 +93,9 @@ export default function DashboardPage() {
     return scheduleCoverage(data.shifts || [], mapped, cfg)
   }, [data])
 
-  // Living Hours: staff deserve 4 weeks' notice. How many of the next 4 weeks are published?
   const horizon = useMemo(() => {
     if (!data) return null
-    const next4 = [0, 1, 2, 3].map((i) => mondayStr(i)) // this week + next 3
+    const next4 = [0, 1, 2, 3].map((i) => mondayStr(i))
     const pubMondays = new Set(data.rotas.filter((r) => r.status === 'Published').map((r) => nearestMonday(r.week_start)))
     return { published: next4.filter((wk) => pubMondays.has(wk)).length, firstGap: next4.find((wk) => !pubMondays.has(wk)) }
   }, [data])
@@ -112,9 +103,6 @@ export default function DashboardPage() {
   const thisWeek = useMemo(() => {
     if (!data) return null
     const wk = mondayStr(0)
-    // Snap to nearest Monday so this matches the Living Hours banner exactly — a rota
-    // saved a day off (e.g. a Sunday week_start) still counts as this week's rota,
-    // instead of the two cards disagreeing ("4 weeks published" vs "no rota yet").
     const rota = data.rotas.find((r) => nearestMonday(r.week_start) === wk)
     return { wk, rota }
   }, [data])
@@ -123,199 +111,184 @@ export default function DashboardPage() {
 
   if (checking || !data) {
     return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: T.font }}>
-      <div style={{ width: 38, height: 38, border: '4px solid #EEE', borderTopColor: T.pink, borderRadius: 99, animation: 'spin 1s linear infinite' }} />
+      <div style={{ width: 38, height: 38, border: `4px solid ${T.track}`, borderTopColor: T.pink, borderRadius: 99, animation: 'spin 1s linear infinite' }} />
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   }
 
   const firstName = user?.firstName || 'there'
-  const cov = coverage.status === 'short' ? SHORT : COVERED
+  const capOk = coverage.status !== 'short'
+  const scheduleColor = schedule.hasGaps ? T.red : schedule.hasKeyGaps ? T.amber : T.green
+  const hasWarn = coverage.bottlenecks.length > 0 || coverage.khGaps.noKeyholder || coverage.khGaps.openMissing.length > 0 || coverage.khGaps.closeMissing.length > 0
+  // overall readiness = the weaker of the two coverage answers (your limiting factor)
+  // NB: named readyVal, not `readiness`, to avoid shadowing the imported readiness() helper
+  const readyVal = Math.min(schedule.coveredPct, coverage.readiness)
+  const readyPct = Math.round(readyVal * 100)
+  const ringColor = readyPct >= 95 ? T.green : readyPct >= 60 ? T.amber : T.red
+  const readyLabel = readyPct >= 95 ? 'READY TO PUBLISH' : 'ALMOST READY'
+  const readyLine = (!schedule.hasGaps && !schedule.hasKeyGaps && capOk)
+    ? "You're fully covered and ready to publish."
+    : !capOk ? 'Staffing is short on some shifts. Add availability or staff.'
+      : 'Some open hours still need a shift or a keyholder.'
 
   return (
-    <div style={{ fontFamily: T.font, ...PAGE }}>
-      <PageHeader
-        title={`${greeting()}, ${firstName}`}
-        subtitle={<>{DAYNAMES[new Date().getDay()]}{data.locName ? <> · <span style={{ fontWeight: 600, color: T.body }}>{data.locName}</span></> : null}</>}
-      />
-
-      {/* Living Hours — persists 4 weeks ahead; turns green with a tick once met */}
-      {horizon && (() => {
-        const met = horizon.published >= 4
-        const accent = met ? T.green : T.pink
-        return (
-          <Card pad={18} style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', background: accent + '0A', border: `1px solid ${accent}2E` }}>
-            <span style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, background: accent + '18', color: accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {met
-                ? <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                : <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
-            </span>
-            <div style={{ flex: 1, minWidth: 220 }}>
-              <p style={{ fontSize: 14, fontWeight: 800, color: T.ink, margin: 0 }}>{met ? 'Meeting the Living Hours standard' : 'Give your staff 4 weeks’ notice'}</p>
-              <p style={{ fontSize: 12.5, color: T.muted, margin: '3px 0 8px' }}>
-                {met
-                  ? <>Your staff have <b style={{ color: T.ink }}>4 weeks’ advance notice</b> of their shifts. Keep it up to stay compliant.</>
-                  : <>The UK Living Hours standard is 4 weeks’ advance notice of shifts. You’ve published <b style={{ color: T.ink }}>{horizon.published} of the next 4 weeks</b>.</>}
-              </p>
-              <div style={{ maxWidth: 280 }}><ProgressBar value={horizon.published / 4} height={7} color={accent} radius={99} /></div>
-            </div>
-            {!met && horizon.firstGap && <Button accent={T.pink} arrow onClick={() => router.push(`/dashboard/generate?start=${horizon.firstGap}`)}>Build w/c {prettyDate(horizon.firstGap)}</Button>}
-          </Card>
-        )
-      })()}
-
-      {/* hero — reads left→right: do shifts cover hours? → can we cover shifts? → build it */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginBottom: 16 }}>
-        {/* THIS WEEK (right) */}
-        <Card pad={22} style={{ order: 3 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: T.faint, letterSpacing: 0.5, textTransform: 'uppercase' }}>This week</span>
-            {thisWeek.rota
-              ? <Tag color={thisWeek.rota.status === 'Published' ? T.green : T.amber}>{thisWeek.rota.status}</Tag>
-              : <Tag color={T.faint}>Not built</Tag>}
-          </div>
-          {thisWeek.rota ? (
-            <>
-              <p style={{ fontSize: 20, fontWeight: 800, color: T.ink, margin: '0 0 4px' }}>{thisWeek.rota.name || `Week of ${prettyDate(thisWeek.wk)}`}</p>
-              <p style={{ fontSize: 13, color: T.muted, margin: '0 0 18px' }}>w/c {prettyDate(thisWeek.wk)}</p>
-              <Button variant={thisWeek.rota.status === 'Published' ? 'secondary' : 'primary'} accent={T.pink} onClick={() => router.push(`/dashboard/generate?rota=${thisWeek.rota.id}`)}>
-                {thisWeek.rota.status === 'Published' ? 'View rota' : 'Open & finish'}
-              </Button>
-            </>
-          ) : (
-            <>
-              <p style={{ fontSize: 20, fontWeight: 800, color: T.ink, margin: '0 0 4px' }}>No rota yet</p>
-              <p style={{ fontSize: 13, color: T.muted, margin: '0 0 18px' }}>Nothing scheduled for w/c {prettyDate(thisWeek.wk)}</p>
-              <Button accent={T.pink} arrow onClick={() => router.push(`/dashboard/generate?start=${thisWeek.wk}`)}>Build this week's rota</Button>
-            </>
-          )}
-        </Card>
-
-        {/* COVERAGE — can we cover the shifts? (middle) */}
-        <Card pad={22} style={{ order: 2, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: T.faint, letterSpacing: 0.5, textTransform: 'uppercase' }}>Can we cover the shifts?</span>
-            <Tag color={cov.color}>{cov.label}</Tag>
-          </div>
-          <div style={{ minHeight: 46, display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
-            <span style={{ fontSize: 30, fontWeight: 800, color: T.ink }}>{Math.round(coverage.readiness * 100)}%</span>
-            <span style={{ fontSize: 13, color: T.muted, lineHeight: 1.3 }}>of shift hours covered by capacity</span>
-          </div>
-          <ProgressBar value={coverage.readiness} height={9} color={cov.color} radius={99} />
-          <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
-            {coverage.teamRows.length === 0 && <p style={{ fontSize: 13, color: T.faint, margin: 0 }}>No teams yet.</p>}
-            {coverage.teamRows.map(({ team, color, r, bottlenecks }) => {
-              const st = (r.coverableAtMax && bottlenecks.length === 0) ? COVERED : SHORT
-              return <div key={team.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ width: 9, height: 9, borderRadius: 99, background: color, flexShrink: 0 }} />
-                <span style={{ fontSize: 13, fontWeight: 600, color: T.body, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{team.name}</span>
-                <span style={{ fontSize: 12, color: T.faint }}>{Math.round(r.maxh)}h / {Math.round(r.req)}h</span>
-                <Tag color={st.color}>{st.label}</Tag>
-              </div>
-            })}
-          </div>
-          {coverage.bottlenecks.length > 0 && <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: T.r.sm, background: T.amber + '12', border: `1px solid ${T.amber}30` }}>
-            {coverage.bottlenecks.slice(0, 3).map((b, i) => <p key={i} style={{ fontSize: 12, color: '#92660B', margin: i ? '6px 0 0' : 0, lineHeight: 1.45 }}><b>{b.name}</b> ({b.team}) is the only cover available every open day — they'd work {b.essential} days but can do {b.maxDays}. Spread availability or add staff.</p>)}
-          </div>}
-          {(coverage.khGaps.noKeyholder || coverage.khGaps.openMissing.length > 0 || coverage.khGaps.closeMissing.length > 0) && <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: T.r.sm, background: T.amber + '12', border: `1px solid ${T.amber}30` }}>
-            <p style={{ fontSize: 12, color: '#92660B', margin: 0, lineHeight: 1.45, display: 'flex', alignItems: 'flex-start', gap: 6 }}><span style={{ marginTop: 1 }}><KeyMark size={13} color="#92660B" /></span><span>{coverage.khGaps.noKeyholder
-              ? 'No keyholders set — mark someone as a keyholder so the location can open and close.'
-              : `No keyholder available to ${coverage.khGaps.openMissing.length ? `open ${coverage.khGaps.openMissing.map((d) => DSHORT[d]).join(', ')}` : ''}${coverage.khGaps.openMissing.length && coverage.khGaps.closeMissing.length ? ' · ' : ''}${coverage.khGaps.closeMissing.length ? `close ${coverage.khGaps.closeMissing.map((d) => DSHORT[d]).join(', ')}` : ''} (one keyholder covers the whole location).`}</span></p>
-          </div>}
-          </div>
-          <button onClick={() => router.push('/dashboard/staff')} style={{ marginTop: 14, alignSelf: 'flex-start', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: T.font, fontSize: 12.5, fontWeight: 700, color: T.pink }}>Review staffing →</button>
-        </Card>
-
-        {/* SCHEDULE COVERAGE — do the shifts cover the open hours? (left) */}
-        <Card pad={22} style={{ order: 1, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: T.faint, letterSpacing: 0.5, textTransform: 'uppercase' }}>Do shifts cover your hours?</span>
-            <Tag color={schedule.hasGaps ? T.red : schedule.hasKeyGaps ? T.amber : T.green}>{schedule.hasGaps ? 'Gaps' : schedule.hasKeyGaps ? 'No keyholder' : 'Complete'}</Tag>
-          </div>
-          <div style={{ minHeight: 46, display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
-            <span style={{ fontSize: 30, fontWeight: 800, color: T.ink }}>{Math.round(schedule.coveredPct * 100)}%</span>
-            <span style={{ fontSize: 13, color: T.muted, lineHeight: 1.3 }}>of open hours have a shift</span>
-          </div>
-          <ProgressBar value={schedule.coveredPct} height={9} color={schedule.hasGaps ? T.red : T.green} radius={99} />
-          <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginTop: 16 }}>
-            {!schedule.hasGaps && !schedule.hasKeyGaps && <p style={{ fontSize: 13, color: T.body, fontWeight: 600, margin: 0 }}><span style={{ color: T.green }}>✓</span> Every open hour is scheduled, with a keyholder at open and close.</p>}
-            {schedule.dayGaps.slice(0, 4).map((g, i) => (
-              <div key={`g${i}`} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-                <span style={{ width: 8, height: 8, borderRadius: 99, background: T.red, flexShrink: 0 }} />
-                <span style={{ fontWeight: 700, color: T.body, width: 30 }}>{DSHORT[g.day]}</span>
-                <span style={{ color: T.muted }}>{fmtTime(g.from)}–{fmtTime(g.to)} uncovered</span>
-              </div>
-            ))}
-            {schedule.keyGaps.slice(0, 3).map((k, i) => (
-              <div key={`k${i}`} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-                <span style={{ width: 8, height: 8, borderRadius: 99, background: T.amber, flexShrink: 0 }} />
-                <span style={{ fontWeight: 700, color: T.body, width: 30 }}>{DSHORT[k.day]}</span>
-                <span style={{ color: T.muted }}>no keyholder at {k.when} ({fmtTime(k.time)})</span>
-              </div>
-            ))}
-            {(schedule.dayGaps.length > 4 || schedule.keyGaps.length > 3) && <p style={{ fontSize: 12, color: T.faint, margin: 0 }}>+ more on the Shifts page</p>}
-          </div>
-          </div>
-          <button onClick={() => router.push('/dashboard/shifts')} style={{ marginTop: 14, alignSelf: 'flex-start', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: T.font, fontSize: 12.5, fontWeight: 700, color: T.pink }}>Review shifts →</button>
-        </Card>
+    <div style={{ fontFamily: T.font, color: T.body, maxWidth: 1120, margin: '0 auto', padding: '40px 32px 64px' }}>
+      {/* header */}
+      <div style={{ marginBottom: 34 }}>
+        <h1 style={{ fontSize: 40, fontWeight: 700, color: T.ink, margin: 0, letterSpacing: '-0.035em', lineHeight: 1.02 }}>{greeting()}, {firstName}</h1>
+        <p style={{ fontSize: 17, color: T.muted, margin: '8px 0 0', letterSpacing: '-0.01em' }}>{DAYNAMES[new Date().getDay()]}{data.locName ? <> · <span style={{ color: T.body, fontWeight: 600 }}>{data.locName}</span></> : null}</p>
       </div>
 
-      {/* quick actions — above recent rotas */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 16 }}>
-        <ActionTile title="Edit shifts" sub="Shift patterns" onClick={() => router.push('/dashboard/shifts')} />
-        <ActionTile title="Manage staff" sub="Team & availability" onClick={() => router.push('/dashboard/staff')} />
-        <ActionTile title="Scheduling rules" sub="Constraints" onClick={() => router.push('/dashboard/rules')} />
-        <ActionTile title="Pending requests" sub={`${data.pending} to review`} accent={data.pending > 0} onClick={() => router.push('/dashboard/requests')} />
+      {/* hero row: merged coverage (2/3) + this week (1/3) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: 18, marginBottom: 18 }}>
+        <Card pad={28} style={{ display: 'flex', gap: 26, alignItems: 'center', minHeight: 220 }}>
+          <Ring value={readyVal} color={ringColor} size={142} stroke={14} label="readiness" />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: ringColor, letterSpacing: '0.03em', marginBottom: 5 }}>{readyLabel}</div>
+            <p style={{ fontSize: 14.5, color: T.muted, lineHeight: 1.5, margin: '0 0 18px', letterSpacing: '-0.01em' }}>{readyLine}</p>
+            <SubMeter label="Do shifts cover your hours?" pct={schedule.coveredPct} color={scheduleColor} onClick={() => router.push('/dashboard/shifts')} />
+            <div style={{ height: 14 }} />
+            <SubMeter label="Can we cover the shifts?" pct={coverage.readiness} color={capOk ? T.green : T.amber} onClick={() => router.push('/dashboard/staff')} />
+          </div>
+        </Card>
+
+        <ThisWeekPanel thisWeek={thisWeek} horizon={horizon} router={router} />
+      </div>
+
+      {/* capacity warning (frosted amber) */}
+      {hasWarn && (
+        <Card pad={18} style={{ marginBottom: 18, display: 'flex', gap: 13, alignItems: 'flex-start', background: T.amber + '14', border: `1px solid ${T.amber}33` }}>
+          <span style={{ width: 30, height: 30, borderRadius: 9, flexShrink: 0, background: T.amber + '22', color: T.amber, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon path={Ic.key} size={16} stroke={1.9} />
+          </span>
+          <div style={{ flex: 1 }}>
+            {coverage.bottlenecks.slice(0, 2).map((b, i) => (
+              <p key={i} style={{ fontSize: 13.5, color: T.body, margin: i ? '6px 0 0' : 0, lineHeight: 1.5, letterSpacing: '-0.01em' }}><b style={{ color: T.ink }}>{b.name}</b> ({b.team}) is the only cover every open day, they'd work {b.essential} days but can do {b.maxDays}. Spread availability or add staff.</p>
+            ))}
+            {(coverage.khGaps.noKeyholder || coverage.khGaps.openMissing.length > 0 || coverage.khGaps.closeMissing.length > 0) && (
+              <p style={{ fontSize: 13.5, color: T.body, margin: coverage.bottlenecks.length ? '6px 0 0' : 0, lineHeight: 1.5, letterSpacing: '-0.01em' }}>{coverage.khGaps.noKeyholder
+                ? 'No keyholders set, mark someone as a keyholder so the location can open and close.'
+                : `No keyholder available to ${coverage.khGaps.openMissing.length ? `open ${coverage.khGaps.openMissing.map((d) => DSHORT[d]).join(', ')}` : ''}${coverage.khGaps.openMissing.length && coverage.khGaps.closeMissing.length ? ' · ' : ''}${coverage.khGaps.closeMissing.length ? `close ${coverage.khGaps.closeMissing.map((d) => DSHORT[d]).join(', ')}` : ''} (one keyholder covers the whole location).`}</p>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {/* quick actions */}
+      <p style={{ fontSize: 12.5, fontWeight: 600, color: T.faint, letterSpacing: '0.02em', textTransform: 'uppercase', margin: '0 0 14px' }}>Quick actions</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 14, marginBottom: 32 }}>
+        <ActionTile title="Edit shifts" sub="Shift patterns" icon={Ic.shifts} onClick={() => router.push('/dashboard/shifts')} />
+        <ActionTile title="Manage staff" sub="Team & availability" icon={Ic.staff} onClick={() => router.push('/dashboard/staff')} />
+        <ActionTile title="Scheduling rules" sub="Constraints" icon={Ic.rules} onClick={() => router.push('/dashboard/rules')} />
+        <ActionTile title="Pending requests" sub={`${data.pending} to review`} icon={Ic.requests} accent={data.pending > 0} onClick={() => router.push('/dashboard/requests')} />
       </div>
 
       {/* recent rotas */}
-      <Card pad={0} style={{ marginBottom: 16, overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: `1px solid ${T.hair}` }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: T.faint, letterSpacing: 0.5, textTransform: 'uppercase' }}>Recent rotas</span>
-          <Button accent={T.pink} size="sm" arrow onClick={() => router.push('/dashboard/generate')}>New rota</Button>
+      <Card pad={0} style={{ overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 24px', borderBottom: `1px solid ${T.hair}` }}>
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: T.faint, letterSpacing: '0.02em', textTransform: 'uppercase' }}>Recent rotas</span>
+          <Button size="sm" arrow onClick={() => router.push('/dashboard/generate')}>New rota</Button>
         </div>
         {recentRotas.length === 0 ? (
           <div style={{ padding: '36px 20px', textAlign: 'center' }}>
-            <p style={{ fontSize: 14, fontWeight: 700, color: T.ink, margin: '0 0 4px' }}>No rotas yet</p>
-            <p style={{ fontSize: 13, color: T.muted, margin: '0 0 16px' }}>Build your first rota to get started.</p>
-            <Button accent={T.pink} arrow onClick={() => router.push('/dashboard/generate')}>Build a rota</Button>
+            <p style={{ fontSize: 15, fontWeight: 600, color: T.ink, margin: '0 0 4px' }}>No rotas yet</p>
+            <p style={{ fontSize: 13.5, color: T.muted, margin: '0 0 16px' }}>Build your first rota to get started.</p>
+            <Button arrow onClick={() => router.push('/dashboard/generate')}>Build a rota</Button>
           </div>
         ) : (
-          <div>
-            {recentRotas.map((r, i) => <RotaRow key={r.id} r={r} top={i > 0} onClick={() => router.push(`/dashboard/generate?rota=${r.id}`)} />)}
-          </div>
+          recentRotas.map((r, i) => <RotaRow key={r.id} r={r} top={i > 0} onClick={() => router.push(`/dashboard/generate?rota=${r.id}`)} />)
         )}
       </Card>
-
     </div>
   )
 }
 
-// recent-rota row with a subtle hover (consistent with the app's interactive surfaces)
-function RotaRow({ r, top, onClick }) {
+// ── sub-meter: one coverage answer as a clickable labelled progress bar ──
+function SubMeter({ label, pct, color, onClick }) {
+  const { T } = useTheme()
   const [h, setH] = useState(false)
-  return <button onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
-    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px', background: h ? T.surface : 'none', border: 'none', borderTop: top ? `1px solid ${T.hair}` : 'none', cursor: 'pointer', fontFamily: T.font, textAlign: 'left', transition: 'background .12s' }}>
-    <span style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: T.pink + '14', color: T.pink, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-    </span>
-    <div style={{ flex: 1, minWidth: 0 }}>
-      <p style={{ fontSize: 14, fontWeight: 700, color: T.ink, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name || `Week of ${prettyDate(r.week_start)}`}</p>
-      <p style={{ fontSize: 12.5, color: T.muted, margin: '2px 0 0' }}>w/c {prettyDate(r.week_start)}</p>
-    </div>
-    <Tag color={r.status === 'Published' ? T.green : T.amber}>{r.status}</Tag>
-  </button>
+  return (
+    <button onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+      style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: T.font }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6, gap: 10 }}>
+        <span style={{ fontSize: 13.5, fontWeight: 600, color: h ? T.pink : T.body, letterSpacing: '-0.01em', display: 'inline-flex', alignItems: 'center', gap: 4, transition: 'color .15s' }}>
+          {label}<Icon path={Ic.chevron} size={12} stroke={2.4} color={h ? T.pink : T.faint} style={{ transform: h ? 'translateX(2px)' : 'none', transition: 'transform .2s' }} />
+        </span>
+        <span style={{ fontSize: 13.5, fontWeight: 700, color }}>{Math.round(pct * 100)}%</span>
+      </div>
+      <div style={{ height: 8, borderRadius: 999, background: T.track, overflow: 'hidden' }}>
+        <div style={{ width: `${Math.round(pct * 100)}%`, height: '100%', background: color, borderRadius: 999, transition: `width .5s ${EASE}` }} />
+      </div>
+    </button>
+  )
 }
 
-function ActionTile({ title, sub, onClick, accent }) {
+function ThisWeekPanel({ thisWeek, horizon, router }) {
+  const { T } = useTheme()
+  const rota = thisWeek.rota
+  const published = rota?.status === 'Published'
+  return (
+    <Card pad={28} style={{ display: 'flex', flexDirection: 'column', minHeight: 260 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <span style={{ fontSize: 12.5, fontWeight: 600, color: T.faint, letterSpacing: '0.02em', textTransform: 'uppercase' }}>This week</span>
+        {rota ? <Pill color={published ? T.green : T.amber}>{rota.status}</Pill> : <Pill color={T.faint}>Not built</Pill>}
+      </div>
+      <div style={{ flex: 1 }}>
+        <p style={{ fontSize: 26, fontWeight: 700, color: T.ink, margin: '4px 0 6px', letterSpacing: '-0.03em', lineHeight: 1.05 }}>{rota ? (rota.name || `Week of ${prettyDate(thisWeek.wk)}`) : 'No rota yet'}</p>
+        <p style={{ fontSize: 15, color: T.muted, margin: 0, letterSpacing: '-0.01em' }}>{rota ? `w/c ${prettyDate(thisWeek.wk)}` : `Nothing scheduled for w/c ${prettyDate(thisWeek.wk)}`}</p>
+      </div>
+      {horizon && (
+        <div style={{ marginTop: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: T.body, letterSpacing: '-0.01em' }}>Living Hours · 4 weeks ahead</span>
+            <span style={{ fontSize: 13, color: T.muted }}>{horizon.published}/4</span>
+          </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} style={{ flex: 1, height: 8, borderRadius: 999, background: i < horizon.published ? T.green : T.track, transition: `background .5s ${EASE}` }} />
+            ))}
+          </div>
+        </div>
+      )}
+      <div style={{ marginTop: 20 }}>
+        {rota
+          ? <Button variant={published ? 'secondary' : 'primary'} arrow={!published} onClick={() => router.push(`/dashboard/generate?rota=${rota.id}`)}>{published ? 'View rota' : 'Open & finish'}</Button>
+          : <Button arrow onClick={() => router.push(`/dashboard/generate?start=${thisWeek.wk}`)}>Build this week's rota</Button>}
+      </div>
+    </Card>
+  )
+}
+
+function ActionTile({ title, sub, icon, onClick, accent }) {
+  const { T } = useTheme()
+  return (
+    <Card interactive pad={20} onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 15 }}>
+      <span style={{ width: 46, height: 46, borderRadius: 14, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: (accent ? T.pink : T.ink) + '12', color: accent ? T.pink : T.ink }}>
+        <Icon path={icon} size={21} />
+      </span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: 15, fontWeight: 600, color: accent ? T.pink : T.ink, margin: 0, letterSpacing: '-0.01em' }}>{title}</p>
+        <p style={{ fontSize: 13, color: T.muted, margin: '2px 0 0', letterSpacing: '-0.01em' }}>{sub}</p>
+      </div>
+    </Card>
+  )
+}
+
+function RotaRow({ r, top, onClick }) {
+  const { T } = useTheme()
   const [h, setH] = useState(false)
-  return <Card pad={18} onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
-    style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, border: `1px solid ${h ? T.pink : T.line}`, boxShadow: h ? T.shadow.lg : T.shadow.md, transform: h ? 'translateY(-2px)' : 'none', transition: 'transform .12s, box-shadow .15s, border-color .12s' }}>
-    <div>
-      <p style={{ fontSize: 14, fontWeight: 700, color: accent ? T.pink : T.ink, margin: 0 }}>{title}</p>
-      <p style={{ fontSize: 12, color: T.muted, margin: '3px 0 0' }}>{sub}</p>
-    </div>
-    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke={h ? T.pink : T.faint} style={{ transform: h ? 'translateX(2px)' : 'none', transition: 'transform .15s, stroke .12s' }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-  </Card>
+  return (
+    <button onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 15, padding: '15px 24px', background: h ? T.hover : 'transparent', border: 'none', borderTop: top ? `1px solid ${T.hair}` : 'none', cursor: 'pointer', fontFamily: T.font, textAlign: 'left', transition: `background .25s ${EASE}` }}>
+      <span style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0, background: T.pink + '16', color: T.pink, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Icon path={Ic.calendar} size={19} />
+      </span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: 14.5, fontWeight: 600, color: T.ink, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.01em' }}>{r.name || `Week of ${prettyDate(r.week_start)}`}</p>
+        <p style={{ fontSize: 13, color: T.muted, margin: '2px 0 0' }}>w/c {prettyDate(r.week_start)}</p>
+      </div>
+      <Pill color={r.status === 'Published' ? T.green : T.amber}>{r.status}</Pill>
+      <Icon path={Ic.chevron} size={17} stroke={2} color={T.faint} style={{ transform: h ? 'translateX(2px)' : 'none', transition: `transform .3s ${EASE}` }} />
+    </button>
+  )
 }
