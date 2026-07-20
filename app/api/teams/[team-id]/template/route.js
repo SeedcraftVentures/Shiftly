@@ -1,6 +1,8 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+// Service-role client: this is a server route and RLS is enabled on the app
+// tables, so the anon client would read nothing. Auth is enforced by auth() below.
+import { supabaseAdmin as supabase } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
