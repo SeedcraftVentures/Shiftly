@@ -32,6 +32,14 @@ yarn-error.log*
 
 .env.local
 .env
+# Catch every env variant and the loose copies that appear when moving secrets
+# between machines (env.download, .env.local.bak, env.txt). A real .env.local
+# transferred as "env.download" was untracked-but-not-ignored and one `git add .`
+# from being pushed, so match broadly rather than by exact filename.
+.env.*
+*.env
+env.*
+!.env.example
 
 # vercel
 .vercel
