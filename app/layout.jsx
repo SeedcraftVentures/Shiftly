@@ -7,15 +7,16 @@ const inter = Inter({
   variable: '--font-inter',
 })
 
-// Plus Jakarta Sans is retained for the in-app dashboard (out of scope for the
-// calling-card restyle). The marketing surfaces now use Figtree as the body font.
+// Plus Jakarta Sans is retained as a fallback for the in-app dashboard.
+// Body copy across the whole site now uses Cal Sans Text (set on <body> below)
+// to rhyme with the app's typography; Figtree is kept as a graceful fallback.
 const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
   variable: '--font-jakarta',
 })
 
-// Figtree: shared Seedcraft calling-card body font.
+// Figtree: shared Seedcraft calling-card body font, kept as the fallback face.
 const figtree = Figtree({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
@@ -42,8 +43,12 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <ClerkProvider signInUrl="/sign-in" waitlistUrl="/waitlist">
-      <html lang="en" className={`${inter.variable} ${jakarta.variable} ${figtree.variable}`}>
-        <body className="font-sans antialiased">
+      <html lang="en" className={`${inter.variable} ${jakarta.variable} ${figtree.variable}`} suppressHydrationWarning>
+        <head>
+          {/* Set the theme before first paint so there's no light-mode flash on load. */}
+          <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('shiftly_theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();` }} />
+        </head>
+        <body className="font-sans antialiased" style={{ fontFamily: "'Cal Sans Text', var(--font-figtree), system-ui, sans-serif" }}>
           {children}
         </body>
       </html>

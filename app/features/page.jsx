@@ -312,7 +312,7 @@ export default function FeaturesPage() {
   )
 
   return (
-    <div className="min-h-screen bg-white" style={{ fontFamily: 'var(--font-figtree), system-ui, sans-serif' }}>
+    <div className="min-h-screen bg-white" style={{ fontFamily: "'Cal Sans Text', var(--font-figtree), system-ui, sans-serif" }}>
       <Nav currentPage="features" />
 
       {/* ═══════════ HERO ═══════════ */}
