@@ -504,6 +504,19 @@ export default function RotaBuilder() {
           </div>
         </Card>}
 
+        {/* Shifts removed because the person had approved time off. These are left as
+            gaps on purpose rather than silently reassigned, so they can be covered. */}
+        {result.time_off_conflicts?.length > 0 && <Card pad={18} style={{ marginBottom: 14, background: T.amber + '12', border: `1px solid ${T.amber}33` }}>
+          <div style={{ fontSize: 11.5, fontWeight: 700, color: T.warnInk, letterSpacing: '0.03em', textTransform: 'uppercase', marginBottom: 8 }}>{result.time_off_conflicts.length} shift{result.time_off_conflicts.length > 1 ? 's' : ''} removed for approved time off</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {result.time_off_conflicts.map((c, i) => (
+              <div key={i} style={{ fontSize: 12.5, color: T.body }}>
+                <b style={{ color: T.ink }}>{c.staff_name}</b> was rostered {c.shift_name} on {c.day} {c.work_date} but is approved off. Needs cover.
+              </div>
+            ))}
+          </div>
+        </Card>}
+
         {/* grid + live-compliance inspector on the right */}
         <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 340 }}>

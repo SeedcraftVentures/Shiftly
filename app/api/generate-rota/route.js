@@ -24,6 +24,29 @@ function availabilityGrid(avail) {
   return grid
 }
 
+// Approved time off is date-ranged, but the scheduler only speaks day-of-week and
+// takes ONE availability grid per person for the whole run. So expand each approved
+// holiday/sick request into concrete dates, clamped to the generation window. That
+// set is used twice: to mark days unavailable before solving (exact for a single
+// week) and to strip anything that slips through afterwards (all runs).
+function expandTimeOff(requests, windowStart, windowEnd) {
+  const off = new Set()
+  for (const r of requests || []) {
+    if (!r.staff_id || !r.start_date) continue
+    const rawEnd = r.end_date || r.start_date
+    const start = r.start_date < windowStart ? windowStart : r.start_date
+    const end = rawEnd > windowEnd ? windowEnd : rawEnd
+    if (end < start) continue
+    const d = new Date(start + 'T00:00:00Z')
+    const last = new Date(end + 'T00:00:00Z')
+    while (d <= last) {
+      off.add(`${r.staff_id}__${d.toISOString().slice(0, 10)}`)
+      d.setUTCDate(d.getUTCDate() + 1)
+    }
+  }
+  return off
+}
+
 async function callScheduler(pythonUrl, payload) {
   const resp = await fetch(`${pythonUrl}/schedule`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
   if (!resp.ok) { const txt = await resp.text(); throw new Error(`Scheduler ${resp.status}: ${txt}`) }
@@ -94,12 +117,21 @@ export async function POST(request) {
 
     const scopeTeams = onlyTeamId ? teamIds.filter((t) => t === onlyTeamId) : teamIds
 
-    const [teamsRes, staffRes, shiftsRes, rulesRes, hoursRes] = await Promise.all([
+    // Generation window, used to clamp approved time off to the weeks being built.
+    const windowStart = weekStart
+    const windowEnd = dateFor(weekStart, weekCount, 'Sunday')
+
+    const [teamsRes, staffRes, shiftsRes, rulesRes, hoursRes, timeOffRes] = await Promise.all([
       supabaseAdmin.from('Teams').select('team_id, name').in('team_id', scopeTeams),
       supabaseAdmin.from('Staff').select('*').in('team_id', scopeTeams),
       supabaseAdmin.from('Shift Patterns').select('*').in('shift_team', scopeTeams),
       supabaseAdmin.from('Location Rules').select('location_id, solver_rules').in('location_id', locationIds),
       supabaseAdmin.from('Location Day Hours').select('day').in('location_id', locationIds),
+      // Approved time off overlapping the window. Overlap is finished in JS so a null
+      // end_date (single-day request) is handled without awkward SQL.
+      supabaseAdmin.from('Requests').select('staff_id, type, start_date, end_date')
+        .in('team_id', scopeTeams).eq('status', 'approved').in('type', ['holiday', 'sick'])
+        .lte('start_date', windowEnd),
     ])
     if (teamsRes.error) throw teamsRes.error
     if (staffRes.error) throw staffRes.error
@@ -110,6 +142,7 @@ export async function POST(request) {
     const teamName = Object.fromEntries((teamsRes.data || []).map((t) => [t.team_id, t.name]))
     const rules = (rulesRes.data || [])[0]?.solver_rules || {}
     const pythonUrl = process.env.PYTHON_SCHEDULER_URL || 'https://shiftly-scheduler-e470.onrender.com'
+    const offDates = expandTimeOff(timeOffRes.data, windowStart, windowEnd)
 
     const allAssignments = []
     const contractIssues = []
@@ -126,17 +159,31 @@ export async function POST(request) {
         continue
       }
 
-      // staff for the scheduler
-      const staff = teamStaff.map((s) => ({
-        id: s.staff_id,
-        name: s.name,
-        contracted_hours: s.contracted_hours || 0,
-        max_hours: s.max_hours || s.contracted_hours || 48,
-        keyholder: !!s.is_keyholder,
-        availability_grid: availabilityGrid(s.availability),
-        team_id: teamId,
-        team_name: teamName[teamId],
-      }))
+      // staff for the scheduler. For a single-week run we can map approved time off
+      // exactly onto that week's day names and mark them unavailable up front, so the
+      // solver never rosters someone who is off. Multi-week runs share one grid across
+      // every week, so pre-filtering there would wrongly block a day in weeks the person
+      // IS available; those are caught by the post-solve sweep instead.
+      const staff = teamStaff.map((s) => {
+        const grid = availabilityGrid(s.availability)
+        if (weekCount === 1) {
+          for (const dayName of DAY_FULL) {
+            if (offDates.has(`${s.staff_id}__${dateFor(weekStart, 1, dayName)}`)) {
+              grid[SHORT[DAY_INDEX[dayName]]] = 'unavailable'
+            }
+          }
+        }
+        return {
+          id: s.staff_id,
+          name: s.name,
+          contracted_hours: s.contracted_hours || 0,
+          max_hours: s.max_hours || s.contracted_hours || 48,
+          keyholder: !!s.is_keyholder,
+          availability_grid: grid,
+          team_id: teamId,
+          team_name: teamName[teamId],
+        }
+      })
 
       // expand each Shift Pattern into one shift per day it runs
       const shifts = []
@@ -213,6 +260,27 @@ export async function POST(request) {
           pushAssignments(result.assignments, wk)
         }
       }
+    }
+
+    // ── approved time off: strip anything the solver still landed on it ──────────
+    // Runs before compliance and contracted-hours below, so neither counts a shift
+    // that is about to be removed. Needed mainly for multi-week runs, where one
+    // shared availability grid cannot express "off in week 2 but not week 1".
+    // Removing rather than reassigning is deliberate: the shift becomes an honest
+    // gap the manager can see and cover, instead of a silent reshuffle.
+    const timeOffConflicts = []
+    if (offDates.size > 0) {
+      for (let i = allAssignments.length - 1; i >= 0; i--) {
+        const a = allAssignments[i]
+        if (!offDates.has(`${a.staff_id}__${a.work_date}`)) continue
+        timeOffConflicts.push({
+          staff_id: a.staff_id, staff_name: a.staff_name, team_name: a.team_name,
+          week: a.week, work_date: a.work_date, day: a.day,
+          shift_name: a.shift_name, start_time: a.start_time, end_time: a.end_time,
+        })
+        allAssignments.splice(i, 1)
+      }
+      timeOffConflicts.reverse()
     }
 
     // ── rule compliance (post-hoc), the rota built; flag anything not fully met ──
@@ -295,6 +363,7 @@ export async function POST(request) {
       weekCount,
       assignments: allAssignments,
       contract_issues: contractIssues,
+      time_off_conflicts: timeOffConflicts,
       rule_compliance: compliance,
       skipped,
       relaxed_teams: [...relaxedTeams],
