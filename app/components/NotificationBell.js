@@ -2,12 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useUser } from '@clerk/nextjs'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-)
 
 const NOTIFICATION_ICONS = {
   rota_published: '📅',
@@ -61,30 +55,23 @@ export default function NotificationBell({ variant = 'desktop' }) {
     if (user) fetchNotifications()
   }, [user, fetchNotifications])
 
+  // Poll rather than subscribe. RLS blocks the anon key on "Notifications", so a
+  // realtime subscription authenticated with it receives nothing at all, silently.
+  // /api/notifications runs server-side with the service-role client and scopes by
+  // Clerk id, so polling it is both correct and keeps the anon key out of the browser.
+  // Also refetch on focus, which catches everything that happened while the tab was away.
   useEffect(() => {
     if (!user) return
 
-    const channel = supabase
-      .channel('notifications-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'Notifications',
-          filter: `recipient_user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          setNotifications((prev) => [payload.new, ...prev])
-          setUnreadCount((prev) => prev + 1)
-        }
-      )
-      .subscribe()
+    const id = setInterval(fetchNotifications, 60000)
+    const onFocus = () => fetchNotifications()
+    window.addEventListener('focus', onFocus)
 
     return () => {
-      supabase.removeChannel(channel)
+      clearInterval(id)
+      window.removeEventListener('focus', onFocus)
     }
-  }, [user])
+  }, [user, fetchNotifications])
 
   useEffect(() => {
     const handleClick = (e) => {

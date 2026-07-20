@@ -50,12 +50,16 @@ commit;
 --                         'recipient_staff_id','sender_staff_id')
 --   order by table_name, column_name;
 --
--- ── STEP 4: Enable Realtime for the notification bell (run once). ────────────
--- The NotificationBell subscribes to INSERTs on "Notifications". Supabase only
--- streams tables that are in the supabase_realtime publication. Without this the
--- bell still works via fetch, but new notifications won't appear live.
+-- ── STEP 4: SUPERSEDED, do not run. ─────────────────────────────────────────
+-- This step previously said to add "Notifications" to the supabase_realtime
+-- publication so the NotificationBell could stream inserts. That is no longer
+-- correct: RLS is now enabled, and the bell subscribed using the ANON key, which
+-- RLS blocks on "Notifications" — so the subscription received nothing at all,
+-- silently. Making it work would need a policy permissive enough to reopen the
+-- very hole RLS closed.
 --
---   alter publication supabase_realtime add table "Notifications";
+-- The bell now polls /api/notifications instead (server-side, service-role,
+-- scoped by Clerk id). No realtime publication change is needed.
 --
--- (If it errors with "already member of publication", it's already enabled.)
+--   -- alter publication supabase_realtime add table "Notifications";  -- DO NOT RUN
 -- ============================================================================
