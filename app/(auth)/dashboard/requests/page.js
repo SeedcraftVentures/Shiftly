@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useTheme, Card, Button, Segmented, Select, Icon, Ic, Avatar, Tag } from '@/app/components/ui/kit'
 
-// ── Inbox — manager view over Requests + Announcements + Escalations ──────────
+// ── Inbox, manager view over Requests + Announcements + Escalations ──────────
 // Backed by /api/requests, /api/notifications/announce, /api/notifications/escalations.
 // Requests are org-scoped server-side to the active location's teams.
 
@@ -187,7 +187,7 @@ function AnnouncementsTab({ T }) {
       const res = await fetch('/api/notifications?type=announcement&sent=true&limit=100')
       const data = await res.json()
       const rows = data?.notifications || []
-      // Announcements fan out to many recipients — dedupe by message + minute.
+      // Announcements fan out to many recipients, dedupe by message + minute.
       const seen = new Set(), unique = []
       for (const n of rows) {
         const key = `${n.message}|${(n.created_at || '').slice(0, 16)}`

@@ -181,7 +181,7 @@ export default function TryMe() {
       const res = await fetch('/api/try-me/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ business: cfg.business, shifts, staff }) })
       const data = await res.json()
       if (!res.ok || data.error) { setError(data.error || 'Could not build a rota.') }
-      else { await new Promise((r) => setTimeout(r, 1100)); setResult(data); setStep(3); setTourIdx(0) } // hold the build a beat longer — feels less instant
+      else { await new Promise((r) => setTimeout(r, 1100)); setResult(data); setStep(3); setTourIdx(0) } // hold the build a beat longer, feels less instant
     } catch { setError('Network error, try again.') } finally { setGenerating(false) }
   }
 
@@ -275,7 +275,7 @@ export default function TryMe() {
         {result ? <Result result={result} staff={staff} team={est.team} /> : <BuildingPanel />}
       </div>}
 
-      {/* footer nav — the persistent Back / Next the coachmark points at */}
+      {/* footer nav, the persistent Back / Next the coachmark points at */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, margin: '20px 0 8px' }}>
         <button onClick={tourBack} disabled={step === 0 && tourIdx === 0} style={{ ...ghostBtn, opacity: step === 0 && tourIdx === 0 ? 0.45 : 1 }}>‹ Back</button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -320,7 +320,7 @@ function Coachmark({ tStep, depKey, onPrimary, onBack, canBack, primaryLabel, di
   else bubble = { top: rect.bottom + 22, left: clamp(rect.left, 12, vw - W - 12) }
 
   return <div style={{ position: 'fixed', inset: 0, zIndex: 70, pointerEvents: 'none' }}>
-    {/* dim everything but the target — skipped on the final "move on" step so the
+    {/* dim everything but the target, skipped on the final "move on" step so the
         whole page is visible and tooltips are easy to read */}
     {dim && <div style={{ position: 'absolute', ...box, borderRadius: 12, boxShadow: '0 0 0 9999px rgba(17,24,39,.5)', transition: 'all .25s' }} />}
     {/* pulsing pink ring on the target */}
@@ -386,7 +386,7 @@ function ErrorPanel({ error, onRetry }) {
   return <div style={{ ...panel, padding: '16px 18px', background: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C', fontSize: 13.5 }}>{error} <button onClick={onRetry} style={{ marginLeft: 8, fontFamily: 'inherit', fontWeight: 700, color: '#B91C1C', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Try again</button></div>
 }
 
-// ── result grid — matches the app's rota grid (RefinedRotaGrid) ───────────────
+// ── result grid, matches the app's rota grid (RefinedRotaGrid) ───────────────
 const RTH = { fontSize: 11, fontWeight: 700, color: '#86868B', padding: '6px 6px 10px', textAlign: 'center' }
 const RTH_STAFF = { ...RTH, textAlign: 'left', position: 'sticky', left: 0, background: '#fff', minWidth: 150 }
 const RTD = { padding: '4px 4px', verticalAlign: 'top' }
@@ -448,7 +448,7 @@ function Confetti() {
     {pieces.map((p, i) => <span key={i} style={{ position: 'absolute', top: -24, left: `${p.left}%`, width: p.w, height: p.w * 0.55, background: p.c, borderRadius: 2, transform: `rotate(${p.rot}deg)`, animation: `tmFall ${p.dur}s linear ${p.delay}s infinite` }} />)}
   </div>
 }
-// a single quick burst (plays once) — fired behind the cards when the rota lands
+// a single quick burst (plays once), fired behind the cards when the rota lands
 function ConfettiBurst() {
   const cols = [PINK, '#6366F1', '#14B8A6', '#F59E0B', '#FFA8C7', '#C20D5C']
   const pieces = Array.from({ length: 96 }, (_, i) => ({ left: (i * 31) % 100, delay: (i % 8) * 0.05, dur: 2.3 + (i % 6) * 0.22, c: cols[i % cols.length], w: 6 + (i % 6), rot: (i * 53) % 360 }))

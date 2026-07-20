@@ -216,16 +216,16 @@ export default function Navigation({ collapsed = false, onToggleCollapse }) {
       {/* ── Desktop sidebar (collapsible + hover-to-peek) ── */}
       <nav onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
         className={`hidden lg:flex fixed left-0 top-0 bottom-0 bg-[#FF1F7D] flex-col z-50 rounded-r-[2rem] transition-[width] duration-200 ${mini ? 'w-[4.75rem]' : 'w-52'} ${collapsed && hovered ? 'shadow-2xl' : ''}`}>
-        {/* workspace / location switcher — sits at the very top of the rail. The logo
+        {/* workspace / location switcher, sits at the very top of the rail. The logo
             was decorative (users know they're in Shiftly), so it's gone to free space. */}
         <div className={`pt-5 pb-4 ${mini ? 'px-2.5' : 'px-3'}`}><Switcher /></div>
 
-        {/* main nav — scrollbar hidden (still scrolls by wheel/trackpad if ever needed) */}
+        {/* main nav, scrollbar hidden (still scrolls by wheel/trackpad if ever needed) */}
         <div className={`flex-1 overflow-y-auto overflow-x-hidden py-1 space-y-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden ${mini ? 'px-2.5' : 'px-3'}`}>
           {MAIN_ITEMS.map((item) => <div key={item.path}><NavLink item={item} />{item.dividerAfter && <div className={`my-3.5 border-t border-white/30 ${mini ? 'mx-2' : 'mx-4'}`} />}</div>)}
         </div>
 
-        {/* pinned bottom: settings, help, collapse toggle, account — lifted off the
+        {/* pinned bottom: settings, help, collapse toggle, account, lifted off the
             very bottom edge so 'Your account' reads as part of the nav, not an afterthought */}
         <div className={`pt-3 pb-6 border-t border-white/15 space-y-1 ${mini ? 'px-2.5' : 'px-3'}`}>
           {BOTTOM_ITEMS.map((item) => <NavLink key={item.path} item={item} />)}

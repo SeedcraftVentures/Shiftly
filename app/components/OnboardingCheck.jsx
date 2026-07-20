@@ -72,17 +72,17 @@ export default function OnboardingCheck({ children }) {
             return
           }
 
-          // All checks passed — show dashboard
+          // All checks passed, show dashboard
           setShouldShow(true)
         } else {
-          // API error — fail closed, send to onboarding
+          // API error, fail closed, send to onboarding
           // Better to re-onboard than to show a broken dashboard
           console.error('Teams API returned non-OK:', response.status)
           router.replace('/onboarding')
           return
         }
       } catch (error) {
-        // Network error — fail closed, send to onboarding
+        // Network error, fail closed, send to onboarding
         console.error('Error checking access:', error)
         router.replace('/onboarding')
         return

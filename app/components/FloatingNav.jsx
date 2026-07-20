@@ -35,7 +35,7 @@ const featureGroups = [
 const GLASS = 'bg-white/70 backdrop-blur-md border border-white/50 shadow-[0_8px_30px_rgba(0,0,0,0.08)]'
 
 /**
- * FloatingNav — Seedcraft calling-card floating two-part nav.
+ * FloatingNav. Seedcraft calling-card floating two-part nav.
  * Glass logo pill (left) + glass nav pill (middle) + solid pink CTA (right),
  * fixed and centred over the page content. Preserves the prior Nav behaviour:
  * features mega-menu, click-outside close, mobile overlay menu, and the
@@ -151,7 +151,7 @@ export default function FloatingNav({ currentPage = null }) {
             </svg>
           </button>
 
-          {/* CTA — same glass pill as the others, set apart with a pink outline
+          {/* CTA, same glass pill as the others, set apart with a pink outline
               so it reads as the action without going dark/heavy. Works on both
               the pink hero and the light sections you scroll past. */}
           <Link

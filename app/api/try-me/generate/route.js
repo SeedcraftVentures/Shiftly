@@ -14,14 +14,14 @@ const hhmm = (h) => {
   const hr = Math.floor(h), m = Math.round((h - hr) * 60)
   return `${String(hr).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
-// scheduler only uses day-level availability — a day is available if avail[d] is truthy
+// scheduler only uses day-level availability, a day is available if avail[d] is truthy
 function availabilityGrid(avail) {
   const grid = {}
   for (let d = 0; d < 7; d++) grid[SHORT[d]] = avail && avail[d] ? 'available' : 'unavailable'
   return grid
 }
 
-// post-hoc fairness/compliance check on the built rota — this is the product's whole point
+// post-hoc fairness/compliance check on the built rota, this is the product's whole point
 function computeCompliance(assignments, staffList) {
   if (!assignments.length) return []
   const DI = { Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4, Saturday: 5, Sunday: 6 }
@@ -71,7 +71,7 @@ function computeCompliance(assignments, staffList) {
   ]
 }
 
-// Best-effort IP rate limit (per serverless instance — a light guard, not bulletproof).
+// Best-effort IP rate limit (per serverless instance, a light guard, not bulletproof).
 const HITS = new Map() // ip -> [timestamps]
 const WINDOW_MS = 60_000, MAX_PER_WINDOW = 12
 function rateLimited(ip, now) {
@@ -96,7 +96,7 @@ export async function POST(request) {
     const inShifts = Array.isArray(body.shifts) ? body.shifts : []
     const inStaff = Array.isArray(body.staff) ? body.staff : []
 
-    // demo caps — keep the public scheduler call small
+    // demo caps, keep the public scheduler call small
     if (inShifts.length === 0 || inStaff.length === 0) return NextResponse.json({ error: 'Add at least one shift and one team member first.' }, { status: 400 })
     if (inShifts.length > 40) return NextResponse.json({ error: 'This free tool handles up to 40 shift patterns.' }, { status: 400 })
     if (inStaff.length > 30) return NextResponse.json({ error: 'This free tool handles up to 30 team members.' }, { status: 400 })

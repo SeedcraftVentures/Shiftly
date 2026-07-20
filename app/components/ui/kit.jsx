@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, createContext, useContext, useMemo, useCallback } from 'react'
 
 // ════════════════════════════════════════════════════════════════════════════
-//  SHIFTLY UI KIT — the single source of truth for shared components + tokens.
+//  SHIFTLY UI KIT, the single source of truth for shared components + tokens.
 //  Import these everywhere instead of re-styling. Iterate here, it updates app-wide.
 //
 //  THEMING: `T` is now theme-aware. Components self-theme via useTheme() internally,
@@ -12,7 +12,7 @@ import { useState, useRef, useEffect, createContext, useContext, useMemo, useCal
 //  preserved because tokens stay real hex/rgba strings, resolved per theme.
 // ════════════════════════════════════════════════════════════════════════════
 
-// ── scale tokens (shared across themes — type, spacing, shape) ─────────────────
+// ── scale tokens (shared across themes, type, spacing, shape) ─────────────────
 const SCALE = {
   font: "'Cal Sans Text', 'Plus Jakarta Sans', sans-serif",
   fontHead: "'Cal Sans Text', 'Plus Jakarta Sans', sans-serif",
@@ -132,8 +132,8 @@ export function PageHeader({ title, subtitle, actions, style }) {
   )
 }
 
-// ── Card — frosted glass surface (translucent + backdrop blur), soft rounded. ──
-// `solid` uses an opaque surface (no blur) — use it for cards holding tables with
+// ── Card, frosted glass surface (translucent + backdrop blur), soft rounded. ──
+// `solid` uses an opaque surface (no blur), use it for cards holding tables with
 // a sticky/frozen column, so the frozen column blends seamlessly with the card.
 export function Card({ children, pad = 20, raised, interactive, solid, radius = 22, style, ...props }) {
   const { T } = useTheme()
@@ -158,14 +158,14 @@ export function Input({ prefix, accent, style, ...props }) {
   accent = accent || T.pink
   const [f, setF] = useState(false)
   const [h, setH] = useState(false)
-  const lit = f || h // pink outline whenever interactive (hover or focus) — the app-wide convention
+  const lit = f || h // pink outline whenever interactive (hover or focus), the app-wide convention
   return <div style={{ position: 'relative' }} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}>
     {prefix && <span style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', fontSize: 14, fontWeight: 700, color: lit ? accent : T.faint, pointerEvents: 'none', transition: 'color .12s' }}>{prefix}</span>}
     <input {...props} onFocus={(e) => { setF(true); props.onFocus?.(e) }} onBlur={(e) => { setF(false); props.onBlur?.(e) }}
       style={{ width: '100%', boxSizing: 'border-box', minHeight: 44, fontFamily: T.font, fontSize: 14, fontWeight: 600, color: T.ink, background: T.card, padding: prefix ? '12px 13px 12px 25px' : '12px 13px', borderRadius: T.r.sm, border: `1px solid ${lit ? accent : T.border}`, outline: 'none', boxShadow: f ? T.ring(accent) : 'none', transition: 'border-color .12s, box-shadow .12s', ...style }} />
   </div>
 }
-// ── Select — native select with the same pink hover/focus convention + chevron ──
+// ── Select, native select with the same pink hover/focus convention + chevron ──
 export function Select({ value, onChange, children, accent, style, ...props }) {
   const { T } = useTheme()
   accent = accent || T.pink
@@ -351,7 +351,7 @@ export function ProgressBar({ value, height = 4, color, radius = 0 }) {
   </div>
 }
 
-// ── Ring — activity-style donut with a centred percentage. Animates on mount. ──
+// ── Ring, activity-style donut with a centred percentage. Animates on mount. ──
 export function Ring({ value, color, size = 128, stroke = 13, label, track }) {
   const { T } = useTheme()
   color = color || T.pink
@@ -371,7 +371,7 @@ export function Ring({ value, color, size = 128, stroke = 13, label, track }) {
   </div>
 }
 
-// ── Pill — status chip with a leading dot (softer sibling of Tag). ──
+// ── Pill, status chip with a leading dot (softer sibling of Tag). ──
 export function Pill({ color, children }) {
   const { T } = useTheme()
   color = color || T.faint
@@ -380,7 +380,7 @@ export function Pill({ color, children }) {
   </span>
 }
 
-// ── Icons — SF-symbol-ish line paths + a tiny renderer. ──
+// ── Icons, SF-symbol-ish line paths + a tiny renderer. ──
 export const Ic = {
   shifts: 'M8 7V3m8 4V3M4 11h16M6 21h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z',
   staff: 'M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-2.13a4 4 0 10-4 0m8 0a4 4 0 10-2-3.46',

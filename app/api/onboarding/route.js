@@ -35,7 +35,7 @@ export async function POST(request) {
       )
     if (orgErr) throw orgErr
 
-    // 2. If the org already has a location, this is a re-onboard — update org only, don't duplicate.
+    // 2. If the org already has a location, this is a re-onboard, update org only, don't duplicate.
     const { data: existingLocs, error: existErr } = await supabaseAdmin
       .from('Locations')
       .select('location_id')
@@ -46,7 +46,7 @@ export async function POST(request) {
       return NextResponse.json({ success: true, locationId: existingLocs[0].location_id, reonboarded: true })
     }
 
-    // 3. First Location for this org — the billable unit.
+    // 3. First Location for this org, the billable unit.
     const { data: location, error: locErr } = await supabaseAdmin
       .from('Locations')
       .insert({
@@ -60,7 +60,7 @@ export async function POST(request) {
     if (locErr) throw locErr
     const locationId = location.location_id
 
-    // 4. Location Day Hours — one row per OPEN day.
+    // 4. Location Day Hours, one row per OPEN day.
     const dayRows = []
     for (const [day, h] of Object.entries(operating_hours || {})) {
       if (!h?.open) continue
@@ -78,13 +78,13 @@ export async function POST(request) {
       if (dayErr) throw dayErr
     }
 
-    // 5. Location Rules — defaults (all columns have DB defaults; just create the row).
+    // 5. Location Rules, defaults (all columns have DB defaults; just create the row).
     const { error: rulesErr } = await supabaseAdmin
       .from('Location Rules')
       .insert({ location_id: locationId })
     if (rulesErr) throw rulesErr
 
-    // 6. Teams under the location (team colour is client-only — no column in new schema).
+    // 6. Teams under the location (team colour is client-only, no column in new schema).
     const teamRows = teams.map((t) => ({ name: t.label, location_id: locationId }))
     const { error: teamErr } = await supabaseAdmin.from('Teams').insert(teamRows)
     if (teamErr) throw teamErr

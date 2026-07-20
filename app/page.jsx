@@ -64,7 +64,7 @@ const faqs = [
   },
   {
     q: 'Can I run multiple teams or locations?',
-    a: 'Yes. Each location has its own teams — kitchen, bar, front of house — each with its own staff, shifts and rules. Switch between locations from the nav, and reports roll up across all your teams.'
+    a: 'Yes. Each location has its own teams (kitchen, bar, front of house), each with its own staff, shifts and rules. Switch between locations from the nav, and reports roll up across all your teams.'
   }
 ]
 
@@ -116,7 +116,7 @@ export default function LandingPage() {
             </p>
           </RevealSection>
 
-          {/* Stat strip — relocated from the standalone metrics bar, on the gradient */}
+          {/* Stat strip, relocated from the standalone metrics bar, on the gradient */}
           <RevealSection delay={0.95}>
             <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-8 max-w-3xl mx-auto text-white/90">
               {[
@@ -134,7 +134,7 @@ export default function LandingPage() {
           </RevealSection>
         </div>
 
-        {/* hero shot renders instantly (no scroll-reveal) — it's above the fold and
+        {/* hero shot renders instantly (no scroll-reveal). It is above the fold and
             the LCP element, so it should paint immediately, not fade in after ~1s */}
         <div className="max-w-6xl mx-auto mt-16">
           <div className="rounded-t-2xl shadow-2xl overflow-hidden border border-white/20 border-b-0 bg-gray-100">

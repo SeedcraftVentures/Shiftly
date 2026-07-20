@@ -460,7 +460,7 @@ export default function FeaturesPage() {
                   </div>
                 </RevealSection>
                 <RevealSection delay={0.15}>
-                  <ScreenshotPanel src="/screenshots/workspace.png" alt="The Staff page — team, contracts and availability" />
+                  <ScreenshotPanel src="/screenshots/workspace.png" alt="The Staff page: team, contracts and availability" />
                 </RevealSection>
               </section>
 
@@ -520,7 +520,7 @@ export default function FeaturesPage() {
                     <Eyebrow icon={chart}>Costs &amp; Hours</Eyebrow>
                     <h3 className="font-cal text-3xl lg:text-4xl text-gray-900 mb-4 tracking-tight">Reports</h3>
                     <p className="text-lg text-gray-500 leading-relaxed mb-6">
-                      Total hours and labour cost, computed straight from your rota. Know what the week costs before it starts — and what the month ahead will cost — not when payroll lands.
+                      Total hours and labour cost, computed straight from your rota. Know what the week costs before it starts, and what the month ahead will cost, not when payroll lands.
                     </p>
                     <div className="space-y-3">
                       <Bullet>Weekly labour cost broken down by team and person</Bullet>
@@ -531,25 +531,25 @@ export default function FeaturesPage() {
                   </div>
                 </RevealSection>
                 <RevealSection delay={0.15}>
-                  <ScreenshotPanel src="/screenshots/reports.png" alt="Reports — labour cost by week" />
+                  <ScreenshotPanel src="/screenshots/reports.png" alt="Reports: labour cost by week" />
                 </RevealSection>
               </section>
 
               {/* Payroll */}
               <section id="payroll" className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center mb-24 scroll-mt-24">
                 <RevealSection className="order-2 lg:order-1">
-                  <ScreenshotPanel src="/screenshots/payroll.png" alt="Payroll — pay per staff member" />
+                  <ScreenshotPanel src="/screenshots/payroll.png" alt="Payroll: pay per staff member" />
                 </RevealSection>
                 <RevealSection delay={0.15} className="order-1 lg:order-2">
                   <div>
                     <Eyebrow icon={pound}>Pay, worked out for you</Eyebrow>
                     <h3 className="font-cal text-3xl lg:text-4xl text-gray-900 mb-4 tracking-tight">Payroll</h3>
                     <p className="text-lg text-gray-500 leading-relaxed mb-6">
-                      Every shift becomes pay automatically. Hourly, salaried, or annualised — Shiftly works out what each person is owed straight from the published rota.
+                      Every shift becomes pay automatically. Hourly, salaried, or annualised. Shiftly works out what each person is owed straight from the published rota.
                     </p>
                     <div className="space-y-3">
                       <Bullet>Hourly, salary, and annualised pay per person</Bullet>
-                      <Bullet>Calculated from the rota — no manual tallying</Bullet>
+                      <Bullet>Calculated from the rota, with no manual tallying</Bullet>
                       <Bullet>Projected cost for the month ahead, not just last week</Bullet>
                       <Bullet>Password-protected, with one-click CSV for your accountant</Bullet>
                     </div>
@@ -575,7 +575,7 @@ export default function FeaturesPage() {
                   </div>
                 </RevealSection>
                 <RevealSection delay={0.15}>
-                  <ScreenshotPanel src="/screenshots/inbox.png" alt="Team inbox — swap and time-off requests" />
+                  <ScreenshotPanel src="/screenshots/inbox.png" alt="Team inbox: swap and time-off requests" />
                 </RevealSection>
               </section>
 

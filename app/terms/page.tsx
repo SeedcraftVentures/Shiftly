@@ -89,7 +89,7 @@ export default function TermsPage() {
           <Section number="02" title="What Shiftly is">
             <p>
               Shiftly is a staff scheduling tool for hospitality and retail businesses in the UK. It generates fair,
-              balanced rotas using a deterministic constraint satisfaction solver — the same kind of maths used for airline crew scheduling.
+              balanced rotas using a deterministic constraint satisfaction solver, the same kind of maths used for airline crew scheduling.
               You configure your staff, shifts, and fairness rules, and Shiftly does the assembly.
             </p>
             <p>

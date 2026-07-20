@@ -1,4 +1,4 @@
-// Shared colour palette — colours are assigned BY SHIFT LENGTH, not by position.
+// Shared colour palette, colours are assigned BY SHIFT LENGTH, not by position.
 // A 4h shift is ALWAYS the same colour everywhere in the app.
 export const PALETTE = [
   { bg: '#FDF2F8', border: '#EC4899', text: '#BE185D', fill: '#EC4899' },  // Pink
@@ -9,12 +9,12 @@ export const PALETTE = [
   { bg: '#FEF2F2', border: '#EF4444', text: '#B91C1C', fill: '#EF4444' },  // Red
 ]
 
-// Get a colour by raw index (loops around) — use for rota grid per-person colouring
+// Get a colour by raw index (loops around), use for rota grid per-person colouring
 export function getBlockColor(index) {
   return PALETTE[index % PALETTE.length]
 }
 
-// Get colour for a specific shift length — consistent everywhere in the app.
+// Get colour for a specific shift length, consistent everywhere in the app.
 // Pass the full shiftLengths array so the index is stable based on sorted position.
 // e.g. if shiftLengths = [4, 8, 10] then 4h = Pink, 8h = Purple, 10h = Teal
 export function getColorForLength(length, shiftLengths) {

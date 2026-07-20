@@ -7,7 +7,7 @@ import { supabaseAdmin } from '@/lib/db'
 // the "sent" (announcement history) view.
 export const dynamic = 'force-dynamic'
 
-// GET — list notifications + unread count
+// GET, list notifications + unread count
 export async function GET(request) {
   try {
     const { userId } = await auth()
@@ -41,7 +41,7 @@ export async function GET(request) {
   }
 }
 
-// PUT — mark notifications read (all, or a specific set), scoped to the recipient
+// PUT, mark notifications read (all, or a specific set), scoped to the recipient
 export async function PUT(request) {
   try {
     const { userId } = await auth()

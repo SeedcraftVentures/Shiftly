@@ -22,7 +22,7 @@ async function attachStaff(requests) {
   return requests.map((r) => ({ ...r, staff: map[r.staff_id] || null, swap_staff: map[r.swap_with_staff_id] || null }))
 }
 
-// GET — list requests across the manager's active-location teams
+// GET, list requests across the manager's active-location teams
 export async function GET(request) {
   try {
     const { userId } = await auth()
@@ -51,7 +51,7 @@ export async function GET(request) {
   }
 }
 
-// POST — log a request (manager on behalf of staff, or staff via employee route)
+// POST, log a request (manager on behalf of staff, or staff via employee route)
 export async function POST(request) {
   try {
     const { userId } = await auth()
@@ -147,7 +147,7 @@ export async function POST(request) {
   }
 }
 
-// PUT — approve/reject a request, then notify the requesting employee
+// PUT, approve/reject a request, then notify the requesting employee
 export async function PUT(request) {
   try {
     const { userId } = await auth()
@@ -164,7 +164,7 @@ export async function PUT(request) {
     const { teamIds } = await getOrgScope(userId)
     if (!teamIds.length) return NextResponse.json({ error: 'No teams in scope' }, { status: 403 })
 
-    // Load first — confirms the request is in the caller's org and gives us fields to notify on.
+    // Load first, confirms the request is in the caller's org and gives us fields to notify on.
     const { data: existing } = await supabaseAdmin.from('Requests').select('*').eq('id', id).single()
     if (!existing || !teamIds.includes(existing.team_id)) {
       return NextResponse.json({ error: 'Request not found' }, { status: 404 })
@@ -213,7 +213,7 @@ export async function PUT(request) {
   }
 }
 
-// DELETE — remove a request (scoped to the manager's org)
+// DELETE, remove a request (scoped to the manager's org)
 export async function DELETE(request) {
   try {
     const { userId } = await auth()

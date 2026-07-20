@@ -18,7 +18,7 @@ export async function POST(request) {
     try {
       await client.waitlistEntries.create({ emailAddress: email })
     } catch (e) {
-      // Clerk throws if the email is already on the waitlist — treat that as success (idempotent).
+      // Clerk throws if the email is already on the waitlist, treat that as success (idempotent).
       const already = JSON.stringify(e?.errors || e?.message || '').toLowerCase().includes('already')
       if (!already) throw e
     }

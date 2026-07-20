@@ -122,7 +122,7 @@ export default function PrivacyPage() {
               <DataCard
                 tag="Account"
                 title="Account holder information"
-                desc="Your email, name, and a password (handled by our auth provider, hashed — we never see the plaintext). If you sign in with a third party, we receive only the basic profile fields they send us."
+                desc="Your email, name, and a password (handled by our auth provider, hashed, so we never see the plaintext). If you sign in with a third party, we receive only the basic profile fields they send us."
               />
               <DataCard
                 tag="Business"
@@ -178,7 +178,7 @@ export default function PrivacyPage() {
               </p>
               <p className="text-2xl font-cal mb-3">No AI. No training. No exceptions.</p>
               <p className="text-gray-300 leading-relaxed">
-                Shiftly's scheduling engine is a deterministic constraint satisfaction solver — the same kind of maths
+                Shiftly's scheduling engine is a deterministic constraint satisfaction solver, the same kind of maths
                 used for airline crew scheduling. It is not AI, and it never will be. We do not use your data to train, fine-tune,
                 or improve any AI or machine learning model, ours or anyone else's. We do not sell, license, or transfer your
                 data to AI companies or data brokers.
@@ -187,7 +187,7 @@ export default function PrivacyPage() {
             <div className="grid sm:grid-cols-2 gap-3 mt-4">
               <CommitmentCard
                 title="No AI training"
-                desc="Your staff data, schedules, and business information will never be used to train any AI model — ours or anyone else's."
+                desc="Your staff data, schedules, and business information will never be used to train any AI model, ours or anyone else's."
               />
               <CommitmentCard
                 title="No selling to vendors"
@@ -208,11 +208,11 @@ export default function PrivacyPage() {
           <Section number="05" title="Our legal bases for processing">
             <p>Under the UK GDPR and EU GDPR, we rely on the following lawful bases:</p>
             <ul className="space-y-2 my-4 list-none">
-              <BulletItem><strong className="text-gray-900">Contract.</strong> Running your account, generating rotas, processing payments — necessary to deliver the service you signed up for.</BulletItem>
+              <BulletItem><strong className="text-gray-900">Contract.</strong> Running your account, generating rotas, processing payments, all necessary to deliver the service you signed up for.</BulletItem>
               <BulletItem><strong className="text-gray-900">Legitimate interests.</strong> Basic logging, security monitoring, and fraud prevention. We've weighed this against your privacy and kept collection minimal.</BulletItem>
               <BulletItem><strong className="text-gray-900">Consent.</strong> Where we ask for something optional, we only act on it if you say yes. You can withdraw consent at any time.</BulletItem>
               <BulletItem><strong className="text-gray-900">Legal obligation.</strong> When we have to respond to a lawful request from a court or regulator, or to keep records as the law requires.</BulletItem>
-              <BulletItem><strong className="text-gray-900">Processor instructions.</strong> For staff data, we process under the documented instructions of the business that signed up — not our own decisions.</BulletItem>
+              <BulletItem><strong className="text-gray-900">Processor instructions.</strong> For staff data, we process under the documented instructions of the business that signed up, not our own decisions.</BulletItem>
             </ul>
           </Section>
 
@@ -372,7 +372,7 @@ export default function PrivacyPage() {
             </p>
             <h3 className="text-2xl font-cal text-gray-900 mb-3">Questions?</h3>
             <p className="text-gray-600 mb-5 max-w-md mx-auto">
-              Write to us. Emails don't go into a black hole — a real person on the team reads every one.
+              Write to us. Emails don't go into a black hole. A real person on the team reads every one.
             </p>
             <a
               href="mailto:shiftly@seedcraft.co"

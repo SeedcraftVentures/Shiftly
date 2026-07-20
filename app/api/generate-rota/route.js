@@ -159,7 +159,7 @@ export async function POST(request) {
       if (shifts.length === 0) { skipped.push({ teamId, teamName: teamName[teamId], reason: 'No shift days' }); continue }
 
       // Keyholder is a LOCATION concern (one person opens, one closes for the whole site),
-      // NOT a per-team rule — so the per-team solver never enforces it. We check it
+      // NOT a per-team rule, so the per-team solver never enforces it. We check it
       // location-wide after every team has built (below).
       const solverRules = { ...rules, enforce_keyholder: false }
 
@@ -215,7 +215,7 @@ export async function POST(request) {
       }
     }
 
-    // ── rule compliance (post-hoc) — the rota built; flag anything not fully met ──
+    // ── rule compliance (post-hoc), the rota built; flag anything not fully met ──
     const keyholderSet = new Set((staffRes.data || []).filter((s) => s.is_keyholder).map((s) => s.staff_id))
     const byStaff = {}
     for (const a of allAssignments) (byStaff[a.staff_id] ||= []).push(a)
@@ -225,7 +225,7 @@ export async function POST(request) {
 
     // Keyholder is LOCATION-wide and judged on ACTUAL TIMES, not the shift's pin: a keyholder must
     // be present when the first person arrives (open) and when the last leaves (close) each day,
-    // across ALL teams. A keyholder working the full span counts for both — no Open/Close tag needed.
+    // across ALL teams. A keyholder working the full span counts for both, no Open/Close tag needed.
     {
       const DAY_ORDER = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
       const fmtDays = (arr) => [...new Set(arr)].sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b)).map((d) => d.slice(0, 3)).join(', ')
