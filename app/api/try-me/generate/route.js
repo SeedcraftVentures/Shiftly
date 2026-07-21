@@ -5,6 +5,10 @@ import { NextResponse } from 'next/server'
 // and calls the same Python OR-Tools service the real app uses. No database.
 
 export const dynamic = 'force-dynamic'
+// Same reason as generate-rota: without this Vercel kills the function at the plan
+// default (~10-15s) and the public demo 504s. This one matters commercially, since
+// a cold scheduler on a prospect's first click is the worst time to time out.
+export const maxDuration = 60
 
 const DAY_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']

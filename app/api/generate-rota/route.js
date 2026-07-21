@@ -3,6 +3,11 @@ import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin, getOrgScope } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
+// The OR-Tools solver can run for tens of seconds on a real week, and longer if the
+// hosted scheduler is cold. Vercel kills a function at the plan default (~10-15s)
+// unless this is set, which would 504 in production while working fine locally.
+// 60s is the Hobby ceiling and safe on Pro too; raise it if the plan allows more.
+export const maxDuration = 60
 
 const DAY_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
