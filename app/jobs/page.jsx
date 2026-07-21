@@ -45,10 +45,13 @@ function JobCard({ job }) {
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <h3 className="font-cal text-lg sm:text-xl text-gray-900 leading-snug group-hover:text-pink-600 transition-colors">
+          {/* min-w-0 on the parent plus break-words here: employer supplied
+              titles are arbitrary text and a long unbroken token would
+              otherwise stretch the card and break the row. */}
+          <h3 className="font-cal text-lg sm:text-xl text-gray-900 leading-snug group-hover:text-pink-600 transition-colors break-words">
             {job.title}
           </h3>
-          <p className="mt-1 text-sm text-gray-600">
+          <p className="mt-1 text-sm text-gray-600 break-words">
             {job.employer_name}
             {job.city ? <span className="text-gray-400"> · {job.city}</span> : null}
           </p>

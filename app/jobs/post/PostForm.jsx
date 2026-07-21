@@ -162,7 +162,7 @@ export default function PostForm() {
           <Field id="city" label="Town or city" required>
             <input id="city" className={inputCls} value={f.city} onChange={set('city')} placeholder="Glasgow" />
           </Field>
-          <Field id="locality" label="Area" hint="Helps people judge the commute.">
+          <Field id="locality" label="Area" hint="Helps people judge the commute. Counts toward featured.">
             <input id="locality" className={inputCls} value={f.locality} onChange={set('locality')} placeholder="Finnieston" />
           </Field>
           <Field id="postcode" label="Postcode">
@@ -174,7 +174,7 @@ export default function PostForm() {
               {VENUES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </Field>
-          <Field id="website" label="Website">
+          <Field id="website" label="Website" hint="Counts toward featured.">
             <input id="website" className={inputCls} value={f.website} onChange={set('website')} placeholder="https://" />
           </Field>
           <div className="sm:col-span-2">
@@ -257,17 +257,26 @@ export default function PostForm() {
         <Field id="description" label="Description" required hint={`${f.description.trim().length} characters. 400 or more counts toward featured.`}>
           <textarea id="description" rows={7} className={inputCls} value={f.description} onChange={set('description')} />
         </Field>
-        <Field id="benefits" label="Benefits or perks" hint="Meals on shift, tips, training, staff discount.">
+        <Field id="benefits" label="Benefits or perks" hint="Meals on shift, tips, training, staff discount. Counts toward featured.">
           <textarea id="benefits" rows={3} className={inputCls} value={f.benefits} onChange={set('benefits')} />
         </Field>
-        <div className="grid sm:grid-cols-2 gap-5 items-start">
-          <Field id="apply_url" label="Application link" hint="One of these two is required.">
-            <input id="apply_url" className={inputCls} value={f.apply_url} onChange={set('apply_url')} placeholder="https://" />
-          </Field>
-          <Field id="apply_email" label="Or an email to apply to">
-            <input id="apply_email" type="email" className={inputCls} value={f.apply_email} onChange={set('apply_email')} />
-          </Field>
-        </div>
+        {/* Either one satisfies the requirement, so the asterisk belongs on the
+            group rather than on a field. Putting it on both would say "both
+            required" and putting it on neither leaves no visual cue at all. */}
+        <fieldset>
+          <legend className="block text-sm font-medium text-gray-700 mb-1.5">
+            How to apply<span className="text-[#FF1F7D] ml-0.5" aria-hidden="true">*</span>
+          </legend>
+          <p className="text-xs text-gray-500 mb-3">Give a link or an email. Either one is enough.</p>
+          <div className="grid sm:grid-cols-2 gap-5 items-start">
+            <Field id="apply_url" label="Application link">
+              <input id="apply_url" className={inputCls} value={f.apply_url} onChange={set('apply_url')} placeholder="https://" />
+            </Field>
+            <Field id="apply_email" label="Or an email to apply to">
+              <input id="apply_email" type="email" className={inputCls} value={f.apply_email} onChange={set('apply_email')} />
+            </Field>
+          </div>
+        </fieldset>
       </div>
 
       {/* Consent. Two separate boxes, both unticked. Bundling marketing consent

@@ -113,10 +113,10 @@ export default async function JobDetailPage({ params }) {
           <Link href="/jobs" className="inline-flex items-center gap-2 text-sm font-medium text-white/80 hover:text-white mb-6">
             ← All hospitality jobs
           </Link>
-          <h1 className="font-cal text-3xl sm:text-4xl lg:text-5xl text-white leading-[1.1] tracking-tight">
+          <h1 className="font-cal text-3xl sm:text-4xl lg:text-5xl text-white leading-[1.1] tracking-tight break-words">
             {job.title}
           </h1>
-          <p className="mt-4 text-lg text-white/85">
+          <p className="mt-4 text-lg text-white/85 break-words">
             {job.employer_name}
             {job.city ? <span className="text-white/60"> · {job.city}</span> : null}
           </p>
@@ -178,7 +178,11 @@ export default async function JobDetailPage({ params }) {
             <div className="rounded-2xl border border-gray-200 bg-white p-7 sm:p-9">
               <h2 className="font-cal text-2xl text-gray-900">About this role</h2>
 
-              <div className="mt-5 space-y-4 text-[15px] leading-relaxed text-gray-700">
+              {/* break-words: employer copy is arbitrary text and can contain a
+                  very long unbroken token (a URL, a reference code, or someone
+                  leaning on one key). Without a break opportunity it overflows
+                  the card and pushes the layout sideways. */}
+              <div className="mt-5 space-y-4 text-[15px] leading-relaxed text-gray-700 break-words">
                 {paragraphs.length ? (
                   paragraphs.map((p, i) => <p key={i}>{p}</p>)
                 ) : (
