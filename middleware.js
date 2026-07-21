@@ -22,12 +22,13 @@ const isPublicRoute = createRouteMatcher([
 const isCheckoutRoute = createRouteMatcher(['/checkout(.*)'])
 const isApiRoute = createRouteMatcher(['/api/(.*)'])
 
-// The board is public, but posting is account gated: it is how a posting venue
-// becomes a known lead. '/jobs(.*)' above would otherwise make these public too,
-// so they are matched first and fall through to the signed-in check.
-// NOTE: API routes skip this middleware entirely, so /api/jobs/post does its own
-// auth() check rather than relying on anything here.
-const isProtectedJobsRoute = createRouteMatcher(['/jobs/post(.*)', '/jobs/manage(.*)'])
+// Posting is deliberately NOT account gated. The board ships before the app
+// opens, and app sign-up is closed behind a waitlist, so requiring an account
+// to post would make the board's own funnel impossible to launch. An employer
+// fills the form first and joins the waitlist to publish, which captures the
+// same lead at the point they are most invested rather than the least.
+// '/jobs(.*)' covers /jobs/post, so nothing extra is needed here.
+const isProtectedJobsRoute = createRouteMatcher(['/jobs/manage(.*)'])
 
 export default clerkMiddleware(async (auth, request) => {
   // Allow all API routes through

@@ -1,5 +1,3 @@
-import { redirect } from 'next/navigation'
-import { auth } from '@clerk/nextjs/server'
 import Nav from '@/app/components/Nav'
 import Footer from '@/app/components/Footer'
 import { HeatGlow, SHIFTLY_PALETTE } from '@/app/components/HeatGlow'
@@ -13,12 +11,9 @@ export const metadata = {
     'Post a hospitality job to Shiftly Jobs for free. State the pay and the hours and your listing is featured at the top of the board.',
 }
 
+// Open to anyone. Identity is captured at the end, when the employer joins the
+// waitlist to publish, not as a toll gate before they have written anything.
 export default async function PostJobPage() {
-  // Belt and braces. middleware.js already gates /jobs/post, but '/jobs(.*)' is
-  // a public matcher, so one careless edit there would silently open this page.
-  const { userId } = await auth()
-  if (!userId) redirect('/sign-in?redirect_url=/jobs/post')
-
   return (
     <div className="min-h-screen bg-gray-50">
       <Nav currentPage="jobs" />

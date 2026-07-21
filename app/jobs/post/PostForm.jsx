@@ -51,6 +51,10 @@ export default function PostForm() {
   const [f, setF] = useState(EMPTY)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+  // Three states: writing the ad, then the waitlist step that publishes it,
+  // then done. The draft is saved before the waitlist step, so nothing typed is
+  // lost if that step fails or the tab is closed.
+  const [draft, setDraft] = useState(null)
   const [done, setDone] = useState(null)
 
   const set = (k) => (e) => {
@@ -85,12 +89,77 @@ export default function PostForm() {
         setError(json.missing?.length ? `Still needed: ${json.missing.map((m) => m.label).join(', ')}` : json.error)
         return
       }
-      setDone(json)
+      setDraft(json)
     } catch {
       setError('Could not reach the server. Try again.')
     } finally {
       setBusy(false)
     }
+  }
+
+  async function publish(e) {
+    e.preventDefault()
+    setError(null)
+    setBusy(true)
+    try {
+      const res = await fetch('/api/jobs/post/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ listing_id: draft.listing_id, email: draft.email }),
+      })
+      const json = await res.json()
+      if (!res.ok) { setError(json.error); return }
+      setDone({ ...draft, ...json })
+    } catch {
+      setError('Could not reach the server. Your job is saved, try again.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // Step 2. The ad is written and saved; joining the waitlist is what publishes
+  // it. Asking here rather than at the start means the employer has already done
+  // the work, so this reads as finishing rather than as a toll gate.
+  if (draft && !done) {
+    return (
+      <form onSubmit={publish} className="rounded-2xl border border-gray-200 bg-white p-8">
+        <p className="text-sm font-medium text-[#FF1F7D]">Last step</p>
+        <h2 className="mt-1 font-cal text-2xl text-gray-900">Your job is saved. Publish it.</h2>
+        <p className="mt-3 text-[15px] leading-relaxed text-gray-600">
+          Shiftly Jobs is free because it is how hospitality employers meet Shiftly, the rota
+          tool this board is built by. Join the waitlist and your listing goes live now.
+        </p>
+
+        <div className="mt-6 rounded-xl border border-gray-200 bg-gray-50 px-5 py-4">
+          <p className="text-sm text-gray-500">Publishing as</p>
+          <p className="mt-0.5 font-medium text-gray-900 break-words">{draft.email}</p>
+        </div>
+
+        {draft.featured && (
+          <div className="mt-4 rounded-xl border border-pink-200 bg-pink-50 px-5 py-4">
+            <p className="text-sm text-pink-800">
+              You filled everything in, so this one is featured at the top of the board for
+              {' '}{draft.featured_days} days once it is live.
+            </p>
+          </div>
+        )}
+
+        {error && (
+          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">{error}</div>
+        )}
+
+        <button
+          type="submit"
+          disabled={busy}
+          className="mt-6 w-full rounded-full bg-[#FF1F7D] px-8 py-3.5 font-medium text-white hover:bg-pink-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {busy ? 'Publishing…' : 'Join the waitlist and publish'}
+        </button>
+        <p className="mt-3 text-xs text-gray-400 text-center">
+          Your job is already saved. Nothing you have written is lost if this fails.
+        </p>
+      </form>
+    )
   }
 
   if (done) {
@@ -110,7 +179,7 @@ export default function PostForm() {
             View your listing
           </button>
           <button
-            onClick={() => { setDone(null); setF(EMPTY) }}
+            onClick={() => { setDone(null); setDraft(null); setF(EMPTY) }}
             className="rounded-full border border-gray-200 px-6 py-3 font-medium text-gray-700 hover:border-gray-300 transition-colors"
           >
             Post another
@@ -334,7 +403,7 @@ export default function PostForm() {
           disabled={busy || blocked}
           className="rounded-full bg-[#FF1F7D] px-8 py-3.5 font-medium text-white hover:bg-pink-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {busy ? 'Posting…' : 'Post this job'}
+          {busy ? 'Saving…' : 'Continue'}
         </button>
       </div>
     </form>

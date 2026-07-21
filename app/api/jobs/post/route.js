@@ -1,11 +1,18 @@
-// Native job posting. Account gated, free, and the point of the whole board:
-// a posting venue becomes a known, consented lead.
+// Step 1 of native job posting: draft the listing.
 //
-// SECURITY: middleware.js lets every /api/* route through without auth, so this
-// route does its own auth() check. Do not remove it.
+// Free and open, no account needed. The listing is created as 'pending' and is
+// NOT on the board yet. It publishes in step 2 (./complete) when the employer
+// joins the waitlist, which is what captures the lead.
+//
+// Ordering matters here: app sign-up is closed behind a waitlist, so gating this
+// on an account would have made the board impossible to launch, and it asked
+// people to commit before they had done anything. Now they write the ad first
+// and identify themselves at the point they are most invested.
+//
+// SPAM: nothing publishes without completing step 2, so a drive-by POST here
+// only ever creates an invisible pending row.
 
 import { NextResponse } from 'next/server'
-import { auth, clerkClient } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/db'
 import { completeness, FEATURED_DAYS, showsPay, toShiftArray, SHIFT_PATTERN_LABEL } from '@/lib/jobs/taxonomy'
 import { buildSlug, classifyRole } from '@/lib/jobs/classify'
@@ -17,8 +24,6 @@ const str = (v, max = 5000) => String(v ?? '').trim().slice(0, max)
 
 export async function POST(request) {
   try {
-    const { userId } = await auth()
-    if (!userId) return NextResponse.json({ error: 'Sign in to post a job.' }, { status: 401 })
     if (!supabaseAdmin) return NextResponse.json({ error: 'Server not configured.' }, { status: 500 })
 
     const body = await request.json().catch(() => null)
@@ -79,21 +84,19 @@ export async function POST(request) {
     const marketingConsent = body.marketing_consent === true
 
     // ── Employer ──────────────────────────────────────────────────────────────
-    // Matched on the signed-in user first, then on email, so a returning poster
-    // updates their row instead of creating a duplicate.
-    // limit(1) rather than maybeSingle(): a user who posted under one email and
-    // later used another would match two rows, and maybeSingle() throws on that.
+    // Matched on email, so a returning poster updates their row instead of
+    // creating a duplicate. There is no signed-in user to match on any more.
+    // limit(1) rather than maybeSingle(), which throws if two rows come back.
     const { data: matches } = await supabaseAdmin
       .from('Job Employers')
       .select('employer_id')
-      .or(`clerk_user_id.eq.${userId},email.eq.${contactEmail}`)
+      .eq('email', contactEmail)
       .limit(1)
     const existing = matches?.[0] || null
 
     const employerPatch = {
       name: data.employer_name,
       email: contactEmail,
-      clerk_user_id: userId,
       venue_type: data.venue_type,
       town: data.city,
       website: data.website || null,
@@ -152,8 +155,12 @@ export async function POST(request) {
       pay_is_estimated: false,
       slug: buildSlug({ title: data.title, employerName: data.employer_name, city: data.city, sourceId }),
       posted_at: new Date().toISOString(),
-      status: 'live',
-      // Featured is EARNED, never sold. Expires on its own, no sweep job needed.
+      // Drafted, not published. applyFilters() requires status='live', so a
+      // pending row is invisible on the board, in search and in facets until
+      // ./complete publishes it.
+      status: 'pending',
+      // Featured is EARNED, never sold. Written now so the value is fixed at
+      // draft time, but it only starts mattering once the row goes live.
       featured_until: check.featured
         ? new Date(Date.now() + FEATURED_DAYS * 864e5).toISOString()
         : null,
@@ -167,27 +174,14 @@ export async function POST(request) {
       .single()
     if (lisErr) return NextResponse.json({ error: 'Could not save your listing.', detail: lisErr.message }, { status: 500 })
 
-    // ── Waitlist ──────────────────────────────────────────────────────────────
-    // Every direct poster joins the Shiftly waitlist. Non-fatal: the job is
-    // already live, and losing the post over a waitlist hiccup would be absurd.
-    let waitlisted = false
-    try {
-      const client = await clerkClient()
-      await client.waitlistEntries.create({ emailAddress: contactEmail })
-      waitlisted = true
-    } catch (e) {
-      const already = JSON.stringify(e?.errors || e?.message || '').toLowerCase().includes('already')
-      waitlisted = already
-      if (!already) console.error('[jobs/post] waitlist failed', e)
-    }
-
     return NextResponse.json({
       success: true,
+      pending: true,
       slug: saved.slug,
       listing_id: saved.listing_id,
+      email: contactEmail,
       featured: check.featured,
       featured_days: check.featured ? FEATURED_DAYS : 0,
-      waitlisted,
     })
   } catch (e) {
     console.error('[jobs/post]', e)
