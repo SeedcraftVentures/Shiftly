@@ -10,6 +10,10 @@ import { rotaBlock } from '@/lib/rotaColors'
 //  Apple-esque + theme-aware; scheduling/compliance logic preserved verbatim.
 // ════════════════════════════════════════════════════════════════════════════
 
+// Shown when the solver overruns or the hosted scheduler is cold. Deliberately
+// light, because it is a "try again" not a "you broke it".
+const SLOW_SCHEDULER = "Gosh darn it, the shifts ain't shifting. Come back shortly and we'll get a shift on fixing it up."
+
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const DAY_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const DAY_INDEX = { Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4, Saturday: 5, Sunday: 6 }
@@ -267,13 +271,20 @@ export default function RotaBuilder() {
 
   const generate = useCallback(async () => {
     setGenerating(true); setError(null); setResult(null); setSaveMsg(null); setSelectedWeek(1)
+    // Give up a little AFTER the server's own 60s maxDuration, so when the solver
+    // overruns we surface Vercel's error rather than racing it. Without this the
+    // button just spins forever and reads as broken.
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 70000)
     try {
-      const res = await fetch('/api/generate-rota', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ weekStart, weekCount, team_id: teamId === 'all' ? null : teamId }) })
+      const res = await fetch('/api/generate-rota', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ weekStart, weekCount, team_id: teamId === 'all' ? null : teamId }), signal: controller.signal })
       const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Failed to generate rota.'); return }
+      if (!res.ok) { setError(data.error || SLOW_SCHEDULER); return }
       setRotaName(`Week of ${prettyDate(weekStart)}`)
       setResult({ ...data, assignments: (data.assignments || []).map((a, i) => ({ ...a, _id: i })) })
-    } catch (e) { setError('Could not reach the scheduler. It may be waking up, try again in a moment.') } finally { setGenerating(false) }
+    } catch (e) {
+      setError(e?.name === 'AbortError' ? SLOW_SCHEDULER : 'Could not reach the scheduler. It may be waking up, try again in a moment.')
+    } finally { clearTimeout(timer); setGenerating(false) }
   }, [weekStart, weekCount, teamId])
 
   const loadSaved = useCallback(async (id) => {

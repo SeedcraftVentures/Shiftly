@@ -15,6 +15,8 @@ import { Inspector as StaffInspector, AvailabilityGrid, AvailKey } from '../(aut
 
 const PINK = '#FF1F7D'
 const FONT = "'Cal Sans Text', 'Plus Jakarta Sans', sans-serif"
+// Shown when the solver overruns or the hosted scheduler is cold.
+const SLOW_SCHEDULER = "Gosh darn it, the shifts ain't shifting. Come back shortly and we'll get a shift on fixing it up."
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const DAY_INDEX = { Monday: 0, Tuesday: 1, Wednesday: 2, Thursday: 3, Friday: 4, Saturday: 5, Sunday: 6 }
 const ALL = [0, 1, 2, 3, 4, 5, 6]
@@ -177,12 +179,18 @@ export default function TryMe() {
 
   const generate = async () => {
     setGenerating(true); setError(null); setResult(null)
+    // Give up just after the route's own 60s cap. This is a prospect's first
+    // impression, so a spinner that never resolves is the worst outcome.
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 70000)
     try {
-      const res = await fetch('/api/try-me/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ business: cfg.business, shifts, staff }) })
+      const res = await fetch('/api/try-me/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ business: cfg.business, shifts, staff }), signal: controller.signal })
       const data = await res.json()
-      if (!res.ok || data.error) { setError(data.error || 'Could not build a rota.') }
+      if (!res.ok || data.error) { setError(data.error || SLOW_SCHEDULER) }
       else { await new Promise((r) => setTimeout(r, 1100)); setResult(data); setStep(3); setTourIdx(0) } // hold the build a beat longer, feels less instant
-    } catch { setError('Network error, try again.') } finally { setGenerating(false) }
+    } catch (e) {
+      setError(e?.name === 'AbortError' ? SLOW_SCHEDULER : 'Network error, try again.')
+    } finally { clearTimeout(timer); setGenerating(false) }
   }
 
   const steps = [
