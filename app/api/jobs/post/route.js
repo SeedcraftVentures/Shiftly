@@ -8,7 +8,7 @@ import { NextResponse } from 'next/server'
 import { auth, clerkClient } from '@clerk/nextjs/server'
 import { supabaseAdmin } from '@/lib/db'
 import { completeness, FEATURED_DAYS, showsPay, toShiftArray, SHIFT_PATTERN_LABEL } from '@/lib/jobs/taxonomy'
-import { buildSlug } from '@/lib/jobs/classify'
+import { buildSlug, classifyRole } from '@/lib/jobs/classify'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,8 +44,9 @@ export async function POST(request) {
       city: str(body.city, 120),
       venue_type: str(body.venue_type, 40),
       title: str(body.title, 200),
-      role_category: str(body.role_category, 40),
       contract_type: str(body.contract_type, 40),
+      locality: str(body.locality, 120),
+      postcode: str(body.postcode, 12),
       // text[] in Postgres. Kept as an array end to end, never joined.
       // Filtered to the known vocabulary so a crafted request cannot write
       // arbitrary values into a column the filters read.
@@ -127,11 +128,16 @@ export async function POST(request) {
       source_url: null,
       attribution: null,
       title: data.title,
-      role_category: data.role_category,
+      // Derived from the free text title, the same way every aggregated listing
+      // is classified. Asking for it separately was redundant and the dropdown
+      // could not cover the real variety of hospitality job titles.
+      role_category: classifyRole(data.title),
       employer_name: data.employer_name,
       employer_id: employerId,
       venue_type: data.venue_type,
       city: data.city,
+      locality: data.locality || null,
+      postcode: data.postcode || null,
       contract_type: data.contract_type,
       shift_pattern: data.shift_pattern,
       description: data.benefits ? `${data.description}\n\n${data.benefits}` : data.description,
