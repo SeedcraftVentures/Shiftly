@@ -22,14 +22,21 @@ const isPublicRoute = createRouteMatcher([
 const isCheckoutRoute = createRouteMatcher(['/checkout(.*)'])
 const isApiRoute = createRouteMatcher(['/api/(.*)'])
 
+// The board is public, but posting is account gated: it is how a posting venue
+// becomes a known lead. '/jobs(.*)' above would otherwise make these public too,
+// so they are matched first and fall through to the signed-in check.
+// NOTE: API routes skip this middleware entirely, so /api/jobs/post does its own
+// auth() check rather than relying on anything here.
+const isProtectedJobsRoute = createRouteMatcher(['/jobs/post(.*)', '/jobs/manage(.*)'])
+
 export default clerkMiddleware(async (auth, request) => {
   // Allow all API routes through
   if (isApiRoute(request)) {
     return NextResponse.next()
   }
-  
+
   // Allow public routes
-  if (isPublicRoute(request)) {
+  if (isPublicRoute(request) && !isProtectedJobsRoute(request)) {
     return NextResponse.next()
   }
   
