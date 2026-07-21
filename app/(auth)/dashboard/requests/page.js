@@ -84,6 +84,7 @@ function RequestsTab({ T, requests, loading, reload }) {
   const [status, setStatus] = useState('pending')
   const [showLog, setShowLog] = useState(false)
   const [busyId, setBusyId] = useState(null)
+  const [impact, setImpact] = useState(null)
 
   const incoming = requests.filter((r) => r.direction === 'incoming')
   const filtered = status === 'all' ? incoming : incoming.filter((r) => r.status === status)
@@ -102,6 +103,19 @@ function RequestsTab({ T, requests, loading, reload }) {
       })
       await reload()
     } finally { setBusyId(null) }
+  }
+
+  // Approving absence can strand shifts, so check the cost before committing.
+  // Nothing is ever blocked: the manager sees the price and decides.
+  const approve = async (r) => {
+    setBusyId(r.id)
+    try {
+      const res = await fetch(`/api/requests/impact?id=${r.id}`)
+      const impact = await res.json()
+      if (res.ok && impact?.hasImpact) { setImpact({ request: r, ...impact }); return }
+    } catch { /* if the check fails, fall through and approve normally */ }
+    finally { setBusyId(null) }
+    await act(r.id, 'approved')
   }
 
   return (
@@ -124,18 +138,20 @@ function RequestsTab({ T, requests, loading, reload }) {
           <div key={g.name} style={{ marginBottom: 22 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: T.faint, letterSpacing: 0.4, textTransform: 'uppercase', margin: '0 2px 10px' }}>{g.name}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {g.items.map((r) => <RequestCard key={r.id} T={T} r={r} busy={busyId === r.id} onAct={act} />)}
+              {g.items.map((r) => <RequestCard key={r.id} T={T} r={r} busy={busyId === r.id} onAct={act} onApprove={approve} />)}
             </div>
           </div>
         ))
       )}
 
       {showLog && <LogRequestModal T={T} onClose={() => setShowLog(false)} onSaved={() => { setShowLog(false); reload() }} />}
+      {impact && <ImpactModal T={T} data={impact} onClose={() => setImpact(null)}
+        onConfirm={async () => { const id = impact.request.id; setImpact(null); await act(id, 'approved') }} />}
     </>
   )
 }
 
-function RequestCard({ T, r, busy, onAct }) {
+function RequestCard({ T, r, busy, onAct, onApprove }) {
   const meta = TYPE_META[r.type] || TYPE_META.holiday
   const name = r.staff?.name || 'Team member'
   const statusColor = r.status === 'approved' ? T.green : r.status === 'rejected' ? T.red : T.pink
@@ -165,7 +181,7 @@ function RequestCard({ T, r, busy, onAct }) {
               if (note === null) return
               onAct(r.id, 'rejected', note || null)
             }}>Deny</Button>
-            <Button size="sm" disabled={busy} onClick={() => onAct(r.id, 'approved')}>Approve</Button>
+            <Button size="sm" disabled={busy} onClick={() => onApprove(r)}>{busy ? 'Checking…' : 'Approve'}</Button>
           </div>
         )}
       </div>
@@ -371,6 +387,56 @@ function LogRequestModal({ T, onClose, onSaved }) {
     </div>
   )
 
+  return typeof document !== 'undefined' ? createPortal(modal, document.body) : null
+}
+
+// ── approval guardrail ───────────────────────────────────────────────────────
+// Shows what approving this absence costs, then lets the manager do it anyway.
+// Never blocks: sometimes leave has to be approved and cover sorted separately.
+function ImpactModal({ T, data, onClose, onConfirm }) {
+  const modal = (
+    <div onMouseDown={onClose} style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(10,10,12,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div onMouseDown={(e) => e.stopPropagation()} style={{ width: 460, maxWidth: '100%', maxHeight: '85vh', overflowY: 'auto', background: T.cardSolid, border: `1px solid ${T.border}`, borderRadius: 20, boxShadow: T.shadowHover, padding: 24, fontFamily: T.font }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+          <span style={{ width: 30, height: 30, borderRadius: 10, flexShrink: 0, background: T.amber + '1E', color: T.warnInk, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>⚠</span>
+          <span style={{ fontSize: 17, fontWeight: 700, color: T.ink, letterSpacing: '-0.02em' }}>This leaves shifts to cover</span>
+        </div>
+
+        <p style={{ fontSize: 13.5, color: T.body, lineHeight: 1.55, margin: '0 0 14px' }}>{data.headline}</p>
+
+        {data.mode === 'assignments' && data.shifts?.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+            {data.shifts.map((s, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12.5, background: T.subtle, borderRadius: 9, padding: '8px 11px' }}>
+                <span style={{ color: T.ink, fontWeight: 600 }}>{s.day} {s.work_date}</span>
+                <span style={{ color: T.muted }}>{s.shift_name} · {s.start_time} to {s.end_time} · {s.hours}h</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {data.mode === 'coverage' && data.gaps?.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+            {data.gaps.map((g, i) => (
+              <div key={i} style={{ fontSize: 12.5, background: T.subtle, borderRadius: 9, padding: '8px 11px', color: T.body }}>
+                <b style={{ color: T.ink }}>{g.day} {g.date}</b> · {g.shift_name}
+                {g.keyholder ? ' · no keyholder free' : ` · ${g.short} short (${g.hours}h)`}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <p style={{ fontSize: 12, color: T.faint, margin: '0 0 18px', lineHeight: 1.5 }}>
+          You can still approve. The shifts will show as gaps on the rota so you can arrange cover.
+        </p>
+
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <Button size="sm" variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button size="sm" onClick={onConfirm}>Approve anyway</Button>
+        </div>
+      </div>
+    </div>
+  )
   return typeof document !== 'undefined' ? createPortal(modal, document.body) : null
 }
 
