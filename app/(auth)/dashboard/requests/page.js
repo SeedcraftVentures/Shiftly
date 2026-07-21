@@ -194,17 +194,9 @@ function RequestCard({ T, r, busy, onAct, onApprove, impact }) {
           {r.manager_notes && r.status !== 'pending' && (
             <div style={{ fontSize: 12.5, color: T.muted, marginTop: 6, fontStyle: 'italic' }}>Note: {r.manager_notes}</div>
           )}
-          {/* Coverage cost, shown before the manager commits rather than after. */}
-          {r.status === 'pending' && impact?.hasImpact && (
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 9, background: T.amber + '14', border: `1px solid ${T.amber}33`, borderRadius: 10, padding: '8px 11px' }}>
-              <span style={{ color: T.warnInk, fontSize: 13, lineHeight: 1.3, flexShrink: 0 }}>⚠</span>
-              <span style={{ fontSize: 12.5, color: T.warnInk, lineHeight: 1.45 }}>
-                {impact.mode === 'assignments'
-                  ? `Covers ${impact.shifts?.length} shift${impact.shifts?.length > 1 ? 's' : ''} (${impact.totalHours}h) on the ${impact.published ? 'published' : 'draft'} rota. Approving leaves ${impact.shifts?.length > 1 ? 'them' : 'it'} uncovered.`
-                  : `Needs ${impact.coverHours}h of cover on ${impact.team_name}${impact.keyholderGaps ? `, and ${impact.keyholderGaps} shift${impact.keyholderGaps > 1 ? 's' : ''} would have no keyholder` : ''}.`}
-              </span>
-            </div>
-          )}
+          {/* Coverage cost, shown before the manager commits rather than after.
+              Matches the dashboard's frosted amber capacity warning. */}
+          {r.status === 'pending' && impact?.hasImpact && <ImpactNote T={T} impact={impact} />}
         </div>
         {r.status === 'pending' && (
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
@@ -319,7 +311,9 @@ function EscalationsTab({ T, escalations }) {
         return (
           <Card key={e.id} pad={16}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 38, height: 38, borderRadius: 11, flexShrink: 0, background: (critical ? T.red : T.amber) + '1E', color: critical ? T.red : T.warnInk, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>⚠</div>
+              <div style={{ width: 38, height: 38, borderRadius: 11, flexShrink: 0, background: (critical ? T.red : T.amber) + '22', color: critical ? T.red : T.amber, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Icon path={Ic.shifts} size={18} stroke={1.9} />
+              </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{e.staff_name || 'A team member'} · {TYPE_META[e.type]?.label || e.type}</div>
                 <div style={{ fontSize: 13, color: T.muted, marginTop: 2 }}>Open for {h}h with no pickup{e.start_date ? ` · ${fmtDate(e.start_date)}` : ''}</div>
@@ -422,6 +416,26 @@ function LogRequestModal({ T, onClose, onSaved }) {
   return typeof document !== 'undefined' ? createPortal(modal, document.body) : null
 }
 
+// Frosted amber note, matching the dashboard's capacity warning: tinted rounded
+// chip with a kit icon, then body copy with the numbers emphasised in ink.
+function ImpactNote({ T, impact, style }) {
+  const kh = impact.keyholderGaps
+  return (
+    <div style={{ display: 'flex', gap: 11, alignItems: 'flex-start', marginTop: 11, background: T.amber + '14', border: `1px solid ${T.amber}33`, borderRadius: 12, padding: 12, ...style }}>
+      <span style={{ width: 26, height: 26, borderRadius: 8, flexShrink: 0, background: T.amber + '22', color: T.amber, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Icon path={kh ? Ic.key : Ic.staff} size={14} stroke={1.9} />
+      </span>
+      <p style={{ flex: 1, fontSize: 13, color: T.body, margin: 0, lineHeight: 1.5, letterSpacing: '-0.01em' }}>
+        {impact.mode === 'assignments' ? (
+          <>Covers <b style={{ color: T.ink }}>{impact.shifts?.length} shift{impact.shifts?.length > 1 ? 's' : ''} ({impact.totalHours}h)</b> on the {impact.published ? 'published' : 'draft'} rota. Approving leaves {impact.shifts?.length > 1 ? 'them' : 'it'} uncovered.</>
+        ) : (
+          <>Needs <b style={{ color: T.ink }}>{impact.coverHours}h of cover</b> on {impact.team_name}{kh ? <>, and <b style={{ color: T.ink }}>{kh} shift{kh > 1 ? 's' : ''}</b> would have no keyholder free</> : ''}.</>
+        )}
+      </p>
+    </div>
+  )
+}
+
 // ── approval guardrail ───────────────────────────────────────────────────────
 // Shows what approving this absence costs, then lets the manager do it anyway.
 // Never blocks: sometimes leave has to be approved and cover sorted separately.
@@ -429,12 +443,14 @@ function ImpactModal({ T, data, onClose, onConfirm }) {
   const modal = (
     <div onMouseDown={onClose} style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(10,10,12,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <div onMouseDown={(e) => e.stopPropagation()} style={{ width: 460, maxWidth: '100%', maxHeight: '85vh', overflowY: 'auto', background: T.cardSolid, border: `1px solid ${T.border}`, borderRadius: 20, boxShadow: T.shadowHover, padding: 24, fontFamily: T.font }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-          <span style={{ width: 30, height: 30, borderRadius: 10, flexShrink: 0, background: T.amber + '1E', color: T.warnInk, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>⚠</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 12 }}>
+          <span style={{ width: 30, height: 30, borderRadius: 9, flexShrink: 0, background: T.amber + '22', color: T.amber, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon path={data.keyholderGaps ? Ic.key : Ic.staff} size={16} stroke={1.9} />
+          </span>
           <span style={{ fontSize: 17, fontWeight: 700, color: T.ink, letterSpacing: '-0.02em' }}>This leaves shifts to cover</span>
         </div>
 
-        <p style={{ fontSize: 13.5, color: T.body, lineHeight: 1.55, margin: '0 0 14px' }}>{data.headline}</p>
+        <p style={{ fontSize: 13.5, color: T.body, lineHeight: 1.5, letterSpacing: '-0.01em', margin: '0 0 14px' }}>{data.headline}</p>
 
         {data.mode === 'assignments' && data.shifts?.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
