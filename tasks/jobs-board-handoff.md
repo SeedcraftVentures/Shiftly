@@ -188,21 +188,30 @@ inventory through Adzuna instead).
 
 ## 6. Work remaining, in priority order
 
-### 6.1 Expired pages should stay alive, not 404 (do this first)
+### 6.1 Expired pages stay alive, not 404 ✅ DONE
 
-`getListingBySlug` filters on age, so an expired listing 404s. That is wrong.
-Keep the page at **200** in a "this role has been filled or closed" state,
-because the URL accumulates SEO equity and long-tail traffic that a 404 throws
-away. This is the pattern from the Makers Forge board, which is proven.
+`getListingForPage(slug)` in `lib/jobs/query.js` fetches by slug with no status
+or age filter and returns the row plus `isExpired`, true when `status !== 'live'`
+**or** `posted_at` is missing or past the 90 day cutoff. The detail page is its
+only caller. `getListingBySlug` is unchanged and still live only, but it now has
+no callers, kept for the venue pages in 6.5.
 
-- Render expired rows with the apply button **removed** and a clear closed notice.
-- Make the page an internal link hub: live roles in the same city and role.
-- Keep expired rows out of the board, search, facets and related lists.
-- `JobPosting` schema must be **absent** on expired pages.
+On a closed page: all three apply CTAs are gone (header badge, body block,
+sidebar button becomes "Browse open jobs"), a "This role has closed" card sits
+above the description with links to `/jobs?city=` and `/jobs?role=`, related
+roles widen from 4 to 8 under a "Roles open now" heading, and the title gains
+"(closed)". The page stays indexable, which is the point.
 
-Implement as a separate accessor, for example `getListingForPage(slug)`
-returning the row plus an `isExpired` flag, leaving `getListingBySlug` (live
-only) for everything else.
+Verified against live data, not reasoned about. There were no expired rows in
+the table, so three throwaway fixtures were inserted (expired by age, expired by
+status, and a live control), asserted, then deleted. 22/22 checks passed: 200 not
+404, closed card and badge present, no "Apply on site" and no `apply_url` in the
+HTML, missing slugs still 404, live pages untouched, and expired rows absent from
+search, the board and related lists. Table back at 180 rows, no runtime errors.
+`npx next build` compiles.
+
+`JobPosting` absence passes trivially today because no JSON-LD exists yet. Wire
+the `closed` flag into the gate in 6.2 so it cannot regress.
 
 ### 6.2 JobPosting JSON-LD
 
