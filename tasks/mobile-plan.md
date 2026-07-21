@@ -50,10 +50,15 @@ evidence that mobile needs its own UI.
    `email`, `invite_token`, none of which exist in the current schema. **Staff
    cannot obtain a login at all.** Nothing staff-facing can be built or even
    tested until this is done, on any platform.
-2. **Prove Clerk auth from Expo on ONE endpoint.** Routes use `auth()` from
-   `@clerk/nextjs/server`; `@clerk/clerk-expo` sends a bearer token. It is
-   expected to work and has never been exercised. This is the single most
-   break-prone assumption in the whole plan, so spike it before building screens.
+2. ~~**Prove Clerk auth from Expo on ONE endpoint.**~~ **DONE, 2026-07-21. It works.**
+   Minted a real session JWT via Clerk's Backend API and called the API with only
+   an `Authorization: Bearer` header and no cookie, which is exactly what
+   `@clerk/clerk-expo` sends. `/api/auth/user-type` returned 200 `{"type":"manager"}`,
+   `/api/teams` returned 200 with real data, and `/api/employee/profile` returned
+   404 "Staff profile not found", the correct answer for a manager and, importantly,
+   404 rather than 401, so the token authenticated and the route logic ran.
+   **No middleware change, no auth rework and no token-exchange layer is needed.**
+   Clerk 6.34.5 with `clerkMiddleware` already handles bearer tokens on `/api/*`.
 3. **Merge instance A's header-based location resolution.** `getOrgScope` here
    resolves the active location from the `shiftly_loc` **cookie only**. Native
    clients cannot set that cookie, so every mobile call would silently resolve to
