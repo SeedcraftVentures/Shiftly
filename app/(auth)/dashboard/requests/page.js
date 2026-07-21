@@ -85,6 +85,22 @@ function RequestsTab({ T, requests, loading, reload }) {
   const [showLog, setShowLog] = useState(false)
   const [busyId, setBusyId] = useState(null)
   const [impact, setImpact] = useState(null)
+  const [impacts, setImpacts] = useState({})
+
+  // Work out the coverage cost of every pending absence up front, so the warning
+  // sits under the request rather than appearing only after clicking Approve.
+  // It also means Approve responds instantly instead of showing "Checking...".
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/requests/impact')
+        const data = await res.json()
+        if (!cancelled) setImpacts(data?.impacts || {})
+      } catch { /* the inline hint is a bonus; never break the list over it */ }
+    })()
+    return () => { cancelled = true }
+  }, [requests])
 
   const incoming = requests.filter((r) => r.direction === 'incoming')
   const filtered = status === 'all' ? incoming : incoming.filter((r) => r.status === status)
@@ -105,16 +121,21 @@ function RequestsTab({ T, requests, loading, reload }) {
     } finally { setBusyId(null) }
   }
 
-  // Approving absence can strand shifts, so check the cost before committing.
+  // Approving absence can strand shifts, so confirm the cost before committing.
   // Nothing is ever blocked: the manager sees the price and decides.
   const approve = async (r) => {
-    setBusyId(r.id)
-    try {
-      const res = await fetch(`/api/requests/impact?id=${r.id}`)
-      const impact = await res.json()
-      if (res.ok && impact?.hasImpact) { setImpact({ request: r, ...impact }); return }
-    } catch { /* if the check fails, fall through and approve normally */ }
-    finally { setBusyId(null) }
+    const known = impacts[r.id]
+    if (known?.hasImpact) { setImpact({ request: r, ...known }); return }
+    // No cached answer yet (batch still loading, or it failed): check just this one.
+    if (!known) {
+      setBusyId(r.id)
+      try {
+        const res = await fetch(`/api/requests/impact?id=${r.id}`)
+        const fresh = await res.json()
+        if (res.ok && fresh?.hasImpact) { setImpact({ request: r, ...fresh }); return }
+      } catch { /* fall through and approve normally */ }
+      finally { setBusyId(null) }
+    }
     await act(r.id, 'approved')
   }
 
@@ -138,7 +159,7 @@ function RequestsTab({ T, requests, loading, reload }) {
           <div key={g.name} style={{ marginBottom: 22 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: T.faint, letterSpacing: 0.4, textTransform: 'uppercase', margin: '0 2px 10px' }}>{g.name}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {g.items.map((r) => <RequestCard key={r.id} T={T} r={r} busy={busyId === r.id} onAct={act} onApprove={approve} />)}
+              {g.items.map((r) => <RequestCard key={r.id} T={T} r={r} busy={busyId === r.id} onAct={act} onApprove={approve} impact={impacts[r.id]} />)}
             </div>
           </div>
         ))
@@ -151,7 +172,7 @@ function RequestsTab({ T, requests, loading, reload }) {
   )
 }
 
-function RequestCard({ T, r, busy, onAct, onApprove }) {
+function RequestCard({ T, r, busy, onAct, onApprove, impact }) {
   const meta = TYPE_META[r.type] || TYPE_META.holiday
   const name = r.staff?.name || 'Team member'
   const statusColor = r.status === 'approved' ? T.green : r.status === 'rejected' ? T.red : T.pink
@@ -172,6 +193,17 @@ function RequestCard({ T, r, busy, onAct, onApprove }) {
           {r.reason && <div style={{ fontSize: 13, color: T.body, marginTop: 6, lineHeight: 1.45 }}>{r.reason}</div>}
           {r.manager_notes && r.status !== 'pending' && (
             <div style={{ fontSize: 12.5, color: T.muted, marginTop: 6, fontStyle: 'italic' }}>Note: {r.manager_notes}</div>
+          )}
+          {/* Coverage cost, shown before the manager commits rather than after. */}
+          {r.status === 'pending' && impact?.hasImpact && (
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 9, background: T.amber + '14', border: `1px solid ${T.amber}33`, borderRadius: 10, padding: '8px 11px' }}>
+              <span style={{ color: T.warnInk, fontSize: 13, lineHeight: 1.3, flexShrink: 0 }}>⚠</span>
+              <span style={{ fontSize: 12.5, color: T.warnInk, lineHeight: 1.45 }}>
+                {impact.mode === 'assignments'
+                  ? `Covers ${impact.shifts?.length} shift${impact.shifts?.length > 1 ? 's' : ''} (${impact.totalHours}h) on the ${impact.published ? 'published' : 'draft'} rota. Approving leaves ${impact.shifts?.length > 1 ? 'them' : 'it'} uncovered.`
+                  : `Needs ${impact.coverHours}h of cover on ${impact.team_name}${impact.keyholderGaps ? `, and ${impact.keyholderGaps} shift${impact.keyholderGaps > 1 ? 's' : ''} would have no keyholder` : ''}.`}
+              </span>
+            </div>
           )}
         </div>
         {r.status === 'pending' && (
