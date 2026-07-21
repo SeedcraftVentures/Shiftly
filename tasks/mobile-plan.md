@@ -3,115 +3,130 @@
 Decided by the owner 2026-07-21. Supersedes the mobile sections of
 `tasks/game-plan.md` and refines `shiftly-mobile-brief.html`.
 
+> **Revised after review.** An earlier draft of this file recommended finishing the
+> PWA instead of building native apps, on the grounds that it was the least
+> break-prone route. That optimised for engineering risk and ignored two real
+> product requirements: store credibility, and the fact that a phone needs its own
+> UI rather than a squeezed desktop one. The native decision below is the correct
+> one; this note is kept so nobody re-opens a settled question.
+
 ---
 
-## 1. Decisions locked
+## 1. The three surfaces
 
-| Decision | Choice |
-|---|---|
-| Repo layout | **Monorepo**: `apps/web`, `apps/mobile`, `packages/tokens` |
-| App structure | **One Expo app, role-branched** after login via `/api/auth/user-type` |
-| Push notifications | **Deferred to v2.** v1 uses the polling already in place |
-| Job board | Ships separately, stays on `jobs-board` |
+| Surface | Who | What |
+|---|---|---|
+| **Web app** | Managers | The full product. All setup, configuration and dense data work |
+| **Desktop PWA** | Managers | The same web app, installable to the desktop. Already built and wired |
+| **Native mobile** | Staff (primary), managers (companion) | Purpose-built on-the-go screens. iOS + Android, via the stores |
 
-## 2. Hard prerequisites (nothing mobile starts before these)
+The PWA **stays**, positioned as the desktop install. It is not the mobile answer.
 
-1. **Merge instance A's header-based location resolution.** `getOrgScope` on
-   `apple-redesign` resolves the active location from the `shiftly_loc` **cookie
-   only**. Native clients cannot set that cookie, so every mobile API call would
-   silently resolve to the wrong location. Instance A already solved this on
-   `jobs-board` (`6a0e9c9`, `ACTIVE_LOCATION_HEADER = 'x-shiftly-location'`).
-   This is a blocker, not a nicety.
-2. **Phase B.** All six `/api/employee/*` routes are stubbed, and
+## 2. Why native, not responsive web
+
+This is the category standard, not a preference. 7shifts, Homebase and Sona all
+ship web dashboards for building the schedule and native apps where staff live
+day to day. Outside this category the same split holds: Shopify's app is not the
+full store admin, Xero's is not the reconciliation grid.
+
+Two reasons it matters here:
+
+- **Credibility.** Staff expect a work tool to arrive from the App Store or Play
+  Store. Our customer has to persuade their team to adopt this; "add this website
+  to your home screen" is a harder sell than "download our app".
+- **A phone needs different screens, not smaller ones.** The installed PWA today
+  shows the manager's Shifts and Staff tabs on a phone and they are unusable.
+  That is not a formatting bug to fix. A native app would never show those screens
+  at all. Mobile answers "when am I working", "can I swap this", "approve this".
+  The dense authoring surfaces belong on a desktop and should stay there.
+
+So the broken mobile layout is not an argument for a responsive pass. It is
+evidence that mobile needs its own UI.
+
+## 3. Prerequisites, in order
+
+1. **Phase B.** All six `/api/employee/*` routes are stubbed, and
    `app/api/staff/invite/route.js` still queries `.eq('id')`, `clerk_user_id`,
    `email`, `invite_token`, none of which exist in the current schema. **Staff
-   cannot obtain a login at all.** The staff app has no backend until this is done.
-3. **Verify Clerk token auth from a native client.** The routes use `auth()` from
-   `@clerk/nextjs/server`, which reads the request context. `@clerk/clerk-expo`
-   sends a bearer token. This is expected to work but has never been exercised;
-   prove it with one endpoint before building screens on the assumption.
+   cannot obtain a login at all.** Nothing staff-facing can be built or even
+   tested until this is done, on any platform.
+2. **Prove Clerk auth from Expo on ONE endpoint.** Routes use `auth()` from
+   `@clerk/nextjs/server`; `@clerk/clerk-expo` sends a bearer token. It is
+   expected to work and has never been exercised. This is the single most
+   break-prone assumption in the whole plan, so spike it before building screens.
+3. **Merge instance A's header-based location resolution.** `getOrgScope` here
+   resolves the active location from the `shiftly_loc` **cookie only**. Native
+   clients cannot set that cookie, so every mobile call would silently resolve to
+   the wrong location. Solved already on `jobs-board` (`6a0e9c9`,
+   `ACTIVE_LOCATION_HEADER = 'x-shiftly-location'`).
 
-## 3. Sequence
+## 4. Build sequence
 
-**Phase B — make the loop two-sided.** Un-stub the six employee endpoints behind a
-`getStaffScope(userId)` resolver keyed on `Staff.user_id`; fix the invite/claim
-flow. Result: staff log in on the web employee page, file real requests, and the
-Inbox stops being manager-only. This is also the cheapest way to test the whole
-staff data model before any native code exists.
+**Phase B** -> **Clerk Expo spike** -> **staff app** -> **manager companion**.
 
-**Full software QA.** The click-through, now including the two-sided loop.
+**Staff app first, deliberately.** It is the higher-value surface, the simpler
+one, and the one a customer's whole team will judge the product on. The manager
+companion is a convenience on top of a desktop product; the staff app *is* the
+product for most of its users.
 
-**Token extraction.** Before the app, not during (see §5).
+## 5. Scope per surface
 
-**Monorepo restructure.** See §6 for why the timing is delicate.
-
-**Mobile build.** Expo + TypeScript, role-branched.
-
-## 4. What stays on desktop
-
-Mobile is a companion for managers and the whole experience for staff.
-
-| Desktop only | Manager mobile | Staff mobile |
+| Desktop web only | Manager mobile | Staff mobile |
 |---|---|---|
-| Shift pattern authoring (TimelineBuilder is drag and drop) | Glance / readiness | Home, next shift + week |
+| Shift pattern authoring (drag and drop) | Glance / readiness | Home: next shift + week |
 | Staff CRUD and the availability grid | Generate -> gap list -> publish | My shifts, shift detail |
 | Rules configuration | **Inbox approvals** | Open shifts, pick up |
 | Opening hours, settings, onboarding | Reports summary | Swaps |
 | Full rota grid editing | Payroll CSV via share sheet | Availability |
-| Archive browsing | | Time off requests |
-| Billing | | Notifications, profile |
+| Archive browsing, billing | | Time off requests |
 
 **The Inbox is the strongest case for the manager app.** Approving time off with
-the coverage cost shown, swipe to approve, away from a desk, is genuinely better
-on a phone than on a laptop. Everything else on the manager side is a convenience;
-this is a real improvement.
+the coverage cost shown, away from a desk, is genuinely better on a phone than on
+a laptop. Everything else manager-side is convenience.
 
-Rota **editing** stays desktop. Tap-to-reassign a single cell on mobile is
-acceptable; dragging across a 7-column grid on a phone is not.
+Rota **editing** stays desktop. Tap-to-reassign one cell is fine on a phone;
+dragging across a seven column grid is not.
 
-## 5. Design consistency: what can and cannot be shared
+## 6. Design consistency
 
 **`app/components/ui/kit.jsx` cannot be imported into React Native.** It is React
-DOM: `<div>`, inline CSS objects, `backdrop-filter`, `box-shadow` strings, CSS
-transitions. None of that exists in RN. Any plan that assumes "just import the
-kit" is wrong.
+DOM: `<div>`, inline CSS, `backdrop-filter`, `box-shadow` strings, CSS
+transitions. Any plan that assumes "just import the kit" fails at the first
+component.
 
-What is genuinely shareable is the **token layer**, and our tokens are currently
-mixed. `THEMES.light/dark` holds both platform-agnostic values (colours, radii,
-type scale, font names, spacing) and web-only ones (`blur: 'blur(24px)
-saturate(180%)'`, `shadow` as CSS strings, `ring()`/`lift()` helpers returning CSS).
+What is shareable is the **token layer**: colours, radii, spacing, type scale,
+font families, easing. Our `THEMES` object currently mixes these with web-only
+values (`blur: 'blur(24px) saturate(180%)'`, shadows as CSS strings,
+`ring()`/`lift()` returning CSS), so the agnostic primitives get separated out.
 
-**`packages/tokens` therefore exports primitives only:**
-- colour palette (both themes), spacing scale, radii, type scale, font families,
-  easing curves, elevation *levels* as abstract steps (not CSS strings)
+**Start by copying a tokens file into the mobile project.** Not a monorepo.
 
-**Each platform derives from those:**
-- web keeps `kit.jsx`, importing primitives and composing CSS `box-shadow`/`blur`
-- mobile builds native components from the same primitives, expressing elevation
-  through `shadowColor`/`shadowOffset`/`shadowRadius` and Android `elevation`
+The earlier plan called for restructuring to `apps/web` + `apps/mobile` +
+`packages/tokens`. That is dropped: it moves every path in the repo, collides
+badly with instance A's in-flight job board work, moves Vercel's root directory,
+and buys convenience rather than capability. If the copies drift enough to hurt,
+revisit it then, from a calmer position.
 
 Components are **reimplemented, not shared**. The guarantee is that a Card is the
-same pink, the same radius and the same type scale on both, because both read one
-file. Anything stronger than that is not achievable across DOM and RN.
+same pink, the same radius and the same type scale on both, because both read
+from one set of primitives. Nothing stronger is achievable across DOM and RN.
 
-## 6. Monorepo restructure: timing is the risk
+## 7. Marketing copy has to change
 
-The move (`app/` -> `apps/web/app/`) touches **every path in the repo**.
+The site currently promises the opposite of this plan:
+- `app/page.jsx` FAQ: *"No app store download needed... Works on any device as a web app."*
+- `app/features/page.jsx`: *"No app store download. Works on any device as a web app."*
 
-Instance A currently has 8 commits of in-flight job board work on `jobs-board`.
-Restructuring while that is open moves every file underneath them and produces a
-merge far worse than the 63-vs-57 file conflict already resolved once.
+Once store apps ship, that is wrong. Reframe as: full web app, installable on
+desktop, with native apps for iOS and Android. Do this **before** launch, not after.
 
-**Therefore: do the restructure only when `jobs-board` is either merged or
-deliberately paused, and agree the moment with instance A first.** It also changes
-Vercel's root directory setting, so the deploy config moves at the same time.
+## 8. Deferred, with eyes open
 
-## 7. Not yet planned anywhere
-
-- **Push notifications backend.** Deferred to v2 by decision, but note what it
-  needs when it comes: device token storage per user, Expo push credentials, and
-  a send step inside `lib/createNotification`'s fan-out. None exists today.
-- **Offline behaviour.** The brief asks for "viewing shifts with no signal". That
-  needs a caching layer on the staff app; no design yet.
-- **App store presence.** Accounts, listings, screenshots, review cycles. Lead
-  time on this is usually underestimated.
+- **Push notifications: v2.** Needs device token storage per user, Expo push
+  credentials, and a send step inside `lib/createNotification`'s fan-out. None of
+  it exists. v1 ships on the polling already in place.
+- **Offline.** The brief asks for viewing shifts with no signal. Needs a caching
+  layer on the staff app; no design yet.
+- **App store presence.** Developer accounts, listings, screenshots, privacy
+  declarations, review cycles. Lead time here is routinely underestimated and it
+  is not engineering work, so start it early rather than at the end.

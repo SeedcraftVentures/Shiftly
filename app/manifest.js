@@ -2,12 +2,15 @@ export default function manifest() {
     return {
       name: 'Shiftly',
       short_name: 'Shiftly',
-      description: 'AI-powered staff scheduling',
+      // The site positions the solver as constraint satisfaction, not "AI", so
+      // keep the installed app's description on the same message.
+      description: 'Fair staff rotas, built in seconds',
       start_url: '/auth-redirect',
       display: 'standalone',
       background_color: '#ffffff',
-      theme_color: '#ec4899',
-      orientation: 'portrait',
+      theme_color: '#FF1F7D',
+      // No orientation lock: this install target is desktop, where portrait is
+      // wrong. Phones are served by the native apps, not by this.
       icons: [
         {
           src: '/icons/icon-192.png',
