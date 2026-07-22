@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   VENUES, CONTRACTS, SHIFT_PATTERNS, PAY_PERIODS,
-  completeness, FEATURED_DAYS,
+  completeness, FEATURED_DAYS, EMAIL_RE,
 } from '@/lib/jobs/taxonomy'
 
 // The form imports the SAME completeness() the API uses, so the progress meter
@@ -140,7 +140,10 @@ export default function PostForm() {
 
   // shift_pattern stays an array throughout, matching the text[] column.
   const scored = useMemo(() => completeness(f), [f])
-  const blocked = !scored.valid || !f.accepted_terms
+  // Contact email is validated here as well as on the server, so the form never
+  // shows a ready state for an address the server will reject.
+  const emailValid = EMAIL_RE.test((f.contact_email || '').trim())
+  const blocked = !scored.valid || !f.accepted_terms || !emailValid
 
   async function submit(e) {
     e.preventDefault()
@@ -301,7 +304,14 @@ export default function PostForm() {
           </Field>
           <div className="sm:col-span-2">
             <Field id="contact_email" label="Contact email" required hint="Used to set up your Shiftly account. Not shown on the listing.">
-              <input id="contact_email" type="email" className={inputCls} value={f.contact_email} onChange={set('contact_email')} />
+              <input
+                id="contact_email" type="email" value={f.contact_email} onChange={set('contact_email')}
+                aria-invalid={Boolean(f.contact_email) && !EMAIL_RE.test(f.contact_email.trim())}
+                className={`${inputCls} ${f.contact_email && !EMAIL_RE.test(f.contact_email.trim()) ? '!border-red-300 focus:!ring-red-100' : ''}`}
+              />
+              {f.contact_email && !EMAIL_RE.test(f.contact_email.trim()) && (
+                <p className="mt-1.5 text-xs text-red-600">Enter a full email, like name@venue.co.uk.</p>
+              )}
             </Field>
           </div>
         </div>
@@ -394,9 +404,30 @@ export default function PostForm() {
             <Field id="apply_url" label="Application link">
               <input id="apply_url" className={inputCls} value={f.apply_url} onChange={set('apply_url')} placeholder="https://" />
             </Field>
-            <Field id="apply_email" label="Or an email to apply to">
-              <input id="apply_email" type="email" className={inputCls} value={f.apply_email} onChange={set('apply_email')} />
-            </Field>
+            <div className="flex flex-col">
+              <div className="flex items-baseline justify-between gap-2 mb-1.5">
+                <label htmlFor="apply_email" className="block text-sm font-medium text-gray-700">Or an email to apply to</label>
+                {/* Saves retyping when applications come to the same inbox. Only
+                    offered once the contact email is a valid address to copy. */}
+                {EMAIL_RE.test((f.contact_email || '').trim()) && f.apply_email.trim() !== f.contact_email.trim() && (
+                  <button
+                    type="button"
+                    onClick={() => setF((p) => ({ ...p, apply_email: p.contact_email.trim() }))}
+                    className="text-xs font-medium text-pink-600 hover:text-pink-700"
+                  >
+                    Use contact email
+                  </button>
+                )}
+              </div>
+              <input
+                id="apply_email" type="email" value={f.apply_email} onChange={set('apply_email')}
+                aria-invalid={Boolean(f.apply_email) && !EMAIL_RE.test(f.apply_email.trim())}
+                className={`${inputCls} ${f.apply_email && !EMAIL_RE.test(f.apply_email.trim()) ? '!border-red-300 focus:!ring-red-100' : ''}`}
+              />
+              {f.apply_email && !EMAIL_RE.test(f.apply_email.trim()) && (
+                <p className="mt-1.5 text-xs text-red-600">Enter a full email, like jobs@venue.co.uk.</p>
+              )}
+            </div>
           </div>
         </fieldset>
       </div>
