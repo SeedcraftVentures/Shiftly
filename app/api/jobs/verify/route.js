@@ -68,15 +68,22 @@ export async function GET(request) {
       return bounce('/jobs/manage?error=mismatch')
     }
 
-    // Join the waitlist. A failure here should not strand a verified poster, so
-    // it is logged and the publish proceeds: they proved the email, which is
-    // what matters, and the waitlist can be reconciled from Job Employers later.
-    try {
-      const client = await clerkClient()
-      await client.waitlistEntries.create({ emailAddress: employer.email })
-    } catch (e) {
-      const already = JSON.stringify(e?.errors || e?.message || '').toLowerCase().includes('already')
-      if (!already) console.error('[jobs/verify] waitlist failed', e)
+    // Join the waitlist only if the poster opted in (token carries the choice).
+    // Actively clicking "join" is clear affirmative consent under PECR, so the
+    // consent timestamp is written alongside. A waitlist failure should not
+    // strand a verified poster, so it is logged and the publish proceeds.
+    const wantsWaitlist = payload.w === 1
+    let joinedWaitlist = false
+    if (wantsWaitlist) {
+      try {
+        const client = await clerkClient()
+        await client.waitlistEntries.create({ emailAddress: employer.email })
+        joinedWaitlist = true
+      } catch (e) {
+        const already = JSON.stringify(e?.errors || e?.message || '').toLowerCase().includes('already')
+        joinedWaitlist = already
+        if (!already) console.error('[jobs/verify] waitlist failed', e)
+      }
     }
 
     // posted_at reset to publish time: the board orders on it and the draft may
@@ -89,7 +96,14 @@ export async function GET(request) {
 
     await supabaseAdmin
       .from('Job Employers')
-      .update({ email_verified_at: new Date().toISOString(), last_seen_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .update({
+        email_verified_at: new Date().toISOString(),
+        last_seen_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        // Only stamp consent when they actually joined. Never overwrite an
+        // existing consent with a later post that declined the offer.
+        ...(joinedWaitlist ? { marketing_consent: true, consent_at: new Date().toISOString() } : {}),
+      })
       .eq('employer_id', employer.employer_id)
 
     return setSession(bounce(`/jobs/${listing.slug}?published=1`), employer.employer_id)

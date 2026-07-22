@@ -189,7 +189,7 @@ export default async function JobsPage({ searchParams }) {
                 ? 'No roles match those filters'
                 : `Showing ${(list.page - 1) * list.perPage + 1}–${Math.min(list.page * list.perPage, list.total)} of ${list.total}`}
             </p>
-            <Link href="/waitlist" className="text-sm font-medium text-pink-600 hover:text-pink-700 underline underline-offset-4">
+            <Link href="/jobs/post" className="text-sm font-medium text-pink-600 hover:text-pink-700 underline underline-offset-4">
               Hiring? Post a role free →
             </Link>
           </div>

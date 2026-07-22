@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   VENUES, CONTRACTS, SHIFT_PATTERNS, PAY_PERIODS,
@@ -17,7 +17,7 @@ const EMPTY = {
   pay_min: '', pay_max: '', pay_period: 'hourly',
   shift_pattern: [], description: '', benefits: '',
   apply_url: '', apply_email: '',
-  accepted_terms: false, marketing_consent: false,
+  accepted_terms: false,
 }
 
 const inputCls =
@@ -33,6 +33,73 @@ const inputCls =
  * Labels are uniform single lines, so every control in a row starts at the same
  * height regardless of which ones have hints.
  */
+// The optional waitlist upsell. Fetches the live tier so the copy matches how
+// many founder slots remain, and fails soft to the generic offer.
+function WaitlistOffer({ draft, busy, error, onChoose }) {
+  const [status, setStatus] = useState(null)
+
+  useEffect(() => {
+    let live = true
+    fetch('/api/jobs/waitlist-status')
+      .then((r) => r.json())
+      .then((d) => { if (live) setStatus(d) })
+      .catch(() => { if (live) setStatus({ tier: 'generic', spotsLeft: null }) })
+    return () => { live = false }
+  }, [])
+
+  const lifetime = status?.tier === 'lifetime'
+
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-8">
+      <p className="text-sm font-medium text-[#FF1F7D]">Before you post</p>
+
+      {lifetime ? (
+        <>
+          <h2 className="mt-1 font-cal text-2xl text-gray-900">Lock in a lifetime deal on Shiftly</h2>
+          <p className="mt-3 text-[15px] leading-relaxed text-gray-600">
+            Shiftly Jobs is free because it is how hospitality owners meet Shiftly, the fair
+            staff-scheduling tool this board is built by. The first {status.cap} on the waitlist
+            keep <span className="font-medium text-gray-900">lifetime pricing</span>, forever.
+          </p>
+          <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-pink-50 border border-pink-200 px-4 py-2 text-sm font-semibold text-pink-700">
+            <span className="w-2 h-2 rounded-full bg-[#FF1F7D]" aria-hidden="true" />
+            {status.spotsLeft} of {status.cap} founder spots left
+          </div>
+        </>
+      ) : (
+        <>
+          <h2 className="mt-1 font-cal text-2xl text-gray-900">Get early access to Shiftly</h2>
+          <p className="mt-3 text-[15px] leading-relaxed text-gray-600">
+            Shiftly Jobs is free because it is how hospitality owners meet Shiftly, the fair
+            staff-scheduling tool this board is built by. Join the waitlist for early access.
+          </p>
+        </>
+      )}
+
+      {error && <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">{error}</div>}
+
+      <div className="mt-7 flex flex-col sm:flex-row gap-3">
+        <button
+          type="button" disabled={busy || !status} onClick={() => onChoose(true)}
+          className="rounded-full bg-[#FF1F7D] px-7 py-3.5 font-medium text-white hover:bg-pink-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {busy ? 'Saving…' : lifetime ? 'Join and lock in the deal' : 'Join the waitlist'}
+        </button>
+        <button
+          type="button" disabled={busy} onClick={() => onChoose(false)}
+          className="rounded-full border border-gray-200 px-7 py-3.5 font-medium text-gray-700 hover:border-gray-300 transition-all disabled:opacity-40"
+        >
+          No thanks, just post my job
+        </button>
+      </div>
+      <p className="mt-4 text-xs text-gray-400">
+        Either way we email a link to confirm your job is real and put it live. Your listing is
+        already saved.
+      </p>
+    </div>
+  )
+}
+
 function Field({ id, label, hint, required, children }) {
   return (
     <div className="flex flex-col">
@@ -98,15 +165,16 @@ export default function PostForm() {
     }
   }
 
-  async function publish(e) {
-    e.preventDefault()
+  // Both offer buttons land here. joinWaitlist is the poster's choice, passed to
+  // the API so verify only joins the list if they actually opted in.
+  async function publish(joinWaitlist) {
     setError(null)
     setBusy(true)
     try {
       const res = await fetch('/api/jobs/post/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ listing_id: draft.listing_id, email: draft.email }),
+        body: JSON.stringify({ listing_id: draft.listing_id, email: draft.email, join_waitlist: joinWaitlist }),
       })
       const json = await res.json()
       if (!res.ok) { setError(json.error); return }
@@ -120,50 +188,12 @@ export default function PostForm() {
     }
   }
 
-  // Step 2. The ad is written and saved; joining the waitlist is what publishes
-  // it. Asking here rather than at the start means the employer has already done
-  // the work, so this reads as finishing rather than as a toll gate.
-  if (draft && !done) {
-    return (
-      <form onSubmit={publish} className="rounded-2xl border border-gray-200 bg-white p-8">
-        <p className="text-sm font-medium text-[#FF1F7D]">Last step</p>
-        <h2 className="mt-1 font-cal text-2xl text-gray-900">Your job is saved. Publish it.</h2>
-        <p className="mt-3 text-[15px] leading-relaxed text-gray-600">
-          Shiftly Jobs is free because it is how hospitality employers meet Shiftly, the rota
-          tool this board is built by. Confirm your email to join the waitlist and publish. We
-          send a link so we know the vacancy is real, which keeps the board clean.
-        </p>
-
-        <div className="mt-6 rounded-xl border border-gray-200 bg-gray-50 px-5 py-4">
-          <p className="text-sm text-gray-500">We will email</p>
-          <p className="mt-0.5 font-medium text-gray-900 break-words">{draft.email}</p>
-        </div>
-
-        {draft.featured && (
-          <div className="mt-4 rounded-xl border border-pink-200 bg-pink-50 px-5 py-4">
-            <p className="text-sm text-pink-800">
-              You filled everything in, so this one is featured at the top of the board for
-              {' '}{draft.featured_days} days once it is live.
-            </p>
-          </div>
-        )}
-
-        {error && (
-          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">{error}</div>
-        )}
-
-        <button
-          type="submit"
-          disabled={busy}
-          className="mt-6 w-full rounded-full bg-[#FF1F7D] px-8 py-3.5 font-medium text-white hover:bg-pink-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {busy ? 'Sending…' : 'Email me the link to publish'}
-        </button>
-        <p className="mt-3 text-xs text-gray-400 text-center">
-          Your job is already saved. Nothing you have written is lost.
-        </p>
-      </form>
-    )
+  // The optional waitlist offer, shown once the draft is saved. Joining is a
+  // value exchange, not a toll: either button publishes the job, the choice only
+  // decides whether they join the Shiftly waitlist. The offer text is dynamic,
+  // the first FOUNDER_CAP joiners get a lifetime deal, so scarcity is real.
+  if (draft && !done && !sent) {
+    return <WaitlistOffer draft={draft} busy={busy} error={error} onChoose={publish} />
   }
 
   // "Check your email" state, between requesting the link and clicking it.
@@ -371,22 +401,17 @@ export default function PostForm() {
         </fieldset>
       </div>
 
-      {/* Consent. Two separate boxes, both unticked. Bundling marketing consent
-          into terms acceptance makes the consent invalid, and sole traders and
-          partnerships count as individuals under PECR. */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 sm:p-8 space-y-4">
+      {/* Just the terms here. Marketing consent is captured separately by the
+          waitlist offer after this step, where actively choosing "join" is a
+          clear, unbundled opt-in. That keeps it valid under PECR (sole traders
+          and partnerships count as individuals) without a second checkbox. */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-6 sm:p-8">
         <label className="flex gap-3 items-start cursor-pointer">
           <input type="checkbox" checked={f.accepted_terms} onChange={set('accepted_terms')} className="mt-1 w-4 h-4 accent-[#FF1F7D]" />
           <span className="text-sm text-gray-700">
             I accept the <a href="/terms" className="underline hover:text-gray-900">terms</a> and confirm this is a
             genuine vacancy at a business I am authorised to post for.
             <span className="text-[#FF1F7D]">*</span>
-          </span>
-        </label>
-        <label className="flex gap-3 items-start cursor-pointer">
-          <input type="checkbox" checked={f.marketing_consent} onChange={set('marketing_consent')} className="mt-1 w-4 h-4 accent-[#FF1F7D]" />
-          <span className="text-sm text-gray-700">
-            Send me occasional emails about Shiftly rota software. Optional, and you can stop them at any time.
           </span>
         </label>
       </div>

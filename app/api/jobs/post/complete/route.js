@@ -25,6 +25,9 @@ export async function POST(request) {
     const body = await request.json().catch(() => null)
     const listingId = String(body?.listing_id || '').trim()
     const email = String(body?.email || '').trim().toLowerCase()
+    // Optional: joining the Shiftly waitlist is a value-offer opt-in, not a
+    // requirement to post. The choice rides in the publish token.
+    const joinWaitlist = body?.join_waitlist === true
     if (!listingId) return NextResponse.json({ error: 'Missing listing.' }, { status: 400 })
     if (!EMAIL_RE.test(email)) return NextResponse.json({ error: 'Enter a valid email.' }, { status: 400 })
 
@@ -53,7 +56,7 @@ export async function POST(request) {
     }
 
     const base = process.env.NEXT_PUBLIC_APP_URL || 'https://shiftly.so'
-    const href = `${base}/api/jobs/verify?token=${encodeURIComponent(publishToken(listingId, email))}`
+    const href = `${base}/api/jobs/verify?token=${encodeURIComponent(publishToken(listingId, email, joinWaitlist))}`
     const { delivered, link } = await sendMagicLink({
       to: email,
       subject: 'Confirm your job on Shiftly Jobs',
