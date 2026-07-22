@@ -22,14 +22,11 @@ const isPublicRoute = createRouteMatcher([
 const isCheckoutRoute = createRouteMatcher(['/checkout(.*)'])
 const isApiRoute = createRouteMatcher(['/api/(.*)'])
 
-// Posting is deliberately NOT account gated. The board ships before the app
-// opens, and app sign-up is closed behind a waitlist, so requiring an account
-// to post would make the board's own funnel impossible to launch. An employer
-// fills the form first and joins the waitlist to publish, which captures the
-// same lead at the point they are most invested rather than the least.
-// '/jobs(.*)' covers /jobs/post, so nothing extra is needed here.
-const isProtectedJobsRoute = createRouteMatcher(['/jobs/manage(.*)'])
-
+// The whole board is public to Clerk, including /jobs/post and /jobs/manage.
+// Posting and managing use their own passwordless email session (lib/jobs/auth),
+// NOT Clerk, because the board ships before the app opens and app sign-up is
+// closed behind a waitlist. Gating either on Clerk would make the board's own
+// funnel impossible to launch. '/jobs(.*)' already covers both.
 export default clerkMiddleware(async (auth, request) => {
   // Allow all API routes through
   if (isApiRoute(request)) {
@@ -37,7 +34,7 @@ export default clerkMiddleware(async (auth, request) => {
   }
 
   // Allow public routes
-  if (isPublicRoute(request) && !isProtectedJobsRoute(request)) {
+  if (isPublicRoute(request)) {
     return NextResponse.next()
   }
   

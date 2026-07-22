@@ -55,6 +55,7 @@ export default function PostForm() {
   // then done. The draft is saved before the waitlist step, so nothing typed is
   // lost if that step fails or the tab is closed.
   const [draft, setDraft] = useState(null)
+  const [sent, setSent] = useState(null)
   const [done, setDone] = useState(null)
 
   const set = (k) => (e) => {
@@ -109,7 +110,9 @@ export default function PostForm() {
       })
       const json = await res.json()
       if (!res.ok) { setError(json.error); return }
-      setDone({ ...draft, ...json })
+      // Already-live path (link clicked, then form resubmitted): jump to success.
+      if (json.alreadyLive) { setDone({ ...draft, ...json }); return }
+      setSent(json)
     } catch {
       setError('Could not reach the server. Your job is saved, try again.')
     } finally {
@@ -127,11 +130,12 @@ export default function PostForm() {
         <h2 className="mt-1 font-cal text-2xl text-gray-900">Your job is saved. Publish it.</h2>
         <p className="mt-3 text-[15px] leading-relaxed text-gray-600">
           Shiftly Jobs is free because it is how hospitality employers meet Shiftly, the rota
-          tool this board is built by. Join the waitlist and your listing goes live now.
+          tool this board is built by. Confirm your email to join the waitlist and publish. We
+          send a link so we know the vacancy is real, which keeps the board clean.
         </p>
 
         <div className="mt-6 rounded-xl border border-gray-200 bg-gray-50 px-5 py-4">
-          <p className="text-sm text-gray-500">Publishing as</p>
+          <p className="text-sm text-gray-500">We will email</p>
           <p className="mt-0.5 font-medium text-gray-900 break-words">{draft.email}</p>
         </div>
 
@@ -153,12 +157,31 @@ export default function PostForm() {
           disabled={busy}
           className="mt-6 w-full rounded-full bg-[#FF1F7D] px-8 py-3.5 font-medium text-white hover:bg-pink-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {busy ? 'Publishing…' : 'Join the waitlist and publish'}
+          {busy ? 'Sending…' : 'Email me the link to publish'}
         </button>
         <p className="mt-3 text-xs text-gray-400 text-center">
-          Your job is already saved. Nothing you have written is lost if this fails.
+          Your job is already saved. Nothing you have written is lost.
         </p>
       </form>
+    )
+  }
+
+  // "Check your email" state, between requesting the link and clicking it.
+  if (sent && !done) {
+    return (
+      <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center">
+        <h2 className="font-cal text-2xl text-gray-900">Check your email</h2>
+        <p className="mt-3 text-[15px] text-gray-600">
+          We sent a link to <span className="font-medium text-gray-900 break-words">{draft.email}</span>.
+          Click it to join the waitlist and put your job live. The link lasts 30 minutes.
+        </p>
+        {sent.devLink && (
+          <p className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 break-words">
+            Dev mode, no email configured.{' '}
+            <a className="underline font-medium" href={sent.devLink}>Open the publish link.</a>
+          </p>
+        )}
+      </div>
     )
   }
 
@@ -179,7 +202,7 @@ export default function PostForm() {
             View your listing
           </button>
           <button
-            onClick={() => { setDone(null); setDraft(null); setF(EMPTY) }}
+            onClick={() => { setDone(null); setDraft(null); setSent(null); setF(EMPTY) }}
             className="rounded-full border border-gray-200 px-6 py-3 font-medium text-gray-700 hover:border-gray-300 transition-colors"
           >
             Post another
