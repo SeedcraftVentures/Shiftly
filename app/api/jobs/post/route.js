@@ -15,7 +15,7 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/db'
 import { completeness, FEATURED_DAYS, showsPay, toShiftArray, SHIFT_PATTERN_LABEL } from '@/lib/jobs/taxonomy'
-import { buildSlug, classifyRole, classifyIndustry } from '@/lib/jobs/classify'
+import { buildSlug, classifyRole, classifyRetailRole } from '@/lib/jobs/classify'
 import { rateLimit, clientIp, tooMany } from '@/lib/jobs/ratelimit'
 
 export const dynamic = 'force-dynamic'
@@ -58,10 +58,16 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Enter a valid contact email.' }, { status: 400 })
     }
 
+    // The poster picks the industry, so it is trusted rather than classified.
+    // Anything unexpected falls back to hospitality (the default board).
+    const industry = body.industry === 'retail' ? 'retail' : 'hospitality'
+
     const data = {
+      industry, // completeness() reads this: venue type is hospitality-only
       employer_name: str(body.employer_name, 200),
       city: str(body.city, 120),
-      venue_type: str(body.venue_type, 40),
+      // No venue type on a retail post; it is a hospitality axis.
+      venue_type: industry === 'retail' ? '' : str(body.venue_type, 40),
       title: str(body.title, 200),
       contract_type: str(body.contract_type, 40),
       locality: str(body.locality, 120),
@@ -111,7 +117,8 @@ export async function POST(request) {
     const employerPatch = {
       name: data.employer_name,
       email: contactEmail,
-      venue_type: data.venue_type,
+      industry, // segments outreach by sector and pre-fills a return post
+      venue_type: data.venue_type || null,
       town: data.city,
       website: data.website || null,
       origin: 'native',
@@ -162,21 +169,15 @@ export async function POST(request) {
       source_url: null,
       attribution: null,
       title: data.title,
-      // Derived from the free text title, the same way every aggregated listing
-      // is classified. Asking for it separately was redundant and the dropdown
-      // could not cover the real variety of hospitality job titles.
-      role_category: classifyRole(data.title),
-      // A native poster deliberately created this listing, so it must never be
-      // hidden as 'other'. Classify for the likely industry, default hospitality
-      // (the current form is hospitality). Replaced by an explicit picker when
-      // the retail posting flow lands.
-      industry: (() => {
-        const i = classifyIndustry({ title: data.title, employerName: data.employer_name, venueType: data.venue_type })
-        return i === 'other' ? 'hospitality' : i
-      })(),
+      // Role is derived from the free text title, using the taxonomy for the
+      // chosen industry so a retail post gets a retail role, not 'other'.
+      role_category: (industry === 'retail' ? classifyRetailRole(data.title) : classifyRole(data.title)) || 'other',
+      // The poster chose the industry, so it is stored directly, never
+      // classified. A native listing is always on one of the two boards.
+      industry,
       employer_name: data.employer_name,
       employer_id: employerId,
-      venue_type: data.venue_type,
+      venue_type: data.venue_type || null,
       city: data.city,
       locality: data.locality || null,
       postcode: data.postcode || null,

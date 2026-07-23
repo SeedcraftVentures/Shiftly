@@ -11,6 +11,7 @@ import {
 // can never promise a Featured spell the server then refuses to grant.
 
 const EMPTY = {
+  industry: 'hospitality',
   employer_name: '', city: '', locality: '', postcode: '', venue_type: '', website: '',
   contact_email: '',
   title: '', contract_type: '',
@@ -139,6 +140,8 @@ export default function PostForm() {
     }))
 
   // shift_pattern stays an array throughout, matching the text[] column.
+  const isRetail = f.industry === 'retail'
+  // completeness() reads f.industry, so venue type is only required for hospitality.
   const scored = useMemo(() => completeness(f), [f])
   // Contact email is validated here as well as on the server, so the form never
   // shows a ready state for an address the server will reject.
@@ -277,12 +280,34 @@ export default function PostForm() {
         </p>
       </div>
 
-      {/* Venue */}
+      {/* Industry. Decides which board the role lands on and what we ask for
+          (a shop has no venue type). Hospitality is the default. */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-6 sm:p-8">
+        <h2 className="font-cal text-xl text-gray-900">What kind of business?</h2>
+        <div className="mt-4 flex flex-wrap gap-3">
+          {[['hospitality', 'Hospitality', 'Pub, bar, restaurant, café, hotel'], ['retail', 'Retail', 'Shop, store, showroom']].map(([key, label, hint]) => {
+            const on = f.industry === key
+            return (
+              <button
+                type="button" key={key}
+                onClick={() => setF((p) => ({ ...p, industry: key, venue_type: key === 'retail' ? '' : p.venue_type }))}
+                aria-pressed={on}
+                className={`flex-1 min-w-[200px] text-left rounded-xl border-2 px-5 py-4 transition-colors ${on ? 'border-[#FF1F7D] bg-pink-50' : 'border-gray-200 hover:border-gray-300'}`}
+              >
+                <span className={`block font-medium ${on ? 'text-pink-700' : 'text-gray-900'}`}>{label}</span>
+                <span className="block text-xs text-gray-500 mt-0.5">{hint}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Business details */}
       <div className="rounded-2xl border border-gray-200 bg-white p-6 sm:p-8 space-y-5">
-        <h2 className="font-cal text-xl text-gray-900">Your venue</h2>
+        <h2 className="font-cal text-xl text-gray-900">{isRetail ? 'Your business' : 'Your venue'}</h2>
         <div className="grid sm:grid-cols-2 gap-5 items-start">
-          <Field id="employer_name" label="Venue name" required>
-            <input id="employer_name" className={inputCls} value={f.employer_name} onChange={set('employer_name')} placeholder="The Bothy" />
+          <Field id="employer_name" label={isRetail ? 'Business name' : 'Venue name'} required>
+            <input id="employer_name" className={inputCls} value={f.employer_name} onChange={set('employer_name')} placeholder={isRetail ? 'The Corner Shop' : 'The Bothy'} />
           </Field>
           <Field id="city" label="Town or city" required>
             <input id="city" className={inputCls} value={f.city} onChange={set('city')} placeholder="Glasgow" />
@@ -293,12 +318,15 @@ export default function PostForm() {
           <Field id="postcode" label="Postcode">
             <input id="postcode" className={inputCls} value={f.postcode} onChange={set('postcode')} placeholder="G3 8AZ" />
           </Field>
-          <Field id="venue_type" label="Venue type" required>
-            <select id="venue_type" className={inputCls} value={f.venue_type} onChange={set('venue_type')}>
-              <option value="">Choose one</option>
-              {VENUES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
-          </Field>
+          {/* Venue type is hospitality only; a shop has no pub/restaurant type. */}
+          {!isRetail && (
+            <Field id="venue_type" label="Venue type" required>
+              <select id="venue_type" className={inputCls} value={f.venue_type} onChange={set('venue_type')}>
+                <option value="">Choose one</option>
+                {VENUES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            </Field>
+          )}
           <Field id="website" label="Website" hint="Counts toward featured.">
             <input id="website" className={inputCls} value={f.website} onChange={set('website')} placeholder="https://" />
           </Field>
