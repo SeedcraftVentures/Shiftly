@@ -16,6 +16,7 @@ import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/db'
 import { completeness, FEATURED_DAYS, showsPay, toShiftArray, SHIFT_PATTERN_LABEL } from '@/lib/jobs/taxonomy'
 import { buildSlug, classifyRole } from '@/lib/jobs/classify'
+import { rateLimit, clientIp, tooMany } from '@/lib/jobs/ratelimit'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,6 +31,14 @@ const MAX_PENDING_PER_EMPLOYER = 10
 export async function POST(request) {
   try {
     if (!supabaseAdmin) return NextResponse.json({ error: 'Server not configured.' }, { status: 500 })
+
+    // Per-IP cap on draft creation. The per-employer pending cap below stops one
+    // email flooding drafts; this stops one IP flooding drafts across many emails.
+    const rl = await rateLimit(`post:ip:${clientIp(request)}`, { limit: 20, windowSeconds: 600 })
+    if (!rl.allowed) {
+      const { retry, headers } = tooMany(rl.resetAt)
+      return NextResponse.json({ error: `Too many attempts. Try again in ${retry}s.` }, { status: 429, headers })
+    }
 
     const body = await request.json().catch(() => null)
     if (!body) return NextResponse.json({ error: 'Invalid request.' }, { status: 400 })

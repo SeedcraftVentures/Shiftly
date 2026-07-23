@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/db'
 import { signToken, MAGIC_LINK_TTL } from '@/lib/jobs/auth'
 import { sendMagicLink, isDev } from '@/lib/jobs/email'
+import { rateLimit, clientIp, tooMany } from '@/lib/jobs/ratelimit'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,6 +19,18 @@ export async function POST(request) {
     const body = await request.json().catch(() => null)
     const email = String(body?.email || '').trim().toLowerCase()
     if (!EMAIL_RE.test(email)) return NextResponse.json({ error: 'Enter a valid email.' }, { status: 400 })
+
+    // Sends an email, so limit per IP and per recipient to stop link bombing.
+    for (const [bucket, limit, windowSeconds] of [
+      [`login:ip:${clientIp(request)}`, 8, 600],
+      [`login:email:${email}`, 5, 900],
+    ]) {
+      const rl = await rateLimit(bucket, { limit, windowSeconds })
+      if (!rl.allowed) {
+        const { retry, headers } = tooMany(rl.resetAt)
+        return NextResponse.json({ error: `Too many attempts. Try again in ${retry}s.` }, { status: 429, headers })
+      }
+    }
 
     const { data: employer } = await supabaseAdmin
       .from('Job Employers')

@@ -13,6 +13,7 @@ import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/db'
 import { publishToken } from '@/lib/jobs/auth'
 import { sendMagicLink, isDev } from '@/lib/jobs/email'
+import { rateLimit, clientIp, tooMany } from '@/lib/jobs/ratelimit'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,6 +31,19 @@ export async function POST(request) {
     const joinWaitlist = body?.join_waitlist === true
     if (!listingId) return NextResponse.json({ error: 'Missing listing.' }, { status: 400 })
     if (!EMAIL_RE.test(email)) return NextResponse.json({ error: 'Enter a valid email.' }, { status: 400 })
+
+    // This endpoint sends an email, so it is a prime target for abuse (bombing a
+    // victim, or burning our Resend quota). Limit per IP and per recipient.
+    for (const [bucket, limit, windowSeconds] of [
+      [`complete:ip:${clientIp(request)}`, 8, 600],
+      [`complete:email:${email}`, 5, 3600],
+    ]) {
+      const rl = await rateLimit(bucket, { limit, windowSeconds })
+      if (!rl.allowed) {
+        const { retry, headers } = tooMany(rl.resetAt)
+        return NextResponse.json({ error: `Too many attempts. Try again in ${retry}s.` }, { status: 429, headers })
+      }
+    }
 
     const { data: listing } = await supabaseAdmin
       .from('Job Listings')

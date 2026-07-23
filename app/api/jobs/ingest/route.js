@@ -135,6 +135,9 @@ export async function POST(req) {
       .select('listing_id')
     if (draftErr) console.error('[jobs/ingest] draft sweep', draftErr)
 
+    // Trim the rate-limit table. Tolerated if the function is not present yet.
+    try { await supabaseAdmin.rpc('jobs_rate_limit_gc', {}) } catch { /* not applied yet */ }
+
     return NextResponse.json({
       ok: true,
       upserted: data?.length ?? 0,
