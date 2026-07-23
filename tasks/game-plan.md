@@ -106,14 +106,17 @@ to those signatures is a breaking change for B.
   "main auto-deploys via Netlify" inference during reconciliation). Deleted. Vercel needs no
   config file. The earlier caution about not merging unverified work into `main` still stands,
   just for the ordinary reason that `main` is the deploy branch.
-- **The job board ships SEPARATELY**, after this release. `jobs-board` keeps developing on its
-  own branch and is NOT merged into the first release.
+- **The job board ships IN release 1** (revised 2026-07-23, was "separately"). It is the
+  marketing funnel for pre-sales and sales, so it belongs with the launch rather than after it.
+  Instance A finishes `jobs-board`, then it is merged into `apple-redesign`, then a full QA runs
+  across the combined surface before Expo work starts.
 - **Phase B is IN scope.** The employee endpoints and the staff invite/claim flow get built
   before release, so the Inbox is genuinely two-sided and the marketing copy promising an
-  employee app is not an overclaim.
+  employee app is not an overclaim. DONE on `apple-redesign` (2026-07-21).
 
-**Release 1 = `apple-redesign`:** Apple redesign + dark mode, dead-code removal, tour/try-me/
-typography, Inbox (Wave 5), RLS/security (merged from `shiftly-rebuild`), plus Phase B.
+**Release 1 = `apple-redesign` + `jobs-board`:** Apple redesign + dark mode, dead-code removal,
+tour/try-me/typography, Inbox (Wave 5), RLS/security, Phase B (employee app + verified-email
+invites), and the job board.
 
 **Sequence:**
 1. **Phase 0, prove it works.** Nothing here has ever been run: ~10 commits of UI plus a rebuilt
@@ -121,12 +124,13 @@ typography, Inbox (Wave 5), RLS/security (merged from `shiftly-rebuild`), plus P
    click-through before any new feature work. Blocking.
    - Known broken, fix first: NotificationBell realtime is dead under RLS (anon key is blocked on
      `Notifications`), so it must poll `/api/notifications` instead of subscribing.
-2. **Phase 1, parallel lanes.** Instance B: Phase B (`app/api/employee/*` + fix the staff
-   invite/claim flow in `app/api/staff/invite/route.js`). Instance A: job board sections 6.1 to
-   6.9 and the remaining em dash sweep (~109 in the authed app; B swept only the 26 inside files
-   it merged, to stay out of A's lane).
-3. **Phase 2, integration.** Cut `develop`, merge `apple-redesign` in, QA. Job board stays out.
-4. **Phase 3, release.** `develop` -> `main` -> Vercel -> smoke test.
+2. **Phase 1, parallel lanes.** Instance B: Phase B, DONE. Instance A: finish `jobs-board`
+   (job board sections 6.1 to 6.9 and the remaining em dash sweep in the authed app).
+3. **Phase 2, integration.** Merge `jobs-board` into `apple-redesign`, then run a full QA across
+   the COMBINED surface (web app + Inbox + employee app + job board). Both branches have moved a
+   long way since they diverged, so the merge is where the surprises live; QA the merged result,
+   not either branch alone.
+4. **Phase 3, release.** Ship to `main` -> Vercel -> smoke test. Only after this does Expo start.
 
 **Known gaps, stated rather than hidden:** there are no automated tests, so everything rests on
 manual click-through. The Inbox has never been exercised against real data. Announcements need
