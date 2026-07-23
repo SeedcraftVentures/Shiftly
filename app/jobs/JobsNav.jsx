@@ -17,7 +17,9 @@ export default function JobsNav() {
             the product name, and links to the board home. */}
         <Link href="/jobs" aria-label="Shiftly Jobs home" className={`${GLASS} flex items-center rounded-full pl-3 pr-4 py-2`}>
           <ShiftlyLogo variant="default" size="sm" showPillbox={false} />
-          <span className="ml-1.5 font-bold text-lg text-[#FF1F7D] leading-tight" style={{ fontFamily: "'Cal Sans', sans-serif" }}>
+          {/* mt-0.5 mirrors the offset ShiftlyLogo puts on "Shiftly", so the two
+              words sit on the same line. */}
+          <span className="ml-1.5 mt-0.5 font-bold text-lg text-[#FF1F7D] leading-tight" style={{ fontFamily: "'Cal Sans', sans-serif" }}>
             Jobs
           </span>
         </Link>

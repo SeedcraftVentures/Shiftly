@@ -210,7 +210,10 @@ export default async function JobBoard({ industry = null, city = null, searchPar
           {/* Industry toggle sits above the filters: it is the primary axis. */}
           <IndustryTabs active={activeIndustry} hrefs={toggleHrefs} />
 
-          <div className="sticky top-4 z-30 mb-8 rounded-2xl border border-gray-200 bg-white/95 backdrop-blur p-4 shadow-sm">
+          {/* Not sticky: the nav is already fixed, and two bars trailing the
+              scroll overlapped. The nav stays with you; the filters sit at the
+              top of the results. */}
+          <div className="mb-8 rounded-2xl border border-gray-200 bg-white/95 backdrop-blur p-4 shadow-sm">
             <JobFilters facets={facets} cities={cities} basePath={basePath} roles={rolesForIndustry(activeIndustry)} showVenue={showVenue} />
           </div>
 
