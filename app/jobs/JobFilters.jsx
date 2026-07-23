@@ -6,7 +6,11 @@ import { ROLES, VENUES, CONTRACTS } from '@/lib/jobs/taxonomy'
 
 // Horizontal filter bar rather than a sidebar: hospitality traffic is
 // overwhelmingly mobile, and a sidebar collapses badly on a phone.
-export default function JobFilters({ facets = {}, cities = [] }) {
+//
+// basePath is the current board (/jobs, /jobs/hospitality, /jobs/retail), so
+// filters navigate within the active industry. roles/showVenue adapt the option
+// lists to the board: retail has its own roles and no venue axis.
+export default function JobFilters({ facets = {}, cities = [], basePath = '/jobs', roles = ROLES, showVenue = true }) {
   const router = useRouter()
   const params = useSearchParams()
   const [q, setQ] = useState(params.get('q') || '')
@@ -19,9 +23,10 @@ export default function JobFilters({ facets = {}, cities = [] }) {
       if (value) next.set(key, value)
       else next.delete(key)
       next.delete('page') // any filter change returns to page 1
-      router.push(`/jobs?${next.toString()}`)
+      const qs = next.toString()
+      router.push(`${basePath}${qs ? `?${qs}` : ''}`)
     },
-    [params, router]
+    [params, router, basePath]
   )
 
   const count = (group, key) => facets?.[group]?.[key] || 0
@@ -76,8 +81,8 @@ export default function JobFilters({ facets = {}, cities = [] }) {
         </svg>
       </form>
 
-      <Dropdown name="role" label="Any role" options={ROLES} group="role" />
-      <Dropdown name="venue" label="Any venue" options={VENUES} group="venue" />
+      <Dropdown name="role" label="Any role" options={roles} group="role" />
+      {showVenue && <Dropdown name="venue" label="Any venue" options={VENUES} group="venue" />}
       <Dropdown name="contract" label="Any contract" options={CONTRACTS} group="contract" />
       <Dropdown name="city" label="Anywhere" options={cities.map((c) => [c, c])} group="city" />
 
@@ -116,7 +121,7 @@ export default function JobFilters({ facets = {}, cities = [] }) {
       </button>
 
       {[...params.keys()].some((k) => k !== 'page') && (
-        <button type="button" onClick={() => router.push('/jobs')} className="text-sm font-medium text-gray-500 hover:text-gray-900 underline underline-offset-4">
+        <button type="button" onClick={() => router.push(basePath)} className="text-sm font-medium text-gray-500 hover:text-gray-900 underline underline-offset-4">
           Clear
         </button>
       )}
