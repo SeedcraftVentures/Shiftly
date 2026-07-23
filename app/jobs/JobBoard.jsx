@@ -168,6 +168,13 @@ export default async function JobBoard({ industry = null, city = null, searchPar
     page: sp.page || 1,
   }
 
+  // Any active narrowing (search, a facet, a toggle within a town). Used to tell
+  // "this town has no jobs" from "a filter hid them" for the empty state.
+  const hasFilters = Boolean(
+    filters.q || filters.role || filters.venue || filters.contract || filters.paid ||
+    filters.livingWage || (townMode && activeIndustry)
+  )
+
   const [list, facets] = await Promise.all([searchListings(filters), getFacets(filters)])
   const stats = facets.stats || {}
   const cities = Object.entries(facets.city || {}).sort((a, b) => b[1] - a[1]).map(([c]) => c)
@@ -231,6 +238,25 @@ export default async function JobBoard({ industry = null, city = null, searchPar
           {list.error ? (
             <div className="rounded-2xl border border-gray-200 bg-white p-10 text-center">
               <p className="text-gray-600">Couldn&apos;t load jobs just now. Please try again shortly.</p>
+            </div>
+          ) : list.results.length === 0 && townMode && !hasFilters ? (
+            // A town with genuinely no jobs (not a filter that hid them). This is
+            // a conversion surface, not a dead end: the URL is advertised locally
+            // to get the first employer posting.
+            <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center">
+              <p className="font-cal text-2xl text-gray-900">No jobs in {city} yet</p>
+              <p className="mt-2 text-gray-600 max-w-md mx-auto">
+                Be the first. Post a hospitality or retail role in {city}, free, and reach local
+                people looking for work close to home.
+              </p>
+              <div className="mt-6 flex flex-wrap justify-center gap-3">
+                <Link href="/jobs/post" className="rounded-full bg-[#FF1F7D] px-6 py-3 text-sm font-medium text-white hover:bg-pink-600">
+                  Post the first job
+                </Link>
+                <Link href="/jobs" className="rounded-full border border-gray-200 px-6 py-3 text-sm font-medium text-gray-700 hover:border-gray-300">
+                  Browse all jobs
+                </Link>
+              </div>
             </div>
           ) : list.results.length === 0 ? (
             <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center">
