@@ -205,7 +205,7 @@ export default async function JobBoard({ industry = null, city = null, searchPar
         </div>
       </HeatGlow>
 
-      <main className="px-6 pb-20">
+      <main className="px-6 pt-10 pb-20">
         <div className="max-w-6xl mx-auto">
           {/* Industry toggle sits above the filters: it is the primary axis. */}
           <IndustryTabs active={activeIndustry} hrefs={toggleHrefs} />
