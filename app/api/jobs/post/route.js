@@ -22,6 +22,11 @@ export const dynamic = 'force-dynamic'
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const str = (v, max = 5000) => String(v ?? '').trim().slice(0, max)
 
+// How many unconfirmed drafts one employer may hold at once. The sweep clears
+// abandoned ones after JOBS_PENDING_TTL_HOURS, so this is a burst cap, not a
+// lifetime one.
+const MAX_PENDING_PER_EMPLOYER = 10
+
 export async function POST(request) {
   try {
     if (!supabaseAdmin) return NextResponse.json({ error: 'Server not configured.' }, { status: 500 })
@@ -121,6 +126,23 @@ export async function POST(request) {
         .single()
       if (empErr) return NextResponse.json({ error: 'Could not save your venue.', detail: empErr.message }, { status: 500 })
       employerId = created.employer_id
+    }
+
+    // Draft-spam cap. Publishing needs an email click, so drafts alone cannot
+    // reach the board, but nothing stopped one email drafting endlessly and
+    // bloating the table. Cap the UNPUBLISHED drafts per employer. Serverless
+    // friendly (a DB count, no shared memory) and it targets the actual abuse
+    // vector. A verified poster who publishes frees the count immediately.
+    const { count: pendingCount } = await supabaseAdmin
+      .from('Job Listings')
+      .select('listing_id', { count: 'exact', head: true })
+      .eq('employer_id', employerId)
+      .eq('status', 'pending')
+    if ((pendingCount || 0) >= MAX_PENDING_PER_EMPLOYER) {
+      return NextResponse.json(
+        { error: 'You have several unpublished drafts. Confirm one by email before starting more.' },
+        { status: 429 }
+      )
     }
 
     // ── Listing ───────────────────────────────────────────────────────────────

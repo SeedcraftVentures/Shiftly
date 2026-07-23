@@ -33,6 +33,10 @@ const SOURCES = {
 // What a no-argument sweep pulls. Reed is deliberately excluded, see above.
 const DEFAULT_SOURCES = ['adzuna', 'smartrecruiters']
 
+// Abandoned drafts older than this are purged on every ingest. A poster gets a
+// generous window to click the confirm email before their draft disappears.
+const PENDING_TTL_HOURS = Number(process.env.JOBS_PENDING_TTL_HOURS || 48)
+
 export async function POST(req) {
   const gate = authorised(req)
   if (!gate.ok) return NextResponse.json({ error: gate.why }, { status: 401 })
@@ -119,10 +123,23 @@ export async function POST(req) {
       .select('listing_id')
     if (sweepErr) console.error('[jobs/ingest] expiry sweep', sweepErr)
 
+    // Abandoned native drafts: someone filled the form but never clicked the
+    // confirm email. They were never public, so they are DELETED, not expired,
+    // and the deletion frees the poster's draft cap.
+    const draftCutoff = new Date(Date.now() - PENDING_TTL_HOURS * 3600e3).toISOString()
+    const { data: purgedDrafts, error: draftErr } = await supabaseAdmin
+      .from('Job Listings')
+      .delete()
+      .eq('status', 'pending')
+      .lt('created_at', draftCutoff)
+      .select('listing_id')
+    if (draftErr) console.error('[jobs/ingest] draft sweep', draftErr)
+
     return NextResponse.json({
       ok: true,
       upserted: data?.length ?? 0,
       expired: swept?.length ?? 0,
+      purgedDrafts: purgedDrafts?.length ?? 0,
       maxAgeDays: MAX_AGE_DAYS,
       ...summary,
     })
