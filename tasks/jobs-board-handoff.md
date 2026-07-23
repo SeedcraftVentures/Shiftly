@@ -10,6 +10,85 @@ character class in `tidyExcerpt`, that one is functional code, leave it.
 
 ---
 
+## SESSION UPDATE (going live is the next job)
+
+The board is feature-complete and verified on localhost, **not deployed**. The
+owner wants it live to unblock the Shiftly Expo apps, and asked to do the
+deploy/merge in a following session. Nothing is pushed. `jobs-board` is ~28
+commits ahead of its base, working tree clean.
+
+**Built and verified this stretch (all on `jobs-board`):**
+
+- Expired pages stay at 200 (6.1), JobPosting JSON-LD (6.2), `metadataBase` (6.3).
+- Full posting funnel: `/jobs/post` is public, drafts as `pending`, an emailed
+  magic link confirms and publishes. Pay + shift pattern required. Featured is
+  earned (fill everything), never sold. Optional waitlist offer with a dynamic
+  Real-Living-Wage-style founder tier (first 200 get lifetime pricing, read live
+  from the Clerk waitlist count).
+- Passwordless employer login and management (`/jobs/manage`): magic-link
+  session, edit / take down / repost, ownership-scoped, enumeration safe.
+- Transparency badges (pay shown, meets living wage) + a living-wage filter.
+  Wording is descriptive, NOT the Living Wage Foundation trademark. A verified
+  "accredited" tier cross-referencing their public directory is a future upgrade.
+- Reed connector (full descriptions, unlocks JobPosting). EXCLUDED from the
+  scheduled ingest until its terms are confirmed.
+- Two industries: classifier (hospitality | retail | other, off-topic dropped),
+  `/jobs/hospitality`, `/jobs/retail`, an industry toggle, and a retail posting
+  picker. Board reads industry from a shared column; only hospitality and retail
+  are ever shown.
+- Town pages `/jobs/in/[town]` for local marketing, with a seed-a-town
+  conversion state (a target town renders "be the first to post" before it has
+  any jobs). `TARGET_TOWNS` in `lib/jobs/taxonomy.js`, extend freely.
+- The board has its own "Shiftly Jobs" header (`app/jobs/JobsNav.jsx`), distinct
+  from the marketing nav, linked from the main site as "Job Board".
+- Rate limiting (Supabase-backed), draft-spam cap, abandoned-draft sweep.
+- Scheduled auto-refresh: `vercel.json` cron hits `/api/jobs/ingest` every 2
+  days, pulling BOTH industries (Adzuna hospitality + retail categories + SR).
+
+**Migrations, ALL APPLIED to Supabase `mobdakvnkkgzndozrpnw`:**
+`schema-employers.sql`, `schema-employer-verify.sql`, `schema-rate-limits.sql`,
+`schema-industry.sql`. The demo-clone DB currently holds ~409 live listings
+(316 hospitality, 93 retail) from manual ingests.
+
+### Going live: the checklist
+
+1. **Merge target is a release decision.** The plan was jobs-board AFTER
+   release 1; the owner now wants it live for the Expo apps. Confirm with the
+   owner / instance B whether it merges to `apple-redesign`, `develop` or `main`.
+2. **Deploy to Vercel.**
+3. **Set Vercel production env vars.** Everything in `.env.local` PLUS:
+   - `NEXT_PUBLIC_APP_URL=https://shiftly.so` (locally it is set to
+     `http://localhost:3001` for dev; production MUST be the real domain or magic
+     links break).
+   - `CRON_SECRET` (any strong random string). Vercel sends it as
+     `Authorization: Bearer` on cron calls; the ingest route checks it. Without
+     it the scheduled refresh is unauthorised.
+   - Clerk **pk_live / sk_live** for production (`.env.local` has pk_test for
+     localhost). `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` / `CLERK_SECRET_KEY`.
+   - `RESEND` (or `RESEND_API_KEY`). `shiftly.so` is a VERIFIED Resend domain,
+     sends from `noreply@shiftly.so` work.
+   - `JOBS_AUTH_SECRET` (magic-link signing, keep stable across deploys or
+     existing links/sessions break), Supabase keys, Adzuna, `REED_JOBSEEKERS`.
+4. **Check the Vercel plan.** The ingest route asks for `maxDuration = 300`,
+   which needs Pro. On Hobby it caps lower and a full sweep can time out, trim
+   SmartRecruiters or split the run.
+5. **Reed terms** stay unconfirmed, so Reed is correctly out of the scheduled
+   ingest (DEFAULT_SOURCES). Confirm attribution/caching before enabling it in
+   production.
+6. **First production ingest** to populate prod: let the cron fire, or POST to
+   `/api/jobs/ingest` with `x-ingest-secret` (`JOBS_INGEST_SECRET`, add it to
+   Vercel too if using the manual path).
+7. **SEO discoverability (not launch-blocking, but do it soon):** a sitemap from
+   live listings + cities + towns, and browse-by-town links, so the town and
+   industry pages are crawlable. `listCities()` in `lib/jobs/query.js` is the
+   helper for the town list. Until this lands, town pages only serve
+   directly-advertised URLs, not organic local search.
+
+Verification this session was via built scripts in the session scratchpad (now
+gone). Re-verify by rendering (curl/Playwright), as section 7 says.
+
+---
+
 ## 0. Getting running on a new machine
 
 ```bash
