@@ -140,6 +140,7 @@ export default async function JobsPage({ searchParams }) {
     contract: sp.contract || '',
     paid: sp.paid === '1',
     livingWage: sp.lw === '1',
+    industry: sp.industry || '',
     page: sp.page || 1,
   }
 

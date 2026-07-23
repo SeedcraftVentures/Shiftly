@@ -15,6 +15,7 @@ export async function GET(req) {
     contract: p.get('contract') || '',
     paid: p.get('paid') === '1',
     livingWage: p.get('lw') === '1',
+    industry: p.get('industry') || '',
     page: p.get('page') || 1,
   }
 

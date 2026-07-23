@@ -15,7 +15,7 @@
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/db'
 import { completeness, FEATURED_DAYS, showsPay, toShiftArray, SHIFT_PATTERN_LABEL } from '@/lib/jobs/taxonomy'
-import { buildSlug, classifyRole } from '@/lib/jobs/classify'
+import { buildSlug, classifyRole, classifyIndustry } from '@/lib/jobs/classify'
 import { rateLimit, clientIp, tooMany } from '@/lib/jobs/ratelimit'
 
 export const dynamic = 'force-dynamic'
@@ -166,6 +166,14 @@ export async function POST(request) {
       // is classified. Asking for it separately was redundant and the dropdown
       // could not cover the real variety of hospitality job titles.
       role_category: classifyRole(data.title),
+      // A native poster deliberately created this listing, so it must never be
+      // hidden as 'other'. Classify for the likely industry, default hospitality
+      // (the current form is hospitality). Replaced by an explicit picker when
+      // the retail posting flow lands.
+      industry: (() => {
+        const i = classifyIndustry({ title: data.title, employerName: data.employer_name, venueType: data.venue_type })
+        return i === 'other' ? 'hospitality' : i
+      })(),
       employer_name: data.employer_name,
       employer_id: employerId,
       venue_type: data.venue_type,

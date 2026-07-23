@@ -87,6 +87,10 @@ export default async function JobDetailPage({ params }) {
   if (!job) notFound()
 
   const closed = job.isExpired
+  // A closed role has no live application route, so drop the apply and source
+  // URLs entirely. This removes them from the visible page AND from the
+  // serialized page data, so a dead apply link never ships in the HTML at all.
+  if (closed) { job.apply_url = null; job.source_url = null }
   // A closed page earns its keep by being a hub, so it gets a wider set of live
   // roles to send the visitor on to. getRelatedListings is live-only, so nothing
   // expired can surface here.
