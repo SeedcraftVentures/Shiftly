@@ -8,6 +8,7 @@ import {
   ROLE_LABEL, VENUE_LABEL, CONTRACT_LABEL,
 } from '@/lib/jobs/query'
 import { jobPostingSchema } from '@/lib/jobs/jsonld'
+import Badges from '../Badges'
 
 export const dynamic = 'force-dynamic'
 
@@ -246,6 +247,9 @@ export default async function JobDetailPage({ params }) {
           <aside className="lg:col-span-1">
             <div className="lg:sticky lg:top-6 rounded-2xl border border-gray-200 bg-white p-6">
               <h2 className="font-cal text-lg text-gray-900 mb-2">At a glance</h2>
+              {/* Badges lead the sidebar: the fairness signals are the first thing
+                  worth knowing, before the row-by-row detail. */}
+              <Badges job={job} size="md" className="mb-4" />
               <dl>
                 <Row label="Pay">
                   {pay || <span className="text-gray-400 font-normal">Not disclosed</span>}

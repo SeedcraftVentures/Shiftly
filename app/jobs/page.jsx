@@ -3,6 +3,7 @@ import Nav from '@/app/components/Nav'
 import Footer from '@/app/components/Footer'
 import { HeatGlow, SHIFTLY_PALETTE } from '@/app/components/HeatGlow'
 import JobFilters from './JobFilters'
+import Badges from './Badges'
 import {
   searchListings, getFacets, formatPay, showsPay,
   ROLE_LABEL, VENUE_LABEL, CONTRACT_LABEL,
@@ -71,7 +72,11 @@ function JobCard({ job }) {
         )}
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      {/* Transparency badges sit above the neutral tags: they are the reason to
+          trust this listing, so they lead. Null when the role earned none. */}
+      <Badges job={job} className="mt-3" />
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
         {/* 'other' means we couldn't classify it, so show nothing rather than leak
             an internal value onto the card. */}
         {job.role_category && job.role_category !== 'other' && <Tag>{ROLE_LABEL[job.role_category]}</Tag>}
@@ -134,6 +139,7 @@ export default async function JobsPage({ searchParams }) {
     city: sp.city || '',
     contract: sp.contract || '',
     paid: sp.paid === '1',
+    livingWage: sp.lw === '1',
     page: sp.page || 1,
   }
 
@@ -165,8 +171,8 @@ export default async function JobsPage({ searchParams }) {
             {[
               [stats.total ?? 0, 'Live roles'],
               [stats.employers ?? 0, 'Venues hiring'],
-              [stats.addedThisWeek ?? 0, 'Added this week'],
               [`${payPct}%`, 'Show their pay'],
+              [stats.livingWage ?? 0, 'Meet living wage'],
             ].map(([value, label]) => (
               <div key={label}>
                 <div className="font-cal text-3xl lg:text-4xl text-white">{value}</div>

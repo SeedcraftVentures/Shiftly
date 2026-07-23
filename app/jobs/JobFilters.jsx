@@ -55,6 +55,7 @@ export default function JobFilters({ facets = {}, cities = [] }) {
   )
 
   const paid = params.get('paid') === '1'
+  const lw = params.get('lw') === '1'
 
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -94,6 +95,24 @@ export default function JobFilters({ facets = {}, cities = [] }) {
       >
         <span className={`w-2 h-2 rounded-full ${paid ? 'bg-white' : 'bg-pink-500'}`} />
         Shows pay
+      </button>
+
+      {/* Real Living Wage: the fairness filter. Implies pay is shown, so it
+          supersedes the toggle above when active. */}
+      <button
+        type="button"
+        onClick={() => setParam('lw', lw ? '' : '1')}
+        aria-pressed={lw}
+        className={`inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium border transition-colors ${
+          lw
+            ? 'bg-pink-500 border-pink-500 text-white'
+            : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+        }`}
+      >
+        <svg viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5" aria-hidden="true">
+          <path d="M10 1l2.6 5.3 5.9.9-4.2 4.1 1 5.8L10 14.9 4.7 17.1l1-5.8L1.5 7.2l5.9-.9L10 1z" />
+        </svg>
+        Living wage
       </button>
 
       {[...params.keys()].some((k) => k !== 'page') && (
