@@ -1,18 +1,18 @@
 import Link from 'next/link'
 
-// The industry toggle. Plain links (not client state) so each board is a real,
-// shareable, crawlable URL. `active` is the current industry, or null for the
-// combined /jobs view.
-const TABS = [
-  { key: null, label: 'All jobs', href: '/jobs' },
-  { key: 'hospitality', label: 'Hospitality', href: '/jobs/hospitality' },
-  { key: 'retail', label: 'Retail', href: '/jobs/retail' },
-]
-
-export default function IndustryTabs({ active = null }) {
+// The industry toggle. Plain links (not client state) so every board is a real,
+// shareable, crawlable URL. `active` is the current industry (null = All), and
+// `hrefs` gives the three destinations, which differ between the main boards
+// (route based) and a town page (query based, staying on the town).
+export default function IndustryTabs({ active = null, hrefs }) {
+  const tabs = [
+    { key: null, label: 'All jobs', href: hrefs.all },
+    { key: 'hospitality', label: 'Hospitality', href: hrefs.hospitality },
+    { key: 'retail', label: 'Retail', href: hrefs.retail },
+  ]
   return (
     <div className="mb-6 inline-flex rounded-full border border-gray-200 bg-white p-1 shadow-sm">
-      {TABS.map((t) => {
+      {tabs.map((t) => {
         const on = t.key === active
         return (
           <Link

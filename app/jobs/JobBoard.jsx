@@ -7,7 +7,7 @@ import IndustryTabs from './IndustryTabs'
 import Badges from './Badges'
 import {
   searchListings, getFacets, formatPay,
-  ROLE_LABEL_ALL, VENUE_LABEL, CONTRACT_LABEL, rolesForIndustry,
+  ROLE_LABEL_ALL, VENUE_LABEL, CONTRACT_LABEL, rolesForIndustry, citySlug,
 } from '@/lib/jobs/query'
 
 // The one board, rendered for /jobs (both industries), /jobs/hospitality and
@@ -127,21 +127,44 @@ function Pagination({ page, pages, params, basePath }) {
 
 /**
  * @param {object} props
- * @param {('hospitality'|'retail'|null)} props.industry  fixed by the route
- * @param {object} props.searchParams  already-awaited URL params
+ * @param {('hospitality'|'retail'|null)} props.industry  fixed by the route (main boards)
+ * @param {string|null} props.city       stored city value (town pages)
+ * @param {object} props.searchParams     already-awaited URL params
  */
-export default async function JobBoard({ industry = null, searchParams = {} }) {
-  const board = BOARDS[industry || 'all']
+export default async function JobBoard({ industry = null, city = null, searchParams = {} }) {
   const sp = searchParams
+  const townMode = Boolean(city)
+
+  // On a town page the industry comes from the query (the toggle stays on the
+  // town). On a main board it is fixed by the route.
+  const activeIndustry = townMode
+    ? (['hospitality', 'retail'].includes(sp.industry) ? sp.industry : null)
+    : industry
+
+  const basePath = townMode ? `/jobs/in/${citySlug(city)}` : BOARDS[industry || 'all'].basePath
+  const showVenue = activeIndustry !== 'retail'
+  const h1 = townMode
+    ? `${activeIndustry === 'retail' ? 'Retail' : activeIndustry === 'hospitality' ? 'Hospitality' : 'Hospitality and retail'} jobs in ${city}`
+    : BOARDS[industry || 'all'].h1
+  const blurb = townMode
+    ? `Every role we can find in ${city}, close to home. We show the pay wherever the employer has given one.`
+    : BOARDS[industry || 'all'].blurb
+
+  // Toggle destinations. Town pages keep you on the town via a query param;
+  // main boards switch route.
+  const toggleHrefs = townMode
+    ? { all: basePath, hospitality: `${basePath}?industry=hospitality`, retail: `${basePath}?industry=retail` }
+    : { all: '/jobs', hospitality: '/jobs/hospitality', retail: '/jobs/retail' }
+
   const filters = {
     q: sp.q || '',
     role: sp.role || '',
     venue: sp.venue || '',
-    city: sp.city || '',
+    city: city || sp.city || '', // town pages fix the city
     contract: sp.contract || '',
     paid: sp.paid === '1',
     livingWage: sp.lw === '1',
-    industry: industry || '', // the route decides the industry, not the URL query
+    industry: activeIndustry || '',
     page: sp.page || 1,
   }
 
@@ -162,9 +185,9 @@ export default async function JobBoard({ industry = null, searchParams = {} }) {
             <span className="text-sm font-medium text-white">Powered by Shiftly</span>
           </div>
           <h1 className="font-cal text-4xl sm:text-5xl lg:text-6xl text-white leading-[1.05] tracking-tight max-w-3xl">
-            {board.h1}
+            {h1}
           </h1>
-          <p className="mt-5 text-lg text-white/85 max-w-xl">{board.blurb}</p>
+          <p className="mt-5 text-lg text-white/85 max-w-xl">{blurb}</p>
 
           <div className="mt-10 flex flex-wrap gap-x-10 gap-y-4">
             {[
@@ -185,10 +208,10 @@ export default async function JobBoard({ industry = null, searchParams = {} }) {
       <main className="px-6 pb-20">
         <div className="max-w-6xl mx-auto">
           {/* Industry toggle sits above the filters: it is the primary axis. */}
-          <IndustryTabs active={industry} />
+          <IndustryTabs active={activeIndustry} hrefs={toggleHrefs} />
 
           <div className="sticky top-4 z-30 mb-8 rounded-2xl border border-gray-200 bg-white/95 backdrop-blur p-4 shadow-sm">
-            <JobFilters facets={facets} cities={cities} basePath={board.basePath} roles={rolesForIndustry(industry)} showVenue={board.showVenue} />
+            <JobFilters facets={facets} cities={cities} basePath={basePath} roles={rolesForIndustry(activeIndustry)} showVenue={showVenue} />
           </div>
 
           <div className="mb-6 flex items-baseline justify-between gap-4">
@@ -210,17 +233,17 @@ export default async function JobBoard({ industry = null, searchParams = {} }) {
             <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center">
               <p className="font-cal text-2xl text-gray-900">Nothing here yet</p>
               <p className="mt-2 text-gray-600">Try widening your filters, or clear them to see everything.</p>
-              <Link href={board.basePath} className="mt-6 inline-block rounded-full bg-gray-900 px-6 py-3 text-sm font-medium text-white hover:bg-gray-800">
+              <Link href={basePath} className="mt-6 inline-block rounded-full bg-gray-900 px-6 py-3 text-sm font-medium text-white hover:bg-gray-800">
                 Clear filters
               </Link>
             </div>
           ) : (
             <div className="grid gap-4">
-              {list.results.map((job) => <JobCard key={job.listing_id} job={job} showVenue={board.showVenue} />)}
+              {list.results.map((job) => <JobCard key={job.listing_id} job={job} showVenue={showVenue} />)}
             </div>
           )}
 
-          <Pagination page={list.page} pages={list.pages} params={paramString} basePath={board.basePath} />
+          <Pagination page={list.page} pages={list.pages} params={paramString} basePath={basePath} />
 
           <p className="mt-12 text-center text-xs text-gray-400">
             Some roles are sourced via{' '}
