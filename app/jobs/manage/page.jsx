@@ -1,4 +1,4 @@
-import Nav from '@/app/components/Nav'
+import JobsNav from '@/app/jobs/JobsNav'
 import Footer from '@/app/components/Footer'
 import { HeatGlow, SHIFTLY_PALETTE } from '@/app/components/HeatGlow'
 import { currentEmployerId } from '@/lib/jobs/session'
@@ -27,7 +27,7 @@ export default async function ManagePage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Nav currentPage="jobs" />
+      <JobsNav />
       <HeatGlow as="header" palette={SHIFTLY_PALETTE} className="pt-32 pb-14 px-6">
         <div className="max-w-4xl mx-auto">
           <h1 className="font-cal text-3xl sm:text-4xl lg:text-5xl text-white leading-[1.1] tracking-tight">

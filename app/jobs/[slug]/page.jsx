@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import Nav from '@/app/components/Nav'
+import JobsNav from '@/app/jobs/JobsNav'
 import Footer from '@/app/components/Footer'
 import { HeatGlow, SHIFTLY_PALETTE } from '@/app/components/HeatGlow'
 import {
@@ -111,12 +111,12 @@ export default async function JobDetailPage({ params }) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
         />
       )}
-      <Nav currentPage="jobs" />
+      <JobsNav />
 
       <HeatGlow as="header" palette={SHIFTLY_PALETTE} className="pt-32 pb-14 px-6">
         <div className="max-w-4xl mx-auto">
           <Link href="/jobs" className="inline-flex items-center gap-2 text-sm font-medium text-white/80 hover:text-white mb-6">
-            ← All hospitality jobs
+            ← All jobs
           </Link>
           <h1 className="font-cal text-3xl sm:text-4xl lg:text-5xl text-white leading-[1.1] tracking-tight break-words">
             {job.title}

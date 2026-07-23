@@ -1,4 +1,4 @@
-import Nav from '@/app/components/Nav'
+import JobsNav from '@/app/jobs/JobsNav'
 import Footer from '@/app/components/Footer'
 import { HeatGlow, SHIFTLY_PALETTE } from '@/app/components/HeatGlow'
 import PostForm from './PostForm'
@@ -16,7 +16,7 @@ export const metadata = {
 export default async function PostJobPage() {
   return (
     <div className="min-h-screen bg-gray-50">
-      <Nav currentPage="jobs" />
+      <JobsNav />
 
       <HeatGlow as="header" palette={SHIFTLY_PALETTE} className="pt-32 pb-14 px-6">
         <div className="max-w-3xl mx-auto">
