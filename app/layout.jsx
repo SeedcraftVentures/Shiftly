@@ -25,6 +25,12 @@ const figtree = Figtree({
 })
 
 export const metadata = {
+  // Without this, every relative Open Graph and Twitter image stays relative, so
+  // nothing resolves when a page is shared. Job listing pages are the ones people
+  // actually share, so they are the ones that break. Falls back to the live domain
+  // rather than localhost, because the fallback is what production uses if the env
+  // var is ever missing there.
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://shiftly.so'),
   title: 'Shiftly - Staff Scheduling Made Fair',
   description: 'Build fair, balanced rotas in minutes. Set your rules once, Shiftly handles the rest. Built for retail and hospitality managers.',
   icons: {

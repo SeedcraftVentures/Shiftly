@@ -22,12 +22,17 @@ const isPublicRoute = createRouteMatcher([
 const isCheckoutRoute = createRouteMatcher(['/checkout(.*)'])
 const isApiRoute = createRouteMatcher(['/api/(.*)'])
 
+// The whole board is public to Clerk, including /jobs/post and /jobs/manage.
+// Posting and managing use their own passwordless email session (lib/jobs/auth),
+// NOT Clerk, because the board ships before the app opens and app sign-up is
+// closed behind a waitlist. Gating either on Clerk would make the board's own
+// funnel impossible to launch. '/jobs(.*)' already covers both.
 export default clerkMiddleware(async (auth, request) => {
   // Allow all API routes through
   if (isApiRoute(request)) {
     return NextResponse.next()
   }
-  
+
   // Allow public routes
   if (isPublicRoute(request)) {
     return NextResponse.next()

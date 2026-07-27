@@ -6,7 +6,11 @@ import { ROLES, VENUES, CONTRACTS } from '@/lib/jobs/taxonomy'
 
 // Horizontal filter bar rather than a sidebar: hospitality traffic is
 // overwhelmingly mobile, and a sidebar collapses badly on a phone.
-export default function JobFilters({ facets = {}, cities = [] }) {
+//
+// basePath is the current board (/jobs, /jobs/hospitality, /jobs/retail), so
+// filters navigate within the active industry. roles/showVenue adapt the option
+// lists to the board: retail has its own roles and no venue axis.
+export default function JobFilters({ facets = {}, cities = [], basePath = '/jobs', roles = ROLES, showVenue = true }) {
   const router = useRouter()
   const params = useSearchParams()
   const [q, setQ] = useState(params.get('q') || '')
@@ -19,9 +23,10 @@ export default function JobFilters({ facets = {}, cities = [] }) {
       if (value) next.set(key, value)
       else next.delete(key)
       next.delete('page') // any filter change returns to page 1
-      router.push(`/jobs?${next.toString()}`)
+      const qs = next.toString()
+      router.push(`${basePath}${qs ? `?${qs}` : ''}`)
     },
-    [params, router]
+    [params, router, basePath]
   )
 
   const count = (group, key) => facets?.[group]?.[key] || 0
@@ -55,6 +60,7 @@ export default function JobFilters({ facets = {}, cities = [] }) {
   )
 
   const paid = params.get('paid') === '1'
+  const lw = params.get('lw') === '1'
 
   return (
     <div className="flex flex-wrap items-center gap-3">
@@ -75,8 +81,8 @@ export default function JobFilters({ facets = {}, cities = [] }) {
         </svg>
       </form>
 
-      <Dropdown name="role" label="Any role" options={ROLES} group="role" />
-      <Dropdown name="venue" label="Any venue" options={VENUES} group="venue" />
+      <Dropdown name="role" label="Any role" options={roles} group="role" />
+      {showVenue && <Dropdown name="venue" label="Any venue" options={VENUES} group="venue" />}
       <Dropdown name="contract" label="Any contract" options={CONTRACTS} group="contract" />
       <Dropdown name="city" label="Anywhere" options={cities.map((c) => [c, c])} group="city" />
 
@@ -96,8 +102,26 @@ export default function JobFilters({ facets = {}, cities = [] }) {
         Shows pay
       </button>
 
+      {/* Real Living Wage: the fairness filter. Implies pay is shown, so it
+          supersedes the toggle above when active. */}
+      <button
+        type="button"
+        onClick={() => setParam('lw', lw ? '' : '1')}
+        aria-pressed={lw}
+        className={`inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium border transition-colors ${
+          lw
+            ? 'bg-pink-500 border-pink-500 text-white'
+            : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
+        }`}
+      >
+        <svg viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5" aria-hidden="true">
+          <path d="M10 1l2.6 5.3 5.9.9-4.2 4.1 1 5.8L10 14.9 4.7 17.1l1-5.8L1.5 7.2l5.9-.9L10 1z" />
+        </svg>
+        Living wage
+      </button>
+
       {[...params.keys()].some((k) => k !== 'page') && (
-        <button type="button" onClick={() => router.push('/jobs')} className="text-sm font-medium text-gray-500 hover:text-gray-900 underline underline-offset-4">
+        <button type="button" onClick={() => router.push(basePath)} className="text-sm font-medium text-gray-500 hover:text-gray-900 underline underline-offset-4">
           Clear
         </button>
       )}

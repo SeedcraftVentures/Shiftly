@@ -1,12 +1,14 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import Nav from '@/app/components/Nav'
+import JobsNav from '@/app/jobs/JobsNav'
 import Footer from '@/app/components/Footer'
 import { HeatGlow, SHIFTLY_PALETTE } from '@/app/components/HeatGlow'
 import {
-  getListingBySlug, getRelatedListings, formatPay, tidyExcerpt,
+  getListingForPage, getRelatedListings, formatPay, tidyExcerpt,
   ROLE_LABEL, VENUE_LABEL, CONTRACT_LABEL,
 } from '@/lib/jobs/query'
+import { jobPostingSchema } from '@/lib/jobs/jsonld'
+import Badges from '../Badges'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,9 +20,20 @@ const isExcerpt = (job) => !job.is_native && (job.description || '').length < SN
 
 export async function generateMetadata({ params }) {
   const { slug } = await params
-  const job = await getListingBySlug(slug)
+  const job = await getListingForPage(slug)
   if (!job) return { title: 'Job not found | Shiftly Jobs' }
   const where = job.city ? ` in ${job.city}` : ''
+
+  // Closed roles stay indexable, that is the whole point of keeping them at 200,
+  // but the title has to say so. A searcher who lands on a filled role and only
+  // finds out after clicking apply is worse served than one told up front.
+  if (job.isExpired) {
+    return {
+      title: `${job.title} at ${job.employer_name}${where} (closed) | Shiftly Jobs`,
+      description: `This ${job.title} role at ${job.employer_name}${where} is no longer taking applications. See similar hospitality jobs that are still open on Shiftly Jobs.`,
+    }
+  }
+
   const pay = formatPay(job)
   return {
     title: `${job.title} at ${job.employer_name}${where} | Shiftly Jobs`,
@@ -70,32 +83,57 @@ function Row({ label, children }) {
 
 export default async function JobDetailPage({ params }) {
   const { slug } = await params
-  const job = await getListingBySlug(slug)
+  const job = await getListingForPage(slug)
   if (!job) notFound()
 
-  const [related, pay] = [await getRelatedListings(job), formatPay(job)]
+  const closed = job.isExpired
+  // A closed role has no live application route, so drop the apply and source
+  // URLs entirely. This removes them from the visible page AND from the
+  // serialized page data, so a dead apply link never ships in the HTML at all.
+  if (closed) { job.apply_url = null; job.source_url = null }
+  // A closed page earns its keep by being a hub, so it gets a wider set of live
+  // roles to send the visitor on to. getRelatedListings is live-only, so nothing
+  // expired can surface here.
+  const [related, pay] = [await getRelatedListings(job, closed ? 8 : 4), formatPay(job)]
   const excerpt = isExcerpt(job)
   const body = excerpt ? tidyExcerpt(job.description) : job.description || ''
   const paragraphs = body.split(/\n{2,}/).filter(Boolean)
 
+  // Null on closed roles and on capped aggregator snippets. Both cases are
+  // enforced inside the builder so the gate cannot drift from the page.
+  const schema = jobPostingSchema(job, { isExpired: closed })
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <Nav currentPage="jobs" />
+      {schema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        />
+      )}
+      <JobsNav />
 
       <HeatGlow as="header" palette={SHIFTLY_PALETTE} className="pt-32 pb-14 px-6">
         <div className="max-w-4xl mx-auto">
           <Link href="/jobs" className="inline-flex items-center gap-2 text-sm font-medium text-white/80 hover:text-white mb-6">
-            ← All hospitality jobs
+            ← All jobs
           </Link>
-          <h1 className="font-cal text-3xl sm:text-4xl lg:text-5xl text-white leading-[1.1] tracking-tight">
+          <h1 className="font-cal text-3xl sm:text-4xl lg:text-5xl text-white leading-[1.1] tracking-tight break-words">
             {job.title}
           </h1>
-          <p className="mt-4 text-lg text-white/85">
+          <p className="mt-4 text-lg text-white/85 break-words">
             {job.employer_name}
             {job.city ? <span className="text-white/60"> · {job.city}</span> : null}
           </p>
           <div className="mt-7 flex flex-wrap items-center gap-3">
-            <ApplyButton job={job} className="!bg-white !text-gray-900 hover:!bg-gray-100" />
+            {closed ? (
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/15 backdrop-blur-md border border-white/25 px-5 py-2.5 text-sm font-semibold text-white">
+                <span className="w-2 h-2 rounded-full bg-white/60" aria-hidden="true" />
+                No longer accepting applications
+              </span>
+            ) : (
+              <ApplyButton job={job} className="!bg-white !text-gray-900 hover:!bg-gray-100" />
+            )}
             {pay ? (
               <span className="inline-flex items-center rounded-full bg-white/15 backdrop-blur-md border border-white/25 px-4 py-2 text-sm font-semibold text-white">
                 {pay}
@@ -112,10 +150,44 @@ export default async function JobDetailPage({ params }) {
       <main className="px-6 py-12">
         <div className="max-w-4xl mx-auto grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
+            {/* Say it before the description, not after. Someone skim-reading a
+                role they cannot apply for should find that out in the first line. */}
+            {closed && (
+              <div className="mb-6 rounded-2xl border border-gray-200 bg-white p-6">
+                <h2 className="font-cal text-xl text-gray-900">This role has closed</h2>
+                <p className="mt-2 text-[15px] leading-relaxed text-gray-600">
+                  {job.employer_name} is no longer taking applications for this position. It has
+                  either been filled or withdrawn. The details below are kept for reference.
+                </p>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  {job.city && (
+                    <Link
+                      href={`/jobs?city=${encodeURIComponent(job.city)}`}
+                      className="inline-flex items-center rounded-full bg-[#FF1F7D] px-5 py-2.5 text-sm font-medium text-white hover:bg-pink-600 transition-colors"
+                    >
+                      Open jobs in {job.city}
+                    </Link>
+                  )}
+                  {job.role_category && (
+                    <Link
+                      href={`/jobs?role=${encodeURIComponent(job.role_category)}`}
+                      className="inline-flex items-center rounded-full border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 hover:border-gray-300 transition-colors"
+                    >
+                      All {(ROLE_LABEL[job.role_category] || 'similar').toLowerCase()} roles
+                    </Link>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="rounded-2xl border border-gray-200 bg-white p-7 sm:p-9">
               <h2 className="font-cal text-2xl text-gray-900">About this role</h2>
 
-              <div className="mt-5 space-y-4 text-[15px] leading-relaxed text-gray-700">
+              {/* break-words: employer copy is arbitrary text and can contain a
+                  very long unbroken token (a URL, a reference code, or someone
+                  leaning on one key). Without a break opportunity it overflows
+                  the card and pushes the layout sideways. */}
+              <div className="mt-5 space-y-4 text-[15px] leading-relaxed text-gray-700 break-words">
                 {paragraphs.length ? (
                   paragraphs.map((p, i) => <p key={i}>{p}</p>)
                 ) : (
@@ -137,18 +209,20 @@ export default async function JobDetailPage({ params }) {
                 </div>
               )}
 
-              <div className="mt-8 pt-7 border-t border-gray-100">
-                <ApplyButton job={job} />
-                <p className="mt-3 text-xs text-gray-400">
-                  Applications are handled by {job.is_agency ? 'the agency' : 'the employer'}, not by Shiftly.
-                </p>
-              </div>
+              {!closed && (
+                <div className="mt-8 pt-7 border-t border-gray-100">
+                  <ApplyButton job={job} />
+                  <p className="mt-3 text-xs text-gray-400">
+                    Applications are handled by {job.is_agency ? 'the agency' : 'the employer'}, not by Shiftly.
+                  </p>
+                </div>
+              )}
             </div>
 
             {related.length > 0 && (
               <div className="mt-8">
                 <h2 className="font-cal text-2xl text-gray-900 mb-4">
-                  More roles{job.city ? ` in ${job.city}` : ''}
+                  {closed ? 'Roles open now' : 'More roles'}{job.city ? ` in ${job.city}` : ''}
                 </h2>
                 <div className="grid gap-3">
                   {related.map((r) => {
@@ -177,6 +251,9 @@ export default async function JobDetailPage({ params }) {
           <aside className="lg:col-span-1">
             <div className="lg:sticky lg:top-6 rounded-2xl border border-gray-200 bg-white p-6">
               <h2 className="font-cal text-lg text-gray-900 mb-2">At a glance</h2>
+              {/* Badges lead the sidebar: the fairness signals are the first thing
+                  worth knowing, before the row-by-row detail. */}
+              <Badges job={job} size="md" className="mb-4" />
               <dl>
                 <Row label="Pay">
                   {pay || <span className="text-gray-400 font-normal">Not disclosed</span>}
@@ -187,9 +264,19 @@ export default async function JobDetailPage({ params }) {
                 <Row label="Location">{job.locality ? `${job.locality}, ${job.city}` : job.city}</Row>
                 <Row label="Employer">{job.brand || job.employer_name}</Row>
                 <Row label="Posted">{timeAgo(job.posted_at)}</Row>
+                <Row label="Status">{closed ? 'Closed' : null}</Row>
               </dl>
 
-              <ApplyButton job={job} className="mt-6 w-full" />
+              {closed ? (
+                <Link
+                  href="/jobs"
+                  className="mt-6 w-full inline-flex items-center justify-center rounded-full bg-[#FF1F7D] px-7 py-3.5 font-medium text-white hover:bg-pink-600 transition-colors"
+                >
+                  Browse open jobs
+                </Link>
+              ) : (
+                <ApplyButton job={job} className="mt-6 w-full" />
+              )}
 
               {job.attribution && (
                 <p className="mt-4 text-xs text-gray-400">

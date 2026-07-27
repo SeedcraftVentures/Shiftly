@@ -129,6 +129,12 @@ export default function FloatingNav({ currentPage = null }) {
             </Link>
           )}
 
+          {/* The job board is a product destination, not a careers tab, so it
+              reads as "Job Board" and opens Shiftly Jobs with its own header. */}
+          <Link href="/jobs" className="px-4 py-2 text-gray-900 hover:text-pink-600 font-medium transition-colors text-sm rounded-full">
+            Job Board
+          </Link>
+
           <Link href="/about" className="px-4 py-2 text-gray-900 hover:text-pink-600 font-medium transition-colors text-sm rounded-full">
             About
           </Link>
@@ -173,6 +179,7 @@ export default function FloatingNav({ currentPage = null }) {
           ) : (
             <a href="/#pricing" onClick={closeMenus} className="block w-full text-left px-4 py-2.5 text-gray-700 font-medium rounded-xl hover:bg-white/60">Pricing</a>
           )}
+          <Link href="/jobs" onClick={closeMenus} className="block w-full text-left px-4 py-2.5 text-gray-700 font-medium rounded-xl hover:bg-white/60">Job Board</Link>
           <Link href="/about" onClick={closeMenus} className="block w-full text-left px-4 py-2.5 text-gray-700 font-medium rounded-xl hover:bg-white/60">About</Link>
           <Link href="/waitlist" onClick={closeMenus} className="block w-full px-4 py-2.5 font-semibold rounded-xl text-center bg-white/70 border-2 border-pink-500 text-gray-900 hover:text-pink-600">Join Waitlist</Link>
         </div>
