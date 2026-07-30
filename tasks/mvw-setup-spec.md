@@ -1,4 +1,4 @@
-# Shiftly — Setup, Onboarding & the Minimum Viable Week
+# Shiftly, Setup, Onboarding & the Minimum Viable Week
 
 Canonical product spec for how a business gets set up and how flexibility is
 handled. Written 2026-07 during QA of the first release. This is the spine we hold
@@ -6,7 +6,7 @@ to as we adapt and build; change it deliberately, not by drift.
 
 ---
 
-## 1. The core idea — the Minimum Viable Week (MVW)
+## 1. The core idea, the Minimum Viable Week (MVW)
 
 Setup captures the **Minimum Viable Week**: the smallest crew that still opens the
 doors and covers every operating hour. Not the busy week. Not peak. The **floor**.
@@ -26,7 +26,7 @@ baseline ships now, flexibility and seasonality are explicitly downstream.
 
 **Naming:** use "Minimum Viable Week" / MVW as the internal term. Surface it to
 managers in plain language ("let's set up your usual week"). Avoid "Minimum Working
-Week" in UK-facing copy — it clashes with the employment meaning of contracted
+Week" in UK-facing copy, it clashes with the employment meaning of contracted
 minimum hours. Test the actual on-screen word with a real manager before committing.
 
 ## 2. Principles (the tie-breakers)
@@ -51,7 +51,7 @@ minimum hours. Test the actual on-screen word with a real manager before committ
 3. Manager invites those staff (the email carries the app link / join code).
 4. Staff self-onboard in the Team app: name, contracted + max hours, availability,
    confirm pay. This syncs back; the manager sees who has done it.
-5. Manager sets up the **MVW** on the Shifts page — the skeleton crew per team —
+5. Manager sets up the **MVW** on the Shifts page, the skeleton crew per team ,
    guided by the companion.
 6. Generate the rota: `scheduler.py` fills the MVW for the week, deterministically.
 7. Flex for this week: drag-and-drop on the grid now; AI-assisted suggestions later.
@@ -70,7 +70,7 @@ trials die there.
 with the bare minimum:
 - First name
 - Usual weekly hours
-- Email — **mandatory**, because it is how the person is invited to self-serve the rest.
+- Email, **mandatory**, because it is how the person is invited to self-serve the rest.
 
 That is enough to generate a usable rota in ~2 minutes. Availability defaults to
 open until the staff member sets it.
@@ -79,7 +79,7 @@ open until the staff member sets it.
 **code/link**, and enter their own:
 - Full name
 - Contracted hours and max hours (max capped at 48/week unless a Working Time
-  Directive opt-out is recorded — UK-first)
+  Directive opt-out is recorded, UK-first)
 - Availability
 - Confirm their pay
 
@@ -103,13 +103,13 @@ It replaces the linear onboarding wizard/tour entirely.
 
 Its jobs, in order of how hard the underlying task is:
 
-1. **Heavy lifting on Shifts — building the MVW.** Coverage-first, one skeleton
+1. **Heavy lifting on Shifts, building the MVW.** Coverage-first, one skeleton
    question per team ("what is the fewest people who can open and cover the day?"),
    a live view of the cover building, and a **guardrail**: you cannot finish a team
    while the shifts you built fall short of the floor you stated (warn, with an
    explicit override).
 2. **Contextual empty-state guidance.** Example, on an empty Payroll page: "Nothing
-   here yet, because wages aren't set. You can do that on the Staff tab — come back
+   here yet, because wages aren't set. You can do that on the Staff tab, come back
    and I'll have this populated." Conversational, helpful, never blocking.
 3. **First-visit page intros (replaces the tour).** The first time a page is opened:
    "New to the Archive? This is where your published rotas live. Any questions? If
@@ -177,12 +177,12 @@ the code/link join described in §4.
 
 ## 9. Open decisions (name them, don't drift on them)
 
-- **Surface wording** for MVW — test on a real manager; avoid "minimum working week".
-- **Join code shape** — one business code (with manager visibility/removal) vs
+- **Surface wording** for MVW, test on a real manager; avoid "minimum working week".
+- **Join code shape**, one business code (with manager visibility/removal) vs
   per-staff codes.
-- **Recurring day-variation** — per-day staffing on a pattern (schema change) vs
+- **Recurring day-variation**, per-day staffing on a pattern (schema change) vs
   weekly flex only.
-- **First-rota fast path** — is name + hours enough, or does it also want a
+- **First-rota fast path**, is name + hours enough, or does it also want a
   demo/skeleton auto-fill to feel instant?
-- **Companion vs tour** — confirm the tour is fully retired in favour of the
+- **Companion vs tour**, confirm the tour is fully retired in favour of the
   per-page companion, and plan its removal so we don't maintain both.
