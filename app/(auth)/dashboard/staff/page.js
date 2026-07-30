@@ -403,8 +403,57 @@ export function AvailKey({ accent }) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-const fromApi = (r) => ({ id: r.id, team_id: r.team_id, name: r.name, role: r.role, contracted: r.contracted_hours, max: r.max_hours, wage: r.hourly_rate, pay_basis: r.pay_basis || 'hourly', annual_salary: r.annual_salary || 0, annualised_hours: r.annualised_hours || 0, keyholder: r.keyholder, avail: r.availability || {} })
+const fromApi = (r) => ({ id: r.id, team_id: r.team_id, name: r.name, role: r.role, contracted: r.contracted_hours, max: r.max_hours, wage: r.hourly_rate, pay_basis: r.pay_basis || 'hourly', annual_salary: r.annual_salary || 0, annualised_hours: r.annualised_hours || 0, keyholder: r.keyholder, avail: r.availability || {}, linked: !!r.clerk_user_id })
 const toApi = (s) => ({ team_id: s.team_id, name: s.name, role: s.role, contracted_hours: s.contracted, max_hours: s.max, hourly_rate: s.wage, pay_basis: s.pay_basis || 'hourly', annual_salary: s.annual_salary ?? 0, annualised_hours: s.annualised_hours ?? 0, keyholder: s.keyholder, availability: s.avail })
+
+// Invite-by-code: the manager shares one business code; staff enter it in the
+// Team app to join and set their own availability. Shows how many have joined.
+function InviteCard({ T, joined, total }) {
+  const [code, setCode] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/staff/join-code').then((r) => (r.ok ? r.json() : null)).then((d) => d && setCode(d.join_code)).catch(() => {})
+  }, [])
+
+  const regenerate = async () => {
+    if (!confirm('Make a new code? The old one stops working, and anyone mid-join will need the new one.')) return
+    setBusy(true)
+    try {
+      const res = await fetch('/api/staff/join-code', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ regenerate: true }) })
+      if (res.ok) setCode((await res.json()).join_code)
+    } finally { setBusy(false) }
+  }
+  const copy = () => { if (code) { navigator.clipboard?.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 1500) } }
+
+  return (
+    <Card pad={18} style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
+      <div style={{ flex: 1, minWidth: 240 }}>
+        <div style={{ fontSize: 15, fontWeight: 700, color: T.ink, letterSpacing: '-0.01em' }}>Invite your team</div>
+        <div style={{ fontSize: 13, color: T.muted, marginTop: 3, lineHeight: 1.5 }}>
+          Share this code. Your team download the Shiftly Team app, enter it, pick their name and set their own availability.
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <button onClick={copy} title="Copy code" style={{ fontFamily: T.font, fontSize: 22, fontWeight: 800, letterSpacing: 4, color: T.pink, background: T.pink + '12', border: `1px solid ${T.pink}33`, borderRadius: 12, padding: '10px 18px', cursor: 'pointer' }}>
+          {code || '······'}
+        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <Button size="sm" variant="secondary" onClick={copy} disabled={!code}>{copied ? 'Copied' : 'Copy'}</Button>
+          <button onClick={regenerate} disabled={busy || !code} style={{ fontFamily: T.font, fontSize: 11.5, fontWeight: 600, color: T.faint, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>New code</button>
+        </div>
+      </div>
+
+      {total > 0 && (
+        <div style={{ fontSize: 12.5, fontWeight: 600, color: joined >= total ? T.green : T.muted, borderLeft: `1px solid ${T.hair}`, paddingLeft: 16 }}>
+          {joined} of {total} joined
+        </div>
+      )}
+    </Card>
+  )
+}
 
 export default function StaffPage() {
   const { T } = useTheme()
@@ -521,7 +570,8 @@ export default function StaffPage() {
     <div style={{ fontFamily: T.font, color: T.body, maxWidth: 1240, margin: '0 auto', padding: '40px 32px 64px' }}>
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 34, fontWeight: 700, color: T.ink, margin: 0, letterSpacing: '-0.03em' }}>Staff</h1>
-        <p style={{ fontSize: 16, color: T.muted, margin: '6px 0 0', letterSpacing: '-0.01em' }}>Your team members, their contracts and availability.</p>
+        <p style={{ fontSize: 16, color: T.muted, margin: '6px 0 18px', letterSpacing: '-0.01em' }}>Your team members, their contracts and availability.</p>
+        <InviteCard T={T} joined={staff.filter((s) => s.linked).length} total={staff.length} />
       </div>
 
       {/* team segmented + team-level actions */}

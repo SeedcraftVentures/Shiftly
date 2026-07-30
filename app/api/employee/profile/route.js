@@ -1,14 +1,12 @@
-import { auth, currentUser } from '@clerk/nextjs/server'
+import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
-import { resolveStaff, toEmployeeProfile, verifiedEmails } from '@/lib/staffScope'
+import { getStaffScope, toEmployeeProfile } from '@/lib/staffScope'
 
-// The employee's own record. This is also the route that CLAIMS an outstanding
-// invite: it is the first call the employee app makes, and by then Clerk has
-// verified the signed-in user owns their email address, so a Staff row invited to
-// that address is linked here. No token, no deep link, nothing to expire.
+// The employee's own record. Linking an account to a Staff row happens explicitly
+// via /api/staff/claim (the join-by-code flow), so this route just reads.
 //
-// Returns 404 (not an error) when there is no linked or claimable record, because
-// the employee page turns 404 into its "Account Not Linked" screen.
+// Returns 404 (not an error) when the caller is not linked to a Staff row, because
+// the employee app turns 404 into its "enter your join code" screen.
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
@@ -16,8 +14,7 @@ export async function GET() {
     const { userId } = await auth()
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const user = await currentUser()
-    const scope = await resolveStaff(userId, verifiedEmails(user))
+    const scope = await getStaffScope(userId)
     if (!scope) return NextResponse.json({ error: 'Staff profile not found' }, { status: 404 })
 
     return NextResponse.json(toEmployeeProfile(scope))
