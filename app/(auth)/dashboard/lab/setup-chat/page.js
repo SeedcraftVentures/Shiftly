@@ -103,7 +103,7 @@ function Flow({ T, teams, mode }) {
     const names = teams.map((t) => t.name)
     const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0]
     say('bot', `Let's map your week. From onboarding you run ${teams.length} teams: ${list}.`)
-    if (mode === 'coverage') say('bot', `Think in terms of cover, not shifts. On a typical weekday, how many ${names[0]} do you need on at once during your busy period?`)
+    if (mode === 'coverage') { say('bot', `Think in terms of cover, not shifts. On a typical weekday, how many ${names[0]} do you need on at once during your busy period?`); setStage('weekday') }
     else say('bot', `We'll go team by team. What shifts does ${names[0]} normally run?`)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
