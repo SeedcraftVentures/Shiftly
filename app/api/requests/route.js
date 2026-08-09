@@ -64,7 +64,7 @@ export async function POST(request) {
     if (!team_id || !staff_id || !type) {
       return NextResponse.json({ error: 'team_id, staff_id, and type are required' }, { status: 400 })
     }
-    const validTypes = ['holiday', 'sick', 'swap', 'cover', 'availability']
+    const validTypes = ['holiday', 'sick', 'days_off', 'swap', 'cover', 'availability']
     if (!validTypes.includes(type)) return NextResponse.json({ error: 'Invalid request type' }, { status: 400 })
     const requestDirection = direction || 'incoming'
     if (!['incoming', 'outgoing'].includes(requestDirection)) {
@@ -96,14 +96,15 @@ export async function POST(request) {
       const { data: staffMember } = await supabaseAdmin.from('Staff').select('name').eq('staff_id', staff_id).single()
       const staffName = staffMember?.name || 'A team member'
 
-      if (type === 'holiday' || type === 'sick') {
+      if (type === 'holiday' || type === 'sick' || type === 'days_off') {
         const managerUserId = await managerForTeam(team_id)
         if (managerUserId && managerUserId !== userId) {
+          const asked = type === 'holiday' ? 'time off' : type === 'sick' ? 'sick leave' : 'a day off'
           await notifyUser({
             recipient_user_id: managerUserId,
             team_id,
             type: 'cover_needed',
-            title: `${staffName} requested ${type === 'holiday' ? 'time off' : 'sick leave'}`,
+            title: `${staffName} requested ${asked}`,
             message: start_date && end_date && start_date !== end_date
               ? `${start_date} to ${end_date}${reason ? `. ${reason}` : ''}`
               : `${start_date || 'Date TBC'}${reason ? `. ${reason}` : ''}`,
@@ -187,6 +188,7 @@ export async function PUT(request) {
         if (staffMember?.user_id) {
           const requestType = existing.type === 'holiday' ? 'time off'
             : existing.type === 'sick' ? 'sick leave'
+            : existing.type === 'days_off' ? 'day off'
             : existing.type === 'swap' ? 'swap request'
             : existing.type === 'cover' ? 'cover request'
             : 'request'

@@ -23,6 +23,11 @@ export const dynamic = 'force-dynamic'
 
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
+// Request types that take a person off a DATE, so approving one costs coverage.
+// days_off belongs here for the same reason holiday does: the manager should see
+// what saying yes actually costs before they say it.
+const DATE_OFF_TYPES = ['holiday', 'sick', 'days_off']
+
 const toMin = (t) => { const [h, m] = String(t || '0:0').slice(0, 5).split(':').map(Number); return (h || 0) * 60 + (m || 0) }
 function durationHours(start, end) {
   let d = toMin(end) - toMin(start)
@@ -167,10 +172,10 @@ export async function GET(request) {
       reqs = [data]
     } else {
       const { data } = await supabaseAdmin.from('Requests').select('*')
-        .in('team_id', teamIds).eq('status', 'pending').in('type', ['holiday', 'sick'])
+        .in('team_id', teamIds).eq('status', 'pending').in('type', DATE_OFF_TYPES)
       reqs = data || []
     }
-    reqs = reqs.filter((r) => ['holiday', 'sick'].includes(r.type) && r.start_date)
+    reqs = reqs.filter((r) => DATE_OFF_TYPES.includes(r.type) && r.start_date)
     if (!reqs.length) return NextResponse.json(id ? { hasImpact: false, mode: 'none' } : { impacts: {} })
 
     // Pre-fetch everything once, then analyse each request against it.

@@ -11,11 +11,16 @@ import { useTheme, Card, Button, Segmented, Select, Icon, Ic, Avatar, Tag } from
 const TYPE_META = {
   holiday: { label: 'Time off', group: 'Time off', color: '#5E5CE6' },
   sick: { label: 'Sick leave', group: 'Sick leave', color: '#FF9F0A' },
+  // A preference about WHICH days are off in a week, not leave being taken. Its own
+  // group so it never reads as holiday: approving it costs coverage, not entitlement.
+  // Without an entry here it would fall through to TYPE_META.holiday below and be
+  // silently mislabelled as time off.
+  days_off: { label: 'Days off', group: 'Days off', color: '#0A84FF' },
   swap: { label: 'Shift swap', group: 'Shift swaps', color: '#30B0C7' },
   cover: { label: 'Cover', group: 'Cover', color: '#FF375F' },
   availability: { label: 'Availability', group: 'Availability', color: '#86868B' },
 }
-const GROUP_ORDER = ['Time off', 'Sick leave', 'Shift swaps', 'Cover', 'Availability']
+const GROUP_ORDER = ['Time off', 'Days off', 'Sick leave', 'Shift swaps', 'Cover', 'Availability']
 
 function fmtDate(d) {
   if (!d) return null
@@ -392,6 +397,7 @@ function LogRequestModal({ T, onClose, onSaved }) {
           <div><label style={lbl}>Type</label>
             <Select value={type} onChange={(e) => setType(e.target.value)}>
               <option value="holiday">Time off</option>
+              <option value="days_off">Days off</option>
               <option value="sick">Sick leave</option>
               <option value="cover">Cover needed</option>
               <option value="swap">Shift swap</option>

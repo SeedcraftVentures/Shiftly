@@ -31,9 +31,12 @@ function availabilityGrid(avail) {
 
 // Approved time off is date-ranged, but the scheduler only speaks day-of-week and
 // takes ONE availability grid per person for the whole run. So expand each approved
-// holiday/sick request into concrete dates, clamped to the generation window. That
-// set is used twice: to mark days unavailable before solving (exact for a single
-// week) and to strip anything that slips through afterwards (all runs).
+// holiday/sick/days_off request into concrete dates, clamped to the generation
+// window. That set is used twice: to mark days unavailable before solving (exact for
+// a single week) and to strip anything that slips through afterwards (all runs).
+//
+// days_off is stored one row per day with start_date == end_date, so it expands to
+// exactly the day asked for and needs no special case here.
 function expandTimeOff(requests, windowStart, windowEnd) {
   const off = new Set()
   for (const r of requests || []) {
@@ -135,7 +138,7 @@ export async function POST(request) {
       // Approved time off overlapping the window. Overlap is finished in JS so a null
       // end_date (single-day request) is handled without awkward SQL.
       supabaseAdmin.from('Requests').select('staff_id, type, start_date, end_date')
-        .in('team_id', scopeTeams).eq('status', 'approved').in('type', ['holiday', 'sick'])
+        .in('team_id', scopeTeams).eq('status', 'approved').in('type', ['holiday', 'sick', 'days_off'])
         .lte('start_date', windowEnd),
     ])
     if (teamsRes.error) throw teamsRes.error

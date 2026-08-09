@@ -9,7 +9,16 @@ import { notifyUser, notifyTeam, managerForTeam } from '@/lib/createNotification
 // what it costs in coverage.
 export const dynamic = 'force-dynamic'
 
-const VALID_TYPES = ['holiday', 'sick', 'swap', 'cover']
+// days_off is a scheduling preference, not leave: "can my days off be Wed and Thu
+// that week". It is stored one row per day so a non-contiguous ask (Mon and Thu)
+// works and the manager can approve one day and decline the other. Like holiday and
+// sick, an APPROVED one blocks that date in generate-rota, which is the only thing
+// that makes the answer mean anything.
+const VALID_TYPES = ['holiday', 'sick', 'days_off', 'swap', 'cover']
+
+// The types that are a person being unavailable on a date, as opposed to a shift
+// changing hands. These notify the manager and are read by the solver.
+const TIME_OFF_TYPES = ['holiday', 'sick', 'days_off']
 
 export async function GET() {
   try {
@@ -68,13 +77,14 @@ export async function POST(request) {
     // Best-effort notifications; never fail the request because a notify failed.
     try {
       const staffName = scope.staff.name || 'A team member'
-      if (type === 'holiday' || type === 'sick') {
+      const TITLE = { holiday: 'time off', sick: 'sick leave', days_off: 'a day off' }
+      if (TIME_OFF_TYPES.includes(type)) {
         if (managerUserId) {
           await notifyUser({
             recipient_user_id: managerUserId,
             team_id: scope.teamId,
             type: 'cover_needed',
-            title: `${staffName} requested ${type === 'holiday' ? 'time off' : 'sick leave'}`,
+            title: `${staffName} requested ${TITLE[type]}`,
             message: end_date && end_date !== start_date
               ? `${start_date} to ${end_date}${reason ? `. ${reason}` : ''}`
               : `${start_date}${reason ? `. ${reason}` : ''}`,
