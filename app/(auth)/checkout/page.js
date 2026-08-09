@@ -37,12 +37,14 @@ const FOUNDING = {
   seats: 200,
 }
 
-// Competitor pricing as of August 2026. Both charge per location, so cost
-// multiplies with each site; 7shifts also caps staff by tier.
-const COMPARE = [
-  { name: 'Shiftly', price: '£49 to £59', unit: 'flat, per business', staff: 'Unlimited', highlight: true },
-  { name: '7shifts', price: '$39.99 to $134.99', unit: 'per location / month', staff: 'Capped by tier' },
-  { name: 'Homebase', price: '$24.95 to $59.95', unit: 'per location / month', staff: 'Per location' },
+// Worked example: 2 sites, 25 staff each, per year. Competitors compared on their
+// feature-comparable tiers (time off, compliance, reporting), converted from USD,
+// Aug 2026, indicative. Shiftly: £59 + £20 for the second site, monthly-billed
+// (the conservative figure; annual billing is lower and still wins).
+const EXAMPLE = [
+  { name: 'Shiftly AI', detail: '£59 + £20 for the 2nd site', year: '£948', highlight: true },
+  { name: 'Homebase Plus', detail: '$59.95 per site', year: '~£1,140' },
+  { name: '7shifts Pro', detail: '$79.99 per site', year: '~£1,520' },
 ]
 
 function CheckoutContent() {
@@ -103,7 +105,7 @@ function CheckoutContent() {
             <span className="text-2xl font-cal text-gray-900">Shiftly</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 font-cal">Unlimited staff. One flat price.</h1>
-          <p className="text-gray-600 mt-2">Free for 7 days. No charge until your trial ends, cancel anytime.</p>
+          <p className="text-gray-600 mt-2">Unlimited staff at every site, and extra locations are just £20 each. Free for 7 days, cancel anytime.</p>
         </div>
 
         {/* Billing cycle toggle */}
@@ -177,22 +179,22 @@ function CheckoutContent() {
           })}
         </div>
 
-        {/* Comparison */}
+        {/* Comparison: a worked example */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 mb-6">
-          <p className="text-sm font-semibold text-gray-900 mb-1">How we compare</p>
-          <p className="text-xs text-gray-500 mb-4">Others charge per location, so your cost multiplies with every site. Shiftly is one flat price for your whole business.</p>
+          <p className="text-sm font-semibold text-gray-900 mb-1">2 sites, 25 staff each, per year</p>
+          <p className="text-xs text-gray-500 mb-4">Others charge full price for every location. Shiftly is £59, then just £20 for each extra site, with unlimited staff throughout.</p>
           <div className="space-y-2">
-            {COMPARE.map((row) => (
+            {EXAMPLE.map((row) => (
               <div key={row.name} className={`flex items-center justify-between gap-3 rounded-xl px-4 py-3 ${row.highlight ? 'bg-pink-50 border border-pink-200' : 'bg-gray-50'}`}>
-                <span className={`font-semibold text-sm ${row.highlight ? 'text-pink-600' : 'text-gray-900'}`}>{row.name}</span>
-                <div className="text-right">
-                  <span className="block text-sm font-bold text-gray-900">{row.price}</span>
-                  <span className="block text-xs text-gray-500">{row.unit} · {row.staff} staff</span>
+                <div>
+                  <span className={`block font-semibold text-sm ${row.highlight ? 'text-pink-600' : 'text-gray-900'}`}>{row.name}</span>
+                  <span className="block text-xs text-gray-500">{row.detail}</span>
                 </div>
+                <span className="text-lg font-bold text-gray-900">{row.year}</span>
               </div>
             ))}
           </div>
-          <p className="text-[11px] text-gray-400 mt-3">Competitor pricing as of August 2026. See their sites for current rates.</p>
+          <p className="text-[11px] text-gray-400 mt-3">Comparable plans (time off, compliance, reporting). Competitor pricing converted from USD, August 2026, indicative. Shiftly AI also builds the rota for you, which neither offers.</p>
         </div>
 
         {/* Promo Code */}
