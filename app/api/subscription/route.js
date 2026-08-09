@@ -7,6 +7,12 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
+// Stripe price ids that map to the AI-supported (£59) tier. Comma-separated in
+// env so monthly + annual can both count. Everyone on a trial gets AI regardless
+// of price, so the trial sells the upgrade (see pricing decision).
+const AI_PRICE_IDS = (process.env.STRIPE_AI_PRICE_IDS || '')
+  .split(',').map((s) => s.trim()).filter(Boolean)
+
 export async function GET() {
   try {
     const { userId } = await auth()
@@ -29,6 +35,7 @@ export async function GET() {
         status: 'inactive',
         hasAccess: false,
         isTrialing: false,
+        isAiTier: false,
       })
     }
 
@@ -36,11 +43,15 @@ export async function GET() {
     const activeStatuses = ['active', 'trialing']
     const hasAccess = activeStatuses.includes(subscription.status)
     const isTrialing = subscription.status === 'trialing'
+    // AI tier: on during any trial (sells the upgrade), or when the subscribed
+    // price is one of the AI prices. Only meaningful while hasAccess.
+    const isAiTier = hasAccess && (isTrialing || AI_PRICE_IDS.includes(subscription.plan))
 
     return NextResponse.json({
       ...subscription,
       hasAccess,
       isTrialing,
+      isAiTier,
     })
   } catch (error) {
     console.error('Subscription check error:', error)
