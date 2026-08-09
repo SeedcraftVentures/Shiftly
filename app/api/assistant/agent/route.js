@@ -1,0 +1,95 @@
+import { auth } from '@clerk/nextjs/server'
+import { NextResponse } from 'next/server'
+import Anthropic from '@anthropic-ai/sdk'
+import { TOOLS, executeTool, nextMondayISO } from '@/lib/aiTools'
+
+export const dynamic = 'force-dynamic'
+export const maxDuration = 60
+
+const MODEL = 'claude-haiku-4-5-20251001' // Haiku-first to bound cost; swap up to Sonnet here if needed
+const MAX_ITERS = 8                        // caps tool round-trips (and worst-case tokens) per turn
+
+const SYSTEM = (nextMonday) => `You are the Shiftly assistant with the ability to set up and build rotas for the manager by calling tools. Shiftly is UK hospitality and retail staff scheduling backed by an OR-Tools solver.
+
+Core rule: a rota builds when your shifts cover your opening hours, and your staff cover those shifts. If build_rota reports skipped teams or "not enough staff", the fix is usually more staff-hours (add_staff) or fewer people needed on a shift.
+
+How to work:
+- Call read_workspace FIRST to see teams, shifts, staff and the hours gap, and to get the ids you need.
+- Make the smallest changes that achieve the goal, then say plainly what you changed.
+- To build, call build_rota. It saves a DRAFT only. NEVER say a rota is published or live. Only the manager can publish, by reviewing the draft and clicking Publish. After building, summarise the result (what built, what was skipped and why) and tell them to review and publish.
+- Days are 0=Monday..6=Sunday. Times are 24h decimal hours (9 = 9am, 17.5 = 5:30pm).
+- The next rota week starts ${nextMonday}.
+- Be concise: two to five short sentences, plain UK English. Never use em dashes or en dashes.
+- Only use team ids and staff ids from read_workspace. Do not invent teams, people or features. If a request is outside your tools, say so and suggest the manual step or support@shiftly.so.`
+
+export async function POST(request) {
+  const { userId } = await auth()
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const url = new URL(request.url)
+  const origin = url.origin
+  const cookie = request.headers.get('cookie') || ''
+
+  // Entitlement gate: agent is the £59 tier only. Reuse the canonical read.
+  try {
+    const subRes = await fetch(`${origin}/api/subscription`, { headers: { cookie } })
+    const sub = subRes.ok ? await subRes.json() : {}
+    if (!sub.hasAccess || !sub.isAiTier) {
+      return NextResponse.json({ error: 'The assistant that builds rotas is on the AI plan.', code: 'upgrade' }, { status: 403 })
+    }
+  } catch {
+    return NextResponse.json({ error: 'Could not verify your plan. Try again.', code: 'upgrade' }, { status: 403 })
+  }
+
+  const key = process.env.ANTHROPIC_API_KEY
+  if (!key) return NextResponse.json({ reply: 'The assistant is not switched on yet. Add an ANTHROPIC_API_KEY to enable it.', actions: [] })
+
+  try {
+    const { message, history } = await request.json()
+    if (!message || typeof message !== 'string') return NextResponse.json({ error: 'message required' }, { status: 400 })
+
+    const prior = Array.isArray(history)
+      ? history.slice(-8).map((m) => ({ role: m.role === 'user' ? 'user' : 'assistant', content: String(m.content || '').slice(0, 2000) })).filter((m) => m.content)
+      : []
+
+    const anthropic = new Anthropic({ apiKey: key })
+    const messages = [...prior, { role: 'user', content: message.slice(0, 2000) }]
+    const system = SYSTEM(nextMondayISO())
+
+    const actions = []
+    let draftId = null
+    let finalText = ''
+    let usageIn = 0, usageOut = 0
+
+    for (let i = 0; i < MAX_ITERS; i++) {
+      const resp = await anthropic.messages.create({ model: MODEL, max_tokens: 1024, system, tools: TOOLS, messages })
+      usageIn += resp.usage?.input_tokens || 0
+      usageOut += resp.usage?.output_tokens || 0
+
+      const text = resp.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n').trim()
+      if (text) finalText = text
+
+      const toolUses = resp.content.filter((b) => b.type === 'tool_use')
+      if (resp.stop_reason !== 'tool_use' || toolUses.length === 0) break
+
+      messages.push({ role: 'assistant', content: resp.content })
+      const results = []
+      for (const tu of toolUses) {
+        const out = await executeTool(tu.name, tu.input || {}, { origin, cookie })
+        if (out?.summary) actions.push(out.summary)
+        if (out?.draftId) draftId = out.draftId
+        results.push({ type: 'tool_result', tool_use_id: tu.id, content: JSON.stringify(out).slice(0, 6000), is_error: out?.ok === false })
+      }
+      messages.push({ role: 'user', content: results })
+    }
+
+    // Per-account monthly caps need a usage table (a schema change to discuss).
+    // For now bound cost per call (MAX_ITERS + max_tokens) and log spend.
+    console.log('[agent] usage', { userId, input: usageIn, output: usageOut, actions: actions.length })
+
+    return NextResponse.json({ reply: finalText || 'Done.', actions, draftId, usage: { input: usageIn, output: usageOut } })
+  } catch (e) {
+    console.error('agent error', e)
+    return NextResponse.json({ reply: 'Something went wrong while I was working on that. Give it another go in a moment.', actions: [] })
+  }
+}
