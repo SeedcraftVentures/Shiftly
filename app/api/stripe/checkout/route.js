@@ -35,7 +35,7 @@ export async function POST(request) {
       client_reference_id: userId,
       customer_email: email,
       subscription_data: {
-        trial_period_days: 14,
+        trial_period_days: 7,
       },
     }
 
