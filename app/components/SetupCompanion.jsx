@@ -52,6 +52,7 @@ export default function SetupCompanion({ onWidth }) {
   const [ready, setReady] = useState(false)
   const [hidden, setHidden] = useState(true)   // nothing to do, or dismissed
   const [open, setOpen] = useState(true)        // drawer open vs collapsed bubble
+  const [mode, setMode] = useState('setup')     // 'setup' (guided build) | 'ask' (Q&A help)
   const [step, setStep] = useState('name')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
@@ -100,7 +101,7 @@ export default function SetupCompanion({ onWidth }) {
         const hasShifts = Array.isArray(shiftRows) && shiftRows.length > 0
         const hasStaff = Array.isArray(staffRows) && staffRows.length > 0
 
-        if (hasShifts && hasStaff) { setHidden(true); setReady(true); return } // setup done
+        if (hasShifts && hasStaff) { setMode('ask'); setHidden(false); setOpen(false); setReady(true); return } // setup done -> persistent help bubble
 
         if (!hasTeams) {
           startAt('name', "Hey! Let's get you set up. It takes a couple of minutes, and everything happens right here so you learn the app as we go.\n\nFirst up, what's your business called?")
@@ -203,15 +204,16 @@ export default function SetupCompanion({ onWidth }) {
     } catch (e) { setError(e.message) } finally { setBusy(false) }
   }
 
-  const onDone = () => { say({ from: 'user', text: `${staffCount} added` }); router.push('/dashboard/generate?setup=1') }
+  const onDone = () => { say({ from: 'user', text: `${staffCount} added` }); setMode('ask'); setOpen(false); router.push('/dashboard/generate?setup=1') }
 
   const dismiss = () => { localStorage.setItem(DISMISS_KEY, '1'); setHidden(true) }
 
-  if (!ready || hidden) return <Bubble T={T} hidden={hidden || !ready} onOpen={() => { setHidden(false); setOpen(true) }} showLauncher={!open && !hidden} />
-  if (!open) return <Bubble T={T} hidden={false} onOpen={() => setOpen(true)} showLauncher />
+  if (!ready || hidden) return null
+  if (!open) return <Bubble T={T} label={mode === 'ask' ? 'Help' : 'Finish setup'} onOpen={() => setOpen(true)} />
+  if (mode === 'ask') return <AskChat T={T} onMinimise={() => setOpen(false)} />
 
   return (
-    <div style={{ position: 'fixed', top: 16, right: 16, bottom: 16, width: 384, maxWidth: 'calc(100vw - 24px)', zIndex: 60, display: 'flex', flexDirection: 'column', fontFamily: T.font, background: T.cardSolid, border: `1px solid ${T.line}`, borderRadius: 20, overflow: 'hidden', boxShadow: T.shadow.lg }}>
+    <Drawer T={T}>
       {/* header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '13px 14px', borderBottom: `1px solid ${T.hair}` }}>
         <span style={{ width: 30, height: 30, borderRadius: 9, background: T.pink, color: '#fff', fontWeight: 800, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>S</span>
@@ -236,15 +238,58 @@ export default function SetupCompanion({ onWidth }) {
         {step === 'coverage' && <CoverageComposer T={T} teams={teams} setTeams={setTeams} busy={busy} onSubmit={onCoverage} />}
         {step === 'staff' && <StaffComposer T={T} teams={teams} count={staffCount} req={reqHours} added={staffHours} onAdd={addStaff} say={say} onDone={onDone} />}
       </div>
-    </div>
+    </Drawer>
+  )
+}
+
+// ── the fixed drawer shell (shared by setup + ask) ────────────────────────────
+function Drawer({ T, children }) {
+  return (
+    <div style={{ position: 'fixed', top: 16, right: 16, bottom: 16, width: 384, maxWidth: 'calc(100vw - 24px)', zIndex: 60, display: 'flex', flexDirection: 'column', fontFamily: T.font, background: T.cardSolid, border: `1px solid ${T.line}`, borderRadius: 20, overflow: 'hidden', boxShadow: T.shadow.lg }}>{children}</div>
+  )
+}
+
+// ── ask mode: grounded how-to Q&A (posts to /api/assistant) ───────────────────
+function AskChat({ T, onMinimise }) {
+  const [msgs, setMsgs] = useState([{ from: 'bot', text: "Hi! Ask me anything about Shiftly, opening hours, shifts, staff, or building and publishing a rota." }])
+  const [q, setQ] = useState('')
+  const [busy, setBusy] = useState(false)
+  const send = async () => {
+    const text = q.trim(); if (!text || busy) return
+    setMsgs((m) => [...m, { from: 'user', text }]); setQ(''); setBusy(true)
+    try {
+      const history = msgs.map((m) => ({ role: m.from === 'user' ? 'user' : 'assistant', content: m.text }))
+      const res = await fetch('/api/assistant', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: text, history }) })
+      const data = res.ok ? await res.json() : {}
+      setMsgs((m) => [...m, { from: 'bot', text: data.reply || "Sorry, I couldn't reach the assistant. Try support@shiftly.so." }])
+    } catch { setMsgs((m) => [...m, { from: 'bot', text: 'Something went wrong. Give it another go in a moment.' }]) }
+    finally { setBusy(false) }
+  }
+  return (
+    <Drawer T={T}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '13px 14px', borderBottom: `1px solid ${T.hair}` }}>
+        <span style={{ width: 30, height: 30, borderRadius: 9, background: T.pink, color: '#fff', fontWeight: 800, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>S</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>Ask Shiftly</div>
+          <div style={{ fontSize: 11.5, color: T.faint }}>How-to help, any time</div>
+        </div>
+        <button onClick={onMinimise} title="Minimise" style={iconBtn(T)}><span style={{ display: 'block', width: 12, height: 2, borderRadius: 2, background: T.faint }} /></button>
+      </div>
+      <Transcript T={T} msgs={busy ? [...msgs, { from: 'bot', text: 'Thinking...' }] : msgs} />
+      <div style={{ borderTop: `1px solid ${T.hair}`, padding: 13, background: T.subtle }}>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && send()} placeholder="Ask a question" style={fieldStyle(T)} />
+          <Button icon={Ic.arrow} disabled={!q.trim() || busy} onClick={send} />
+        </div>
+      </div>
+    </Drawer>
   )
 }
 
 // ── bubble launcher ────────────────────────────────────────────────────────────
-function Bubble({ T, hidden, onOpen, showLauncher }) {
-  if (hidden || !showLauncher) return null
+function Bubble({ T, label, onOpen }) {
   return (
-    <button onClick={onOpen} title="Finish setup" style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 60, width: 54, height: 54, borderRadius: 999, border: 'none', cursor: 'pointer', background: T.pink, color: '#fff', fontWeight: 800, fontSize: 20, boxShadow: T.shadow.lg, fontFamily: T.font }}>S</button>
+    <button onClick={onOpen} title={label} style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 60, width: 54, height: 54, borderRadius: 999, border: 'none', cursor: 'pointer', background: T.pink, color: '#fff', fontWeight: 800, fontSize: 20, boxShadow: T.shadow.lg, fontFamily: T.font }}>S</button>
   )
 }
 const iconBtn = (T) => ({ width: 28, height: 28, borderRadius: 8, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' })
