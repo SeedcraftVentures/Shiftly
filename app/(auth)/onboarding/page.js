@@ -1,5 +1,5 @@
-import PreWizardOnboarding from '@/app/components/PreWizardOnboarding'
+import CompanionOnboarding from '@/app/components/CompanionOnboarding'
 
 export default function OnboardingPage() {
-  return <PreWizardOnboarding />
+  return <CompanionOnboarding />
 }
