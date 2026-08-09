@@ -37,9 +37,14 @@ const STEPS = ['name', 'hours', 'team', 'coverage', 'staff', 'done']
 // Only navigate to a real page once its data exists, so we never drop the
 // manager onto a page that assumes a location/team before we've created one.
 // (name/hours/team happen in the drawer; foundation is written entering coverage.)
-const STEP_ROUTE = { coverage: '/dashboard/shifts', staff: '/dashboard/staff' }
+// The staff route is built with ?team=<id> in goRoute so they land on a team tab.
+const STEP_ROUTE = { coverage: '/dashboard/shifts' }
+// Footprint the open drawer occupies on wide screens, so the dashboard can
+// condense to the left instead of being overlapped. Matches the fixed geometry
+// below (width 384 + right margin 16 + a small gap).
+export const DRAWER_W = 416
 
-export default function SetupCompanion() {
+export default function SetupCompanion({ onWidth }) {
   const { T } = useTheme()
   const router = useRouter()
   const pathname = usePathname()
@@ -56,6 +61,8 @@ export default function SetupCompanion() {
   const [hours, setHours] = useState(defaultHours)
   const [teams, setTeams] = useState([{ id: null, name: 'Front of house', color: PALETTE[0], min: 2 }])
   const [staffCount, setStaffCount] = useState(0)
+  const [staffHours, setStaffHours] = useState(0) // sum of contracted hours added
+  const [reqHours, setReqHours] = useState(0) // staff-hours needed to cover the week
   const foundationDone = useRef(false) // has /api/onboarding already run this session/workspace
   const commitFoundationCache = useRef(null) // name -> id map from foundation, for the shifts step
 
@@ -68,6 +75,13 @@ export default function SetupCompanion() {
   }, [hours])
 
   const say = (...m) => setMsgs((prev) => [...prev, ...m])
+
+  // Report our footprint so the dashboard layout can condense instead of overlap.
+  useEffect(() => {
+    const w = ready && !hidden && open ? DRAWER_W : 0
+    onWidth?.(w)
+    return () => onWidth?.(0)
+  }, [ready, hidden, open, onWidth])
 
   // ── decide where to pick up, from live data ──────────────────────────────────
   useEffect(() => {
@@ -97,8 +111,10 @@ export default function SetupCompanion() {
           if (!hasShifts) {
             startAt('coverage', "Welcome back. Let's finish setup. On a normal day, what's the fewest people you need on to keep each area running? That's your baseline shift.")
           } else {
-            setStaffCount(staffRows.length)
-            startAt('staff', "Almost there. Last thing, add your team. Just a name and their weekly hours to start, they fill in the rest from their own app.")
+            const req = Math.round(shiftRows.reduce((a, s) => a + (Number(s.end) - Number(s.start)) * (Number(s.staff) || 1) * ((s.days || []).length || 1), 0))
+            const added = staffRows.reduce((a, s) => a + (Number(s.contracted_hours ?? s.contracted) || 0), 0)
+            setReqHours(req); setStaffCount(staffRows.length); setStaffHours(added)
+            startAt('staff', `Almost there. Last thing, add your team. Just a name and their weekly hours to start, they fill in the rest from their own app.\n\nYou'll want about ${req} staff-hours a week to cover your shifts.`)
           }
         }
         setReady(true)
@@ -111,7 +127,12 @@ export default function SetupCompanion() {
   }, [])
 
   const startAt = (s, greeting) => { setHidden(false); setOpen(true); setStep(s); setMsgs([{ from: 'bot', text: greeting }]) }
-  const goRoute = (s) => { const r = STEP_ROUTE[s]; if (r && pathname !== r) router.push(r) }
+  const goRoute = (s) => {
+    let r = STEP_ROUTE[s]
+    if (s === 'staff') r = `/dashboard/staff${teams[0]?.id ? `?team=${teams[0].id}` : ''}`
+    if (!r) return
+    if (pathname !== r.split('?')[0]) router.push(r)
+  }
   const advance = (userText, botText, next) => { say({ from: 'user', text: userText }, { from: 'bot', text: botText }); setStep(next); goRoute(next) }
 
   const hoursSummary = () => {
@@ -156,6 +177,7 @@ export default function SetupCompanion() {
     })
     if (!res.ok) throw new Error('Could not add that person. Try again.')
     setStaffCount((c) => c + 1)
+    setStaffHours((h) => h + (sh || 0))
   }
 
   // ── step submit handlers ─────────────────────────────────────────────────────
@@ -167,7 +189,7 @@ export default function SetupCompanion() {
     try {
       const idByName = foundationDone.current ? null : await commitFoundation()
       commitFoundationCache.current = idByName
-      advance(list.join(', '), `Nice. On a normal day, what's the fewest people you need on to keep ${list.length > 1 ? 'each area' : list[0]} running? That's your baseline shift.`, 'coverage')
+      advance(list.join(', '), `A rota builds when your shifts cover your opening hours, and your staff cover those shifts.\n\nSo first: on a normal day, what's the fewest people you need on to keep ${list.length > 1 ? 'each area' : list[0]} running? That's your baseline.`, 'coverage')
     } catch (e) { setError(e.message) } finally { setBusy(false) }
   }
 
@@ -175,7 +197,9 @@ export default function SetupCompanion() {
     setBusy(true); setError(null)
     try {
       await commitShifts(commitFoundationCache.current)
-      advance(teams.map((t) => `${t.name}: ${t.min}`).join('  ·  '), "That's your shifts sorted, take a look on the left. Last thing, add your team. Just a name and their weekly hours to start.", 'staff')
+      const req = Math.round(teams.reduce((a, t) => a + (cfg.close - cfg.open) * t.min * cfg.openDays.length, 0))
+      setReqHours(req)
+      advance(teams.map((t) => `${t.name}: ${t.min}`).join('  ·  '), `That's your shifts sorted, take a look on the left.\n\nTo cover them you'll need roughly ${req} staff-hours a week. Add your team now, just a name and their weekly hours, and I'll track how close you are.`, 'staff')
     } catch (e) { setError(e.message) } finally { setBusy(false) }
   }
 
@@ -210,7 +234,7 @@ export default function SetupCompanion() {
         {step === 'hours' && <HoursStep T={T} hours={hours} setHours={setHours} busy={busy} onNext={onHours} />}
         {step === 'team' && <TeamComposer T={T} teams={teams} setTeams={setTeams} busy={busy} onSubmit={onTeams} />}
         {step === 'coverage' && <CoverageComposer T={T} teams={teams} setTeams={setTeams} busy={busy} onSubmit={onCoverage} />}
-        {step === 'staff' && <StaffComposer T={T} teams={teams} count={staffCount} onAdd={addStaff} say={say} onDone={onDone} />}
+        {step === 'staff' && <StaffComposer T={T} teams={teams} count={staffCount} req={reqHours} added={staffHours} onAdd={addStaff} say={say} onDone={onDone} />}
       </div>
     </div>
   )
@@ -342,7 +366,28 @@ function CoverageComposer({ T, teams, setTeams, busy, onSubmit }) {
 }
 const stepBtn = (T) => ({ width: 30, height: 30, borderRadius: 8, border: `1px solid ${T.border}`, background: T.surface, color: T.body, fontSize: 17, fontWeight: 700, cursor: 'pointer', fontFamily: T.font, lineHeight: 1 })
 
-function StaffComposer({ T, teams, count, onAdd, say, onDone }) {
+function HoursMeter({ T, req, added }) {
+  const pct = Math.min(100, Math.round((added / req) * 100))
+  const enough = added >= req
+  const shortH = Math.max(0, Math.round(req - added))
+  const morePeople = Math.max(1, Math.ceil(shortH / 32)) // ~32h as a sensible default contract
+  return (
+    <div style={{ background: T.cardSolid, border: `1px solid ${T.line}`, borderRadius: 12, padding: '10px 12px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 700, marginBottom: 7 }}>
+        <span style={{ color: T.ink }}>{Math.round(added)} of ~{req} staff-hours</span>
+        <span style={{ color: enough ? T.green : T.pink }}>{enough ? 'Enough to cover' : `~${shortH}h short`}</span>
+      </div>
+      <div style={{ height: 6, borderRadius: 99, background: T.track, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${pct}%`, background: enough ? T.green : T.pink, borderRadius: 99, transition: 'width .25s' }} />
+      </div>
+      <div style={{ fontSize: 11.5, color: T.muted, marginTop: 7, lineHeight: 1.45 }}>
+        {enough ? "You've got enough hours to cover your week. Add more anytime." : `Add about ${morePeople} more ${morePeople === 1 ? 'person' : 'people'}, or lower a team's minimum. You can still build now and tweak on the rota.`}
+      </div>
+    </div>
+  )
+}
+
+function StaffComposer({ T, teams, count, req, added, onAdd, say, onDone }) {
   const [nm, setNm] = useState('')
   const [hrs, setHrs] = useState('')
   const [team, setTeam] = useState(teams[0]?.id || teams[0]?.name)
@@ -362,6 +407,7 @@ function StaffComposer({ T, teams, count, onAdd, say, onDone }) {
   }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {req > 0 && <HoursMeter T={T} req={req} added={added || 0} />}
       {err && <div style={{ fontSize: 12.5, color: T.red, fontWeight: 600 }}>{err}</div>}
       <div style={{ display: 'flex', gap: 8 }}>
         <input autoFocus value={nm} onChange={(e) => setNm(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} placeholder="Name" style={{ ...fieldStyle(T), flex: 2 }} />

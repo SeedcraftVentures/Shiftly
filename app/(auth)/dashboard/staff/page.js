@@ -476,7 +476,11 @@ export default function StaffPage() {
         const [tr, lr, shr, str] = await Promise.all([fetch('/api/teams'), fetch('/api/location'), fetch('/api/shifts'), fetch('/api/staff')])
         const td = await tr.json(), ld = await lr.json(), shd = await shr.json(), std = await str.json()
         const withColor = (Array.isArray(td) ? td : []).map((t, i) => ({ id: t.id, name: t.name, color: TEAM_COLORS[i % TEAM_COLORS.length] }))
-        setTeams(withColor); setLocation(ld || null); setShifts(Array.isArray(shd) ? shd : []); setStaff((Array.isArray(std) ? std : []).map(fromApi)); setTeamId('all')
+        // Deep-link support: ?team=<id> opens that team's tab (the setup companion
+        // uses this so people land on the granular view where gaps show), else 'all'.
+        const wantTeam = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('team') : null
+        const initialTeam = wantTeam && withColor.some((t) => t.id === wantTeam) ? wantTeam : 'all'
+        setTeams(withColor); setLocation(ld || null); setShifts(Array.isArray(shd) ? shd : []); setStaff((Array.isArray(std) ? std : []).map(fromApi)); setTeamId(initialTeam)
       } catch (e) { console.error('Failed to load staff page', e) } finally { setLoading(false) }
     })()
   }, [])
@@ -559,7 +563,7 @@ export default function StaffPage() {
   }, [staff, addStaff, persist, cfg])
 
   if (loading) return <div style={{ fontFamily: T.font, padding: 60, textAlign: 'center', color: T.faint }}>Loading staff…</div>
-  if (teams.length === 0) return <div style={{ fontFamily: T.font, padding: 60, textAlign: 'center', color: T.muted }}>No teams yet. Finish onboarding to add teams first.</div>
+  if (teams.length === 0) return <div style={{ fontFamily: T.font, padding: 60, textAlign: 'center', color: T.muted }}>No teams yet. Open the setup assistant to add your teams and staff.</div>
 
   const tabs = [{ id: 'all', name: 'All teams' }, ...teams]
   const teamName = teams.find((t) => t.id === teamId)?.name || ''
