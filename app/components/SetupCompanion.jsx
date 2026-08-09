@@ -34,12 +34,12 @@ const defaultHours = () => Object.fromEntries(ALL.map((d) => [d, { open: true, o
 const fmtH = (h) => { const hr = Math.floor(h); const ap = hr < 12 || hr === 24 ? 'am' : 'pm'; let x = hr % 12; if (!x) x = 12; return `${x}${ap}` }
 const hhmm = (h) => { const hr = Math.floor(h); const m = Math.round((h - hr) * 60); return `${String(hr).padStart(2, '0')}:${String(m).padStart(2, '0')}` }
 
-const STEPS = ['name', 'hours', 'team', 'coverage', 'staff', 'done']
+const STEPS = ['name', 'hours', 'team', 'coverage', 'review', 'staff', 'done']
 // Only navigate to a real page once its data exists, so we never drop the
 // manager onto a page that assumes a location/team before we've created one.
 // (name/hours/team happen in the drawer; foundation is written entering coverage.)
 // The staff route is built with ?team=<id> in goRoute so they land on a team tab.
-const STEP_ROUTE = { coverage: '/dashboard/shifts' }
+const STEP_ROUTE = { coverage: '/dashboard/shifts', review: '/dashboard/shifts' }
 // Footprint the open drawer occupies on wide screens, so the dashboard can
 // condense to the left instead of being overlapped. Matches the fixed geometry
 // below (width 384 + right margin 16 + a small gap).
@@ -165,26 +165,31 @@ export default function SetupCompanion({ onWidth }) {
   }
 
   const commitShifts = async (idByName) => {
-    // Split a long trading day into two coverable shifts. A person can work only
-    // one shift a day and ~48h a week, so a single open-to-close block (e.g. 14h)
-    // is unschedulable for a small team even with full availability. Two shifts
-    // (open + close) carry the same demand but the solver can actually tile them.
+    // Real days are an opening shift and a closing shift, not one long block. A
+    // person works one shift a day and ~48h a week, so a single open-to-close
+    // block (e.g. 14h) is unschedulable for a small team. Anchored ~8h open + close
+    // shifts overlap in the middle (natural lunch/peak cover) and the solver can
+    // tile them. A default unpaid break is set so pay is right from the start; the
+    // break is part of the shift span, so paid hours = span minus the break.
     const span = cfg.close - cfg.open
-    const parts = span > 9 ? 2 : 1
-    const mid = Math.round(cfg.open + span / 2)
+    const brk = (s, e) => (e - s >= 6 ? 30 : 0) // 30 min unpaid break on 6h+ shifts
     for (const t of teams) {
       const team_id = (idByName && idByName[t.name]) || t.id
       if (!team_id) continue
-      const segs = parts === 2
-        ? [{ name: `${t.name} open`, start: cfg.open, end: mid }, { name: `${t.name} close`, start: mid, end: cfg.close }]
-        : [{ name: `${t.name} cover`, start: cfg.open, end: cfg.close }]
+      const segs = span > 9
+        ? [
+            { name: `${t.name} open`, start: cfg.open, end: Math.min(cfg.open + 8, cfg.close), anchor: 'open' },
+            { name: `${t.name} close`, start: Math.max(cfg.close - 8, cfg.open), end: cfg.close, anchor: 'close' },
+          ]
+        : [{ name: `${t.name} cover`, start: cfg.open, end: cfg.close, anchor: 'fixed' }]
       for (const s of segs) {
         await fetch('/api/shifts', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ team_id, name: s.name, anchor_type: 'fixed', start: s.start, end: s.end, days: cfg.openDays, staff: t.min, keyholder: false, break_duration_mins: 0, break_type: 'unpaid' }),
+          body: JSON.stringify({ team_id, name: s.name, anchor_type: s.anchor, start: s.start, end: s.end, days: cfg.openDays, staff: t.min, keyholder: false, break_duration_mins: brk(s.start, s.end), break_type: 'unpaid' }),
         })
       }
     }
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('shiftly:shifts-changed'))
   }
 
   const addStaff = async ({ name: sn, hours: sh, teamId }) => {
@@ -220,9 +225,11 @@ export default function SetupCompanion({ onWidth }) {
       const rbt = Object.fromEntries(teams.map((t) => [t.id, Math.round((cfg.close - cfg.open) * t.min * cfg.openDays.length)]))
       setReqByTeam(rbt)
       const req = Object.values(rbt).reduce((a, b) => a + b, 0)
-      advance(teams.map((t) => `${t.name}: ${t.min}`).join('  ·  '), `That's your shifts sorted, take a look on the left.\n\nTo cover them you'll need roughly ${req} staff-hours a week. Add your team now, just a name and their weekly hours, and I'll track how close you are per team.`, 'staff')
+      advance(teams.map((t) => `${t.name}: ${t.min}`).join('  ·  '), `That's your shifts sorted. I've set an opening and a closing shift for each team, take a look on the left and click any shift to change its length, hours or break.\n\nTo cover these you'll need roughly ${req} staff-hours a week.`, 'review')
     } catch (e) { setError(e.message) } finally { setBusy(false) }
   }
+
+  const onReview = () => advance('Looks good', "Great. Now add your team, just a name and their weekly hours to start. I'll track how close you are to covering each team.", 'staff')
 
   const onDone = () => { say({ from: 'user', text: `${staffCount} added` }); setMode('ask'); setOpen(false); router.push('/dashboard/generate?setup=1') }
 
@@ -256,6 +263,7 @@ export default function SetupCompanion({ onWidth }) {
         {step === 'hours' && <HoursStep T={T} hours={hours} setHours={setHours} busy={busy} onNext={onHours} />}
         {step === 'team' && <TeamComposer T={T} teams={teams} setTeams={setTeams} busy={busy} onSubmit={onTeams} />}
         {step === 'coverage' && <CoverageComposer T={T} teams={teams} setTeams={setTeams} busy={busy} onSubmit={onCoverage} />}
+        {step === 'review' && <NextComposer T={T} label="Looks good, add my team" onSubmit={onReview} />}
         {step === 'staff' && <StaffComposer T={T} teams={teams} count={staffCount} reqByTeam={reqByTeam} addedByTeam={addedByTeam} onAdd={addStaff} say={say} onDone={onDone} />}
       </div>
     </Drawer>
@@ -381,7 +389,7 @@ const iconBtn = (T) => ({ width: 28, height: 28, borderRadius: 8, border: 'none'
 
 function ProgressDots({ T, step }) {
   const idx = STEPS.indexOf(step)
-  return <div style={{ display: 'flex', gap: 4 }}>{STEPS.slice(0, 5).map((s, i) => <span key={s} style={{ width: 6, height: 6, borderRadius: 99, background: i < idx ? T.green : i === idx ? T.pink : T.track }} />)}</div>
+  return <div style={{ display: 'flex', gap: 4 }}>{STEPS.slice(0, 6).map((s, i) => <span key={s} style={{ width: 6, height: 6, borderRadius: 99, background: i < idx ? T.green : i === idx ? T.pink : T.track }} />)}</div>
 }
 
 function Transcript({ T, msgs }) {

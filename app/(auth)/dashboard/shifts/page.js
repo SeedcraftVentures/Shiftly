@@ -433,6 +433,22 @@ export default function ShiftsPage() {
     })()
   }, [])
 
+  // Live refresh: the setup companion emits this after creating shifts, so they
+  // appear here without a reload during the review step. Skips the shift replace
+  // mid-save so an in-flight edit is never clobbered.
+  useEffect(() => {
+    const reload = async () => {
+      try {
+        const [tr, sr] = await Promise.all([fetch('/api/teams'), fetch('/api/shifts')])
+        const td = await tr.json(), sd = await sr.json()
+        if (Array.isArray(td)) setTeams(td.map((t, i) => ({ id: t.id, name: t.name, color: TEAM_COLORS[i % TEAM_COLORS.length] })))
+        if (!pending.current && Array.isArray(sd)) setShifts(sd.map(withPin))
+      } catch {}
+    }
+    window.addEventListener('shiftly:shifts-changed', reload)
+    return () => window.removeEventListener('shiftly:shifts-changed', reload)
+  }, [])
+
   const cfg = useMemo(() => {
     const business = location?.business || { 0: [9, 17], 1: [9, 17], 2: [9, 17], 3: [9, 17], 4: [9, 17], 5: [9, 17], 6: null }
     const openDays = ALL.filter((d) => business[d])
