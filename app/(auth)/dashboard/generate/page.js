@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef, Fragment } from 'react'
 import { useTheme, Card, Field, Input, Select, TimeRange, Switch, Button, Icon, Ic, PageHeader, EASE, THEMES } from '@/app/components/ui/kit'
 import { rotaBlock } from '@/lib/rotaColors'
+import SetupCoach from '@/app/components/SetupCoach'
 
 // ════════════════════════════════════════════════════════════════════════════
 //  ROTA BUILDER (live) - pick week -> Generate (OR-Tools) -> grid -> save/publish.
@@ -250,6 +251,7 @@ export default function RotaBuilder() {
   const [rules, setRules] = useState({ min_rest_hours: 11, max_consecutive_days: 5 })
   const [rotaName, setRotaName] = useState('')
   const [editCell, setEditCell] = useState(null) // { staff, day } opens the add-shift inspector
+  const [setupMode, setSetupMode] = useState(false) // arrived from onboarding (?setup=1): show the coach
   const dragRef = useRef(null)
 
   useEffect(() => {
@@ -306,6 +308,7 @@ export default function RotaBuilder() {
     const rid = p.get('rota'); const start = p.get('start')
     if (rid) loadSaved(rid)
     else if (start) setWeekStart(start)
+    if (p.get('setup') === '1') setSetupMode(true)
   }, [loadSaved])
 
   const reassign = useCallback((id, staffId) => setResult((r) => ({ ...r, assignments: r.assignments.map((a) => (a._id === id ? { ...a, staff_id: staffId, staff_name: staffName(staffId) } : a)) })), [staffName])
@@ -442,6 +445,7 @@ export default function RotaBuilder() {
 
   return (
     <div style={{ fontFamily: T.font, color: T.body, maxWidth: 1200, margin: '0 auto', padding: '40px 32px 64px' }}>
+      <SetupCoach active={setupMode} generating={generating} hasResult={!!result} published={saveMsg === 'published'} onGenerate={generate} />
       <PageHeader title="Rota Builder" subtitle="Generate a schedule that meets contracted hours and respects availability." />
 
       {/* controls */}
