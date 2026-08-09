@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import Navigation from '@/app/components/Navigation'
 import DashboardTopBar from '@/app/components/DashboardTopBar'
 import OnboardingCheck from '@/app/components/OnboardingCheck'
-import OnboardingTour from '@/components/OnboardingTour'
 import { useTheme } from '@/app/components/ui/kit'
 
 export default function DashboardLayout({ children }) {
@@ -29,7 +28,6 @@ export default function DashboardLayout({ children }) {
           </div>
         </div>
       </div>
-      <OnboardingTour />
     </OnboardingCheck>
   )
 }
