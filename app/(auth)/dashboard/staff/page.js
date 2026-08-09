@@ -336,7 +336,7 @@ export function AvailabilityGrid({ groups, cfg, selectedId, onSelect, selectMode
                 const a = s.avail?.[d], closed = !cfg.openDays.includes(d)
                 const canEdit = editable && !closed
                 return <td key={d}
-                  onClick={canEdit ? (e) => { setEdit({ s, day: d, rect: e.currentTarget.getBoundingClientRect() }); onSelect?.(s.id) } : (interactive ? () => (selectMode ? onToggle?.(s.id) : onSelect?.(s.id)) : undefined)}
+                  onClick={canEdit ? (e) => { setEdit({ s, day: d, rect: e.currentTarget.getBoundingClientRect() }); if (!grouped) onSelect?.(s.id) } : (interactive ? () => (selectMode ? onToggle?.(s.id) : onSelect?.(s.id)) : undefined)}
                   style={{ ...cell, cursor: canEdit ? 'pointer' : (interactive ? 'pointer' : 'default'), background: active ? rowBg : 'transparent', borderTopRightRadius: active && d === 6 ? 10 : 0, borderBottomRightRadius: active && d === 6 ? 10 : 0 }}>
                   {closed
                     ? <div style={{ ...block, background: `repeating-linear-gradient(45deg, ${T.track}, ${T.track} 1.5px, transparent 1.5px, transparent 6px)` }} />
@@ -632,8 +632,8 @@ export default function StaffPage() {
           <AllTeams teams={teams} staff={staff} shifts={shifts} onFix={applyFix} cfg={cfg} />
           <Card solid pad={24}>
             <div style={{ fontSize: 14, fontWeight: 700, color: T.ink, marginBottom: 3, letterSpacing: '-0.01em' }}>All availability <span style={{ color: T.faint, fontWeight: 500 }}>· whole location</span></div>
-            <div style={{ fontSize: 12.5, color: T.faint, marginBottom: 12 }}>Everyone's week at a glance. Click anyone to jump into their team and edit.</div>
-            <AvailabilityGrid groups={teams.map((t) => ({ name: t.name, color: t.color, staff: staff.filter((s) => s.team_id === t.id) }))} cfg={cfg} onSelect={(id) => { const st = staff.find((x) => x.id === id); if (st) { setTeamId(st.team_id); setSelectedId(st.id) } }} />
+            <div style={{ fontSize: 12.5, color: T.faint, marginBottom: 12 }}>Everyone's week at a glance. Click a day to set availability, or a name to open their team.</div>
+            <AvailabilityGrid groups={teams.map((t) => ({ name: t.name, color: t.color, staff: staff.filter((s) => s.team_id === t.id) }))} cfg={cfg} onEditDay={editDay} onSelect={(id) => { const st = staff.find((x) => x.id === id); if (st) { setTeamId(st.team_id); setSelectedId(st.id) } }} />
             <AvailKey accent={T.pink} />
           </Card>
         </div>
