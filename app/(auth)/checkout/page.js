@@ -25,6 +25,18 @@ const PRICE_ENV = {
   manual: { monthly: process.env.NEXT_PUBLIC_STRIPE_PRICE_MONTHLY, annual: process.env.NEXT_PUBLIC_STRIPE_PRICE_ANNUAL },
 }
 
+// Founding Member launch offer: first 200 AI members get £299 their first year
+// (from £549 annual), applied via a Stripe promotion code on the AI annual price.
+// Active only when the code env is set, so it can be switched off after 200.
+// The "keep £299 for life for a testimonial" lock is handled manually (a re-issued
+// renewal coupon), not in code, at this scale.
+const FOUNDING = {
+  active: !!process.env.NEXT_PUBLIC_STRIPE_FOUNDING_CODE,
+  code: process.env.NEXT_PUBLIC_STRIPE_FOUNDING_CODE,
+  firstYear: 299,
+  seats: 200,
+}
+
 // Competitor pricing as of August 2026. Both charge per location, so cost
 // multiplies with each site; 7shifts also caps staff by tier.
 const COMPARE = [
@@ -56,9 +68,13 @@ function CheckoutContent() {
     setLoading(true); setError(null)
     try {
       const priceId = PRICE_ENV[tier]?.[billingCycle]
+      // Auto-apply the founding code on the AI annual price (unless the user typed
+      // their own). Their code always wins.
+      const applyFounding = FOUNDING.active && tier === 'ai' && billingCycle === 'annual'
+      const codeToSend = promoCode.trim() || (applyFounding ? FOUNDING.code : '')
       const response = await fetch('/api/stripe/checkout', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceId, email: user.primaryEmailAddress?.emailAddress, promoCode: promoCode.trim() || undefined }),
+        body: JSON.stringify({ priceId, email: user.primaryEmailAddress?.emailAddress, promoCode: codeToSend || undefined }),
       })
       const data = await response.json()
       if (data.url) window.location.href = data.url
@@ -103,10 +119,19 @@ function CheckoutContent() {
           </div>
         </div>
 
+        {/* Founding Member banner */}
+        {FOUNDING.active && (
+          <div className="mb-4 rounded-2xl bg-gradient-to-r from-pink-500 to-pink-600 text-white p-4 text-center shadow-sm">
+            <p className="text-sm font-bold">Founding Member offer</p>
+            <p className="text-xs text-white/90 mt-1">The first {FOUNDING.seats} AI members get £{FOUNDING.firstYear} their first year (from £549 annual). Keep that rate for life in exchange for a testimonial and your feedback.</p>
+          </div>
+        )}
+
         {/* Plan cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           {[PLANS.ai, PLANS.manual].map((p) => {
             const selected = tier === p.key
+            const isFoundingCard = FOUNDING.active && p.key === 'ai' && billingCycle === 'annual'
             const price = billingCycle === 'monthly' ? p.monthly : Math.round(p.annual / 12)
             return (
               <button key={p.key} onClick={() => setTier(p.key)}
@@ -120,11 +145,24 @@ function CheckoutContent() {
                     {selected && <span className="w-2 h-2 rounded-full bg-white" />}
                   </span>
                 </div>
-                <div className="flex items-baseline gap-1 mb-1">
-                  <span className="text-3xl font-bold text-gray-900">£{price}</span>
-                  <span className="text-sm text-gray-500">/month</span>
-                </div>
-                {billingCycle === 'annual' && <p className="text-xs text-green-600 mb-2">£{p.annual} billed yearly, save £{p.monthly * 12 - p.annual}</p>}
+                {isFoundingCard ? (
+                  <>
+                    <div className="flex items-baseline gap-1 mb-1">
+                      <span className="text-3xl font-bold text-gray-900">£{FOUNDING.firstYear}</span>
+                      <span className="text-sm text-gray-500">first year</span>
+                      <span className="text-sm text-gray-400 line-through ml-1">£{p.annual}</span>
+                    </div>
+                    <p className="text-xs text-pink-600 mb-2 font-medium">Founding Member, first {FOUNDING.seats} only. Then £{p.annual}/year, or lock £{FOUNDING.firstYear} for life for a testimonial.</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-baseline gap-1 mb-1">
+                      <span className="text-3xl font-bold text-gray-900">£{price}</span>
+                      <span className="text-sm text-gray-500">/month</span>
+                    </div>
+                    {billingCycle === 'annual' && <p className="text-xs text-green-600 mb-2">£{p.annual} billed yearly, save £{p.monthly * 12 - p.annual}</p>}
+                  </>
+                )}
                 <p className="text-sm text-gray-600 mb-3 leading-relaxed">{p.tagline}</p>
                 <ul className="space-y-1.5">
                   {p.features.map((f, i) => (
