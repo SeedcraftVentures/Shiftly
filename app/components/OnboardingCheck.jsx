@@ -1,35 +1,31 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { useUser } from '@clerk/nextjs'
 
+// Employee router + passthrough. Employees are sent to their own app; everyone
+// else (managers, and brand-new accounts with no data yet) drops straight into
+// the dashboard. First-run setup is no longer a separate route: the in-app
+// SetupCompanion, mounted in the dashboard layout, guides new managers in place.
 export default function OnboardingCheck({ children }) {
   const router = useRouter()
-  const pathname = usePathname()
   const { isLoaded, user } = useUser()
   const [checking, setChecking] = useState(true)
   const [shouldShow, setShouldShow] = useState(false)
 
   useEffect(() => {
     if (!isLoaded) return
-    
+
     if (!user) {
       setChecking(false)
       setShouldShow(true)
       return
     }
 
-    // Don't redirect if already on onboarding page
-    if (pathname === '/onboarding') {
-      setShouldShow(true)
-      setChecking(false)
-      return
-    }
-
     const checkAccess = async () => {
       try {
-        // Step 1: Check if user is an employee
+        // Is this an employee? If so, route them to their own app.
         const cacheKey = `shiftly_user_type_${user.id}`
         const cachedType = localStorage.getItem(cacheKey)
 
@@ -53,46 +49,23 @@ export default function OnboardingCheck({ children }) {
               localStorage.setItem(cacheKey, 'manager')
             }
           }
-          // If user-type API fails, continue to onboarding check
-          // rather than silently letting through
+          // If the user-type API fails, fall through to the dashboard rather
+          // than block a manager out of their own app.
         }
 
-        // Step 2: Check onboarding status
-        const response = await fetch('/api/teams')
-        
-        if (response.ok) {
-          const teams = await response.json()
-          const defaultTeam = teams.find(t => t.is_default) || teams[0]
-
-          // Redirect to onboarding if:
-          // - No teams exist at all
-          // - Default team hasn't completed onboarding
-          if (!defaultTeam || !defaultTeam.onboarding_completed) {
-            router.replace('/onboarding')
-            return
-          }
-
-          // All checks passed, show dashboard
-          setShouldShow(true)
-        } else {
-          // API error, fail closed, send to onboarding
-          // Better to re-onboard than to show a broken dashboard
-          console.error('Teams API returned non-OK:', response.status)
-          router.replace('/onboarding')
-          return
-        }
+        // Manager (or new) -> show the dashboard. The SetupCompanion handles
+        // first-run setup in place; no redirect.
+        setShouldShow(true)
       } catch (error) {
-        // Network error, fail closed, send to onboarding
-        console.error('Error checking access:', error)
-        router.replace('/onboarding')
-        return
+        console.error('Error checking user type:', error)
+        setShouldShow(true) // fail open to the dashboard, never strand a manager
       } finally {
         setChecking(false)
       }
     }
 
     checkAccess()
-  }, [isLoaded, user, pathname, router])
+  }, [isLoaded, user, router])
 
   if (checking || !shouldShow) {
     return (

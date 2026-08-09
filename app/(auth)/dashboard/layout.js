@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Navigation from '@/app/components/Navigation'
 import DashboardTopBar from '@/app/components/DashboardTopBar'
 import OnboardingCheck from '@/app/components/OnboardingCheck'
+import SetupCompanion from '@/app/components/SetupCompanion'
 import { useTheme } from '@/app/components/ui/kit'
 
 export default function DashboardLayout({ children }) {
@@ -27,6 +28,9 @@ export default function DashboardLayout({ children }) {
             {children}
           </div>
         </div>
+        {/* First-run setup, in place. Floats over every dashboard page; shows
+            only while the workspace is incomplete, else steps aside to a bubble. */}
+        <SetupCompanion />
       </div>
     </OnboardingCheck>
   )
