@@ -9,12 +9,12 @@ import Image from 'next/image'
 // trial starts on it (sells the upgrade); a manager can drop to Manual anytime.
 const PLANS = {
   ai: {
-    key: 'ai', name: 'AI-supported', monthly: 59, annual: 590, recommended: true,
+    key: 'ai', name: 'AI-supported', monthly: 59, annual: 549, recommended: true,
     tagline: 'Everything in Manual, plus the assistant that sets up, fills gaps and builds your rota for you.',
     features: ['Unlimited staff and teams', 'AI assistant builds and fixes your rota', 'Ask it to do things in plain English', 'Approve and publish in one tap'],
   },
   manual: {
-    key: 'manual', name: 'Manual', monthly: 49, annual: 490,
+    key: 'manual', name: 'Manual', monthly: 49, annual: 449,
     tagline: 'The full rota builder with a guided setup assistant and how-to help.',
     features: ['Unlimited staff and teams', 'Smart rota generator', 'Guided setup + how-to assistant', 'Time off, availability, payroll, reports'],
   },
@@ -97,7 +97,7 @@ function CheckoutContent() {
               <button key={c} onClick={() => setBillingCycle(c)}
                 className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${billingCycle === c ? 'bg-pink-500 text-white' : 'text-gray-600 hover:text-gray-900'}`}>
                 {c === 'monthly' ? 'Monthly' : 'Annual'}
-                {c === 'annual' && <span className={`ml-1.5 text-xs ${billingCycle === 'annual' ? 'text-white/90' : 'text-green-600'}`}>2 months free</span>}
+                {c === 'annual' && <span className={`ml-1.5 text-xs ${billingCycle === 'annual' ? 'text-white/90' : 'text-green-600'}`}>Best value</span>}
               </button>
             ))}
           </div>
