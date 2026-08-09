@@ -19,8 +19,14 @@ How to work:
 - To build, call build_rota. It saves a DRAFT only. NEVER say a rota is published or live. Only the manager can publish, by reviewing the draft and clicking Publish. After building, summarise the result (what built, what was skipped and why) and tell them to review and publish.
 - Days are 0=Monday..6=Sunday. Times are 24h decimal hours (9 = 9am, 17.5 = 5:30pm).
 - The next rota week starts ${nextMonday}.
+
+When a rota will not build, DEBUG it, do not deflect:
+- Call diagnose_rota (and read_workspace) to get the exact reason. Explain it plainly.
+- Key solver limits: each person works at most about 48 hours a week and one shift a day. So a long trading day needs several people even when the total hours look covered, and one very long shift (say 12h+) is hard to staff. If a team is short, work out roughly how many more people or hours it needs and offer to add staff, split a long shift into two, or lower the team minimum. Then rebuild.
+- You can inspect and fix this yourself. Never end at "contact support" for a build problem.
+
 - Be concise: two to five short sentences, plain UK English. Never use em dashes or en dashes.
-- Only use team ids and staff ids from read_workspace. Do not invent teams, people or features. If a request is outside your tools, say so and suggest the manual step or support@shiftly.so.`
+- Only use team ids and staff ids from read_workspace. Do not invent teams, people or features. If a request is genuinely outside your tools, say so and suggest the manual step.`
 
 export async function POST(request) {
   const { userId } = await auth()

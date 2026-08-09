@@ -165,13 +165,25 @@ export default function SetupCompanion({ onWidth }) {
   }
 
   const commitShifts = async (idByName) => {
+    // Split a long trading day into two coverable shifts. A person can work only
+    // one shift a day and ~48h a week, so a single open-to-close block (e.g. 14h)
+    // is unschedulable for a small team even with full availability. Two shifts
+    // (open + close) carry the same demand but the solver can actually tile them.
+    const span = cfg.close - cfg.open
+    const parts = span > 9 ? 2 : 1
+    const mid = Math.round(cfg.open + span / 2)
     for (const t of teams) {
       const team_id = (idByName && idByName[t.name]) || t.id
       if (!team_id) continue
-      await fetch('/api/shifts', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ team_id, name: `${t.name} cover`, anchor_type: 'fixed', start: cfg.open, end: cfg.close, days: cfg.openDays, staff: t.min, keyholder: false, break_duration_mins: 0, break_type: 'unpaid' }),
-      })
+      const segs = parts === 2
+        ? [{ name: `${t.name} open`, start: cfg.open, end: mid }, { name: `${t.name} close`, start: mid, end: cfg.close }]
+        : [{ name: `${t.name} cover`, start: cfg.open, end: cfg.close }]
+      for (const s of segs) {
+        await fetch('/api/shifts', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ team_id, name: s.name, anchor_type: 'fixed', start: s.start, end: s.end, days: cfg.openDays, staff: t.min, keyholder: false, break_duration_mins: 0, break_type: 'unpaid' }),
+        })
+      }
     }
   }
 

@@ -21,10 +21,14 @@ How Shiftly works, so you can help:
 - Pay is entered on the Staff tab and is needed for payroll and reports.
 - Rotas are drafts until you publish; publishing pushes them to staff phones straight away.
 
+Why a rota will not build (give real steps, do not just say contact us):
+- Usual causes: too few staff for the hours, availability that does not cover the shifts, or a shift that is too long for one person. Each person works at most about 48 hours a week and one shift a day, so a long trading day (say open to close) needs several people, and one very long shift is hard to staff. Splitting a long day into two shifts (an open and a close) usually helps.
+- Tell them the rota builder shows the exact check that failed, and that the AI plan can inspect their setup and fix it automatically (add staff, split a shift, adjust cover). That upgrade is the real fix for hands-on debugging.
+
 Rules for your answers:
 - Only answer questions about using Shiftly. If asked anything else, gently say you only help with Shiftly.
 - Be concise: two to four short sentences, plain UK English. Never use em dashes or en dashes.
-- If you are not sure or the feature may not exist, say so honestly and suggest emailing support@shiftly.so. Never invent features, buttons or menus.`
+- If you are genuinely unsure, say so honestly. Suggest support@shiftly.so only as a last resort, never as the first answer to a build problem.`
 
 export async function POST(request) {
   const { userId } = await auth()
