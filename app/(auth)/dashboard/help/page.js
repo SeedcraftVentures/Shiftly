@@ -4,8 +4,6 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import PageHeader from '@/app/components/PageHeader'
 
-const resetTour = () => localStorage.removeItem('shiftly_tour_complete')
-
 const FAQ_SECTIONS = [
   {
     title: 'Getting Started',
@@ -115,8 +113,9 @@ export default function HelpPage() {
   }
 
   const handleRetakeTour = () => {
-    resetTour()
-    router.push('/dashboard?tour=start')
+    // Re-show the setup assistant's build guidance on the rota builder.
+    localStorage.removeItem('shiftly_setup_done')
+    router.push('/dashboard/generate?setup=1')
   }
 
   return (
@@ -138,8 +137,8 @@ export default function HelpPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
           </div>
-          <p className="font-semibold text-gray-900 mb-1 group-hover:text-pink-600 transition-colors">Retake the Tour</p>
-          <p className="text-sm text-gray-500">Walk through Shiftly's features again with the guided tour</p>
+          <p className="font-semibold text-gray-900 mb-1 group-hover:text-pink-600 transition-colors">Show the setup guide</p>
+          <p className="text-sm text-gray-500">Reopen the assistant that walks you through building and publishing a rota</p>
         </button>
 
         {/* Contact Support Card */}

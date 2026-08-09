@@ -5,6 +5,7 @@ import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { Card, Button, Pill, Ring, Icon, Ic, fmtTime, useTheme, EASE } from '@/app/components/ui/kit'
 import { TEAM_COLORS, cfgFromLocation, mapStaffForCoverage, readiness, scheduleCoverage, coverageBottlenecks, locationKeyholderGaps } from '@/app/(auth)/dashboard/staff/utils/staffHelpers'
+import SetupChecklist from '@/app/components/SetupChecklist'
 
 // ════════════════════════════════════════════════════════════════════════════
 //  DASHBOARD (live), Apple-esque. Same data/derivations as before (coverage via
@@ -138,6 +139,8 @@ export default function DashboardPage() {
         <h1 style={{ fontSize: 40, fontWeight: 700, color: T.ink, margin: 0, letterSpacing: '-0.035em', lineHeight: 1.02 }}>{greeting()}, {firstName}</h1>
         <p style={{ fontSize: 17, color: T.muted, margin: '8px 0 0', letterSpacing: '-0.01em' }}>{DAYNAMES[new Date().getDay()]}{data.locName ? <> · <span style={{ color: T.body, fontWeight: 600 }}>{data.locName}</span></> : null}</p>
       </div>
+
+      <SetupChecklist />
 
       {/* hero row: merged coverage (2/3) + this week (1/3) */}
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: 18, marginBottom: 18 }}>

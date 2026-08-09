@@ -84,7 +84,9 @@ export default function CompanionOnboarding() {
         if (!team_id || !s.name.trim()) continue
         await fetch('/api/staff', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ team_id, name: s.name.trim(), contracted_hours: s.hours || 0, max_hours: Math.max(40, s.hours || 0), hourly_rate: 11.44, keyholder: !!s.keyholder, availability: availAll }),
+          // hourly_rate 0 on purpose: leaves pay UNSET so the setup checklist can
+          // prompt the manager to enter real pay (payroll and reports need it).
+          body: JSON.stringify({ team_id, name: s.name.trim(), contracted_hours: s.hours || 0, max_hours: Math.max(40, s.hours || 0), hourly_rate: 0, keyholder: !!s.keyholder, availability: availAll }),
         })
       }
 
