@@ -181,6 +181,8 @@ export default function SetupCompanion({ onWidth }) {
     if (!res.ok) throw new Error('Could not add that person. Try again.')
     setStaffCount((c) => c + 1)
     setStaffHours((h) => h + (sh || 0))
+    // Nudge any open Staff page to refetch so people appear live as they're added.
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('shiftly:staff-changed'))
   }
 
   // ── step submit handlers ─────────────────────────────────────────────────────

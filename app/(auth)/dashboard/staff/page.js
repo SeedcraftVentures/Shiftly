@@ -485,6 +485,22 @@ export default function StaffPage() {
     })()
   }, [])
 
+  // Live populate during setup: when the companion adds people/shifts it emits
+  // this event; refetch so they appear without a manual reload. Skips the staff
+  // replace if an edit is mid-save so we never clobber an in-flight change.
+  useEffect(() => {
+    const reload = async () => {
+      try {
+        const [shr, str] = await Promise.all([fetch('/api/shifts'), fetch('/api/staff')])
+        const shd = await shr.json(), std = await str.json()
+        setShifts(Array.isArray(shd) ? shd : [])
+        if (!pending.current) setStaff((Array.isArray(std) ? std : []).map(fromApi))
+      } catch {}
+    }
+    window.addEventListener('shiftly:staff-changed', reload)
+    return () => window.removeEventListener('shiftly:staff-changed', reload)
+  }, [])
+
   const cfg = useMemo(() => {
     const business = location?.business || { 0: [9, 17], 1: [9, 17], 2: [9, 17], 3: [9, 17], 4: [9, 17], 5: [9, 17], 6: null }
     const openDays = ALL.filter((d) => business[d])
