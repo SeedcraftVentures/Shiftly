@@ -43,10 +43,13 @@ export async function GET(request) {
     const shiftIds = [...new Set(assigns.map((a) => a.shift_id).filter(Boolean))]
     const staffIds = [...new Set(assigns.map((a) => a.staff_id))]
     const [{ data: shifts }, { data: staff }] = await Promise.all([
-      supabaseAdmin.from('Shift Patterns').select('shift_id, start_time, end_time').in('shift_id', shiftIds),
+      supabaseAdmin.from('Shift Patterns').select('shift_id, start_time, end_time, break_duration, break_is_paid').in('shift_id', shiftIds),
       supabaseAdmin.from('Staff').select('staff_id, team_id, wage, pay_basis, annual_salary, annualised_hours, contracted_hours').in('staff_id', staffIds),
     ])
-    const dur = Object.fromEntries((shifts || []).map((s) => [s.shift_id, Math.max(0, tzToDec(s.end_time) - tzToDec(s.start_time))]))
+    // Paid hours = clock span minus any UNPAID break (break_duration is in minutes).
+    // The break is part of the shift span, so an 8h-worked shift with a 1h unpaid
+    // break is a 9h shift on the rota but pays 8h.
+    const dur = Object.fromEntries((shifts || []).map((s) => [s.shift_id, Math.max(0, (tzToDec(s.end_time) - tzToDec(s.start_time)) - (s.break_is_paid ? 0 : (s.break_duration || 0) / 60))]))
     const staffById = Object.fromEntries((staff || []).map((s) => [s.staff_id, { ...s, hourly_rate: parseFloat(s.wage) || 0, annual_salary: parseFloat(s.annual_salary) || 0, annualised_hours: parseFloat(s.annualised_hours) || 0 }]))
 
     // hours[weekBucket][staffId] = hours

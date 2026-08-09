@@ -117,6 +117,9 @@ export function Inspector({ shift, patch, onDelete, saveState, onSave, accent, c
   )
   const L = shift.end - shift.start
   const anchor = shift.pin || 'none'
+  const brkMins = shift.break_duration_mins || 0
+  const unpaidH = shift.break_type === 'paid' ? 0 : brkMins / 60
+  const paidH = Math.round((curLen - unpaidH) * 10) / 10
   const rename = (p, a) => { if (isAutoName(shift.name)) p.name = autoName(a); return p }
   const setAnchor = (a) => {
     const p = { pin: a }
@@ -150,8 +153,16 @@ export function Inspector({ shift, patch, onDelete, saveState, onSave, accent, c
         <Segmented full accent={accent} value={lenMode} onChange={(v) => (v === 'custom' ? setLenMode('custom') : setLen(Number(v)))} options={[{ value: '4', label: '4h' }, { value: '8', label: '8h' }, { value: '12', label: '12h' }, { value: 'custom', label: 'Custom' }]} />
       </div>
       <div>
-        <Label>{fmt(shift.start)} - {fmt(shift.end)} · {curLen}h{anchor !== 'none' && <span style={{ color: accent, fontWeight: 700 }}> · {anchor === 'open' ? 'opens' : 'closes'}</span>}</Label>
+        <Label>{fmt(shift.start)} - {fmt(shift.end)} · {curLen}h at venue{unpaidH > 0 && <span style={{ color: T.muted, fontWeight: 700 }}> · {paidH}h paid</span>}{anchor !== 'none' && <span style={{ color: accent, fontWeight: 700 }}> · {anchor === 'open' ? 'opens' : 'closes'}</span>}</Label>
         <div style={{ marginTop: 11 }}><TimeRange start={shift.start} end={shift.end} onChange={(start, end) => { setLenMode('custom'); patch({ start, end }) }} accent={accent} domain={cfg.slider} /></div>
+      </div>
+      <div>
+        <Label style={{ marginBottom: 9 }}>Break</Label>
+        <Segmented full accent={accent} value={String(brkMins)} onChange={(v) => patch({ break_duration_mins: Number(v) })} options={[{ value: '0', label: 'None' }, { value: '30', label: '30 min' }, { value: '60', label: '1 hr' }]} />
+        {brkMins > 0 && <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 11 }}>
+          <span style={{ fontSize: 12.5, color: T.muted }}>Paid break {shift.break_type === 'paid' ? '(counts toward pay)' : '(unpaid, part of the shift)'}</span>
+          <Switch on={shift.break_type === 'paid'} onChange={() => patch({ break_type: shift.break_type === 'paid' ? 'unpaid' : 'paid' })} accent={accent} />
+        </div>}
       </div>
       <div data-tour="shift-days"><Label style={{ marginBottom: 9 }}>Runs on</Label><DayPicker days={shift.days} onChange={(days) => patch({ days })} openDays={cfg.openDays} accent={accent} /></div>
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12, alignItems: 'end' }}>
@@ -189,7 +200,7 @@ function ShiftCard({ shift, selected, onClick, accent, cfg, selectMode = false, 
             <span style={{ fontSize: 9.5, fontWeight: 700, padding: '2px 7px', borderRadius: 999, background: T.subtle, color: T.muted, letterSpacing: '0.03em' }}>{designation(shift, cfg).toUpperCase()}</span>
             {shift.keyholder && <Icon path={Ic.key} size={13} stroke={2} color={accent} />}
           </div>
-          <div style={{ fontSize: 13, color: T.muted, marginTop: 4, letterSpacing: '-0.01em' }}>{fmt(shift.start)}-{fmt(shift.end)} · {dayLabel} · {shift.staff} staff</div>
+          <div style={{ fontSize: 13, color: T.muted, marginTop: 4, letterSpacing: '-0.01em' }}>{fmt(shift.start)}-{fmt(shift.end)} · {dayLabel} · {shift.staff} staff{shift.break_duration_mins ? ` · ${shift.break_duration_mins === 60 ? '1h' : shift.break_duration_mins + 'm'} break` : ''}</div>
         </div>
         {!selectMode && <Icon path={Ic.chevron} size={17} stroke={2} color={T.faint} style={{ transform: h ? 'translateX(2px)' : 'none', transition: `transform .3s ${EASE}` }} />}
       </div>
@@ -464,7 +475,7 @@ export default function ShiftsPage() {
   useEffect(() => { setSelectMode(false); setSelectedIds(new Set()) }, [teamId])
 
   const ANCHOR = { Opening: 'open', Closing: 'close', Regular: 'fixed' }
-  const toApi = useCallback((s) => ({ team_id: s.team_id, name: s.name, anchor_type: s.pin ? pinToAnchor(s.pin) : ANCHOR[designation(s, cfg)], start: s.start, end: s.end, days: s.days, staff: s.staff, keyholder: s.keyholder, break_duration_mins: 0, break_type: 'unpaid' }), [cfg])
+  const toApi = useCallback((s) => ({ team_id: s.team_id, name: s.name, anchor_type: s.pin ? pinToAnchor(s.pin) : ANCHOR[designation(s, cfg)], start: s.start, end: s.end, days: s.days, staff: s.staff, keyholder: s.keyholder, break_duration_mins: s.break_duration_mins || 0, break_type: s.break_type || 'unpaid' }), [cfg])
 
   // ── autosave: debounced PUT; flush on shift-switch/unmount; real error state ──
   const doSave = useCallback(async (shift) => {
