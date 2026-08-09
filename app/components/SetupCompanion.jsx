@@ -3,6 +3,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useTheme, Card, Button, Switch, TimeRange, Icon, Ic } from '@/app/components/ui/kit'
+import { useEntitlement } from '@/app/hooks/useEntitlement'
 
 // ════════════════════════════════════════════════════════════════════════════
 //  SETUP COMPANION — first-run setup, in the app, no separate onboarding route.
@@ -48,6 +49,7 @@ export default function SetupCompanion({ onWidth }) {
   const { T } = useTheme()
   const router = useRouter()
   const pathname = usePathname()
+  const { isAiTier } = useEntitlement()
 
   const [ready, setReady] = useState(false)
   const [hidden, setHidden] = useState(true)   // nothing to do, or dismissed
@@ -210,7 +212,7 @@ export default function SetupCompanion({ onWidth }) {
 
   if (!ready || hidden) return null
   if (!open) return <Bubble T={T} label={mode === 'ask' ? 'Help' : 'Finish setup'} onOpen={() => setOpen(true)} />
-  if (mode === 'ask') return <AskChat T={T} onMinimise={() => setOpen(false)} />
+  if (mode === 'ask') return <AskChat T={T} isAiTier={isAiTier} onMinimise={() => setOpen(false)} />
 
   return (
     <Drawer T={T}>
@@ -249,38 +251,103 @@ function Drawer({ T, children }) {
   )
 }
 
-// ── ask mode: grounded how-to Q&A (posts to /api/assistant) ───────────────────
-function AskChat({ T, onMinimise }) {
-  const [msgs, setMsgs] = useState([{ from: 'bot', text: "Hi! Ask me anything about Shiftly, opening hours, shifts, staff, or building and publishing a rota." }])
+// ── ask mode: Q&A for manual, agentic for the AI tier ─────────────────────────
+function AskChat({ T, isAiTier, onMinimise }) {
+  const router = useRouter()
+  const agent = !!isAiTier
+  const [msgs, setMsgs] = useState([{ from: 'bot', text: agent
+    ? "Hi! Tell me what you need and I'll do it. Set your cover, add staff, or build next week's rota for you to review and publish."
+    : "Hi! Ask me anything about Shiftly, opening hours, shifts, staff, or building and publishing a rota." }])
   const [q, setQ] = useState('')
   const [busy, setBusy] = useState(false)
+  const [confirmDraft, setConfirmDraft] = useState(null)
+  const [publishedIds, setPublishedIds] = useState(() => new Set())
+  const scrollRef = useRef(null)
+  useEffect(() => { const el = scrollRef.current; if (el) el.scrollTop = el.scrollHeight }, [msgs, busy])
+
   const send = async () => {
     const text = q.trim(); if (!text || busy) return
     setMsgs((m) => [...m, { from: 'user', text }]); setQ(''); setBusy(true)
     try {
-      const history = msgs.map((m) => ({ role: m.from === 'user' ? 'user' : 'assistant', content: m.text }))
-      const res = await fetch('/api/assistant', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: text, history }) })
+      const history = msgs.filter((m) => m.text).map((m) => ({ role: m.from === 'user' ? 'user' : 'assistant', content: m.text }))
+      const res = await fetch(agent ? '/api/assistant/agent' : '/api/assistant', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(agent ? { message: text, history } : { question: text, history }),
+      })
+      if (res.status === 403) { const d = await res.json().catch(() => ({})); setMsgs((m) => [...m, { from: 'bot', text: d.error || "That's on the AI plan.", upgrade: true }]); return }
       const data = res.ok ? await res.json() : {}
-      setMsgs((m) => [...m, { from: 'bot', text: data.reply || "Sorry, I couldn't reach the assistant. Try support@shiftly.so." }])
+      setMsgs((m) => [...m, { from: 'bot', text: data.reply || "Sorry, I couldn't do that. Try support@shiftly.so.", actions: data.actions, draftId: data.draftId }])
     } catch { setMsgs((m) => [...m, { from: 'bot', text: 'Something went wrong. Give it another go in a moment.' }]) }
     finally { setBusy(false) }
   }
+
+  const publish = async (draftId) => {
+    setBusy(true)
+    try {
+      const res = await fetch(`/api/rotas/${draftId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'Published' }) })
+      if (res.ok) { setPublishedIds((s) => new Set(s).add(draftId)); setMsgs((m) => [...m, { from: 'bot', text: 'Published. Your team can see it in their app now.' }]) }
+      else setMsgs((m) => [...m, { from: 'bot', text: "I couldn't publish that. Open the rota builder to publish it there." }])
+    } catch { setMsgs((m) => [...m, { from: 'bot', text: 'Publish failed. Try again in a moment.' }]) }
+    finally { setBusy(false); setConfirmDraft(null) }
+  }
+
   return (
     <Drawer T={T}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '13px 14px', borderBottom: `1px solid ${T.hair}` }}>
         <span style={{ width: 30, height: 30, borderRadius: 9, background: T.pink, color: '#fff', fontWeight: 800, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>S</span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>Ask Shiftly</div>
-          <div style={{ fontSize: 11.5, color: T.faint }}>How-to help, any time</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: T.ink }}>{agent ? 'Shiftly assistant' : 'Ask Shiftly'}</div>
+          <div style={{ fontSize: 11.5, color: T.faint }}>{agent ? 'Builds and fixes your rota' : 'How-to help, any time'}</div>
         </div>
         <button onClick={onMinimise} title="Minimise" style={iconBtn(T)}><span style={{ display: 'block', width: 12, height: 2, borderRadius: 2, background: T.faint }} /></button>
       </div>
-      <Transcript T={T} msgs={busy ? [...msgs, { from: 'bot', text: 'Thinking...' }] : msgs} />
+
+      <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 15, display: 'flex', flexDirection: 'column', gap: 9 }}>
+        {msgs.map((m, i) => {
+          const bot = m.from === 'bot'
+          return (
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: bot ? 'flex-start' : 'flex-end', gap: 6 }}>
+              <div style={{ maxWidth: '88%', whiteSpace: 'pre-wrap', fontSize: 13.5, lineHeight: 1.5, padding: '10px 13px', borderRadius: 14, ...(bot ? { background: T.subtle, color: T.body, borderBottomLeftRadius: 4 } : { background: T.pink, color: '#fff', borderBottomRightRadius: 4, fontWeight: 600 }) }}>{m.text}</div>
+              {bot && Array.isArray(m.actions) && m.actions.length > 0 && (
+                <div style={{ maxWidth: '88%', display: 'flex', flexDirection: 'column', gap: 4, paddingLeft: 2 }}>
+                  {m.actions.map((a, j) => (
+                    <div key={j} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: T.muted }}>
+                      <Icon path={Ic.check} size={12} stroke={2.6} color={T.green} />{a}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {bot && m.upgrade && <Button size="sm" onClick={() => router.push('/checkout')}>See the AI plan</Button>}
+              {bot && m.draftId && !publishedIds.has(m.draftId) && (
+                confirmDraft === m.draftId ? (
+                  <div style={{ maxWidth: '88%', background: T.cardSolid, border: `1px solid ${T.line}`, borderRadius: 12, padding: 12 }}>
+                    <div style={{ fontSize: 12.5, color: T.body, lineHeight: 1.45, marginBottom: 9 }}>Publish to your team? They'll see it on their phones straight away.</div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <Button size="sm" disabled={busy} onClick={() => publish(m.draftId)}>Publish</Button>
+                      <Button size="sm" variant="secondary" disabled={busy} onClick={() => setConfirmDraft(null)}>Not yet</Button>
+                      <button onClick={() => router.push('/dashboard/generate')} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: T.faint, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: T.font }}>Review in builder</button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button size="sm" arrow onClick={() => setConfirmDraft(m.draftId)}>Review and publish</Button>
+                )
+              )}
+            </div>
+          )
+        })}
+        {busy && <div style={{ alignSelf: 'flex-start', fontSize: 12.5, color: T.faint, padding: '6px 4px' }}>{agent ? 'Working on it...' : 'Thinking...'}</div>}
+      </div>
+
       <div style={{ borderTop: `1px solid ${T.hair}`, padding: 13, background: T.subtle }}>
         <div style={{ display: 'flex', gap: 8 }}>
-          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && send()} placeholder="Ask a question" style={fieldStyle(T)} />
+          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && send()} placeholder={agent ? 'Tell me what to do' : 'Ask a question'} style={fieldStyle(T)} />
           <Button icon={Ic.arrow} disabled={!q.trim() || busy} onClick={send} />
         </div>
+        {!agent && (
+          <div style={{ fontSize: 11, color: T.faint, marginTop: 8, textAlign: 'center' }}>
+            Want me to do it for you? <span onClick={() => router.push('/checkout')} style={{ color: T.pink, fontWeight: 700, cursor: 'pointer' }}>Get the AI plan</span>
+          </div>
+        )}
       </div>
     </Drawer>
   )
