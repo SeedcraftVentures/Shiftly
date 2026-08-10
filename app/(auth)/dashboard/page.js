@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Card, Button, Pill, Ring, Icon, Ic, fmtTime, useTheme, EASE } from '@/app/components/ui/kit'
 import { TEAM_COLORS, cfgFromLocation, mapStaffForCoverage, readiness, scheduleCoverage, coverageBottlenecks, locationKeyholderGaps } from '@/app/(auth)/dashboard/staff/utils/staffHelpers'
 import SetupChecklist from '@/app/components/SetupChecklist'
+import LeaveNudge from '@/app/components/LeaveNudge'
 
 // ════════════════════════════════════════════════════════════════════════════
 //  DASHBOARD (live), Apple-esque. Same data/derivations as before (coverage via
@@ -141,6 +142,7 @@ export default function DashboardPage() {
       </div>
 
       <SetupChecklist />
+      <LeaveNudge />
 
       {/* hero row: merged coverage (2/3) + this week (1/3) */}
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: 18, marginBottom: 18 }}>
