@@ -157,8 +157,23 @@ export default function SetupCompanion({ onWidth }) {
       body: JSON.stringify({ business_name: name.trim() || 'My business', industry: 'Hospitality', teams: teams.map((t) => ({ label: t.name })), operating_hours }),
     })
     if (!res.ok) throw new Error('Could not set up your business. Give it another go.')
+    const data = await res.json().catch(() => ({}))
+    // A re-onboard (a location already existed) updates the org only, so the hours
+    // and teams sent above are ignored. Set them explicitly so re-running setup works.
+    if (data?.reonboarded) {
+      const settingsHours = {}
+      for (let i = 0; i < 7; i++) settingsHours[i] = hours[i]?.open ? { open: true, opening: [hours[i].opening[0], hours[i].opening[1]] } : { open: false }
+      await fetch('/api/settings', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hours: settingsHours }) })
+    }
     const teamRows = await (await fetch('/api/teams')).json()
-    const idByName = Object.fromEntries((teamRows || []).map((t) => [t.name, t.id]))
+    const idByName = Object.fromEntries((Array.isArray(teamRows) ? teamRows : []).map((t) => [t.name, t.id]))
+    // Ensure every team the manager named exists (onboarding skips team creation on
+    // a re-onboard, and it is the source of the "no teams" error when re-testing).
+    for (const t of teams) {
+      if (idByName[t.name]) continue
+      const r = await fetch('/api/teams', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: t.name }) })
+      if (r.ok) { const c = await r.json(); idByName[t.name] = c.id }
+    }
     setTeams((prev) => prev.map((t) => ({ ...t, id: idByName[t.name] ?? t.id })))
     foundationDone.current = true
     return idByName
