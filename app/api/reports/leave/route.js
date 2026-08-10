@@ -38,8 +38,6 @@ function expandDates(startStr, endStr, winStart, winEnd) {
   return out
 }
 
-const availWorks = (avail, dow) => { const a = avail ? (avail[dow] ?? avail[String(dow)]) : undefined; return a === true || Array.isArray(a) }
-
 export async function GET() {
   try {
     const { userId } = await auth()
@@ -53,7 +51,7 @@ export async function GET() {
     const [{ data: loc }, { data: hours }, { data: staff }] = await Promise.all([
       supabaseAdmin.from('Locations').select('holiday_year_basis, holiday_year_start_month, holiday_entitlement_weeks, sick_paid_days').eq('location_id', locationId).maybeSingle(),
       supabaseAdmin.from('Location Day Hours').select('day').eq('location_id', locationId),
-      supabaseAdmin.from('Staff').select('staff_id, name, team_id, contracted_hours, availability, holiday_entitlement_weeks_override').in('team_id', teamIds).order('name'),
+      supabaseAdmin.from('Staff').select('staff_id, name, team_id, contracted_hours, holiday_entitlement_weeks_override').in('team_id', teamIds).order('name'),
     ])
 
     const policy = { basis: loc?.holiday_year_basis || 'calendar', startMonth: loc?.holiday_year_start_month || 1, weeks: loc?.holiday_entitlement_weeks ?? 5.6, sickPaidDays: loc?.sick_paid_days ?? null }
@@ -74,18 +72,30 @@ export async function GET() {
       ;(bucket[r.staff_id] ||= []).push(...expandDates(r.start_date, r.end_date, yearStart, yearEnd))
     }
 
+    // Working days per week from contracted hours (a person available 7 days isn't
+    // working 7). Taken is counted on business-open days, capped per week at the
+    // person's working days, so a full week off costs their working days, not 7.
+    const openDayCount = openDays.size || 5
+    const dpwFor = (st) => Math.max(1, Math.min(openDayCount, st.contracted_hours ? Math.round(st.contracted_hours / 8) : 5))
+    const countLeave = (dates, dpw) => {
+      const wk = {}
+      for (const d of dates || []) {
+        if (!openDays.has(dowMon(d))) continue
+        const b = Math.floor((d - yearStart) / (7 * 864e5))
+        wk[b] = (wk[b] || 0) + 1
+      }
+      return Object.values(wk).reduce((a, c) => a + Math.min(c, dpw), 0)
+    }
+
     const staffOut = (staff || []).map((st) => {
-      const avail = st.availability || {}
-      let wdpw = [...openDays].filter((dow) => availWorks(avail, dow)).length
-      if (!wdpw) wdpw = Math.max(1, Math.min(openDays.size || 5, Math.round((st.contracted_hours || 0) / 8) || 5))
+      const dpw = dpwFor(st)
       const weeks = st.holiday_entitlement_weeks_override != null ? parseFloat(st.holiday_entitlement_weeks_override) : policy.weeks
-      const entitlementDays = Math.round(weeks * wdpw)
-      const countWorking = (dates) => (dates || []).filter((d) => { const dow = dowMon(d); return openDays.has(dow) && availWorks(avail, dow) }).length
-      const holidayTakenDays = countWorking(holBy[st.staff_id])
-      const sickDaysUsed = countWorking(sickBy[st.staff_id])
+      const entitlementDays = Math.round(weeks * dpw)
+      const holidayTakenDays = countLeave(holBy[st.staff_id], dpw)
+      const sickDaysUsed = countLeave(sickBy[st.staff_id], dpw)
       return {
         staff_id: st.staff_id, name: st.name, team_id: st.team_id,
-        workingDaysPerWeek: wdpw, entitlementDays, holidayTakenDays,
+        workingDaysPerWeek: dpw, entitlementDays, holidayTakenDays,
         holidayRemainingDays: Math.max(0, entitlementDays - holidayTakenDays),
         sickDaysUsed,
       }
