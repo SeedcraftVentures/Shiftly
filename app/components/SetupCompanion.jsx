@@ -240,7 +240,7 @@ export default function SetupCompanion({ onWidth }) {
       const rbt = Object.fromEntries(teams.map((t) => [t.id, Math.round((cfg.close - cfg.open) * t.min * cfg.openDays.length)]))
       setReqByTeam(rbt)
       const req = Object.values(rbt).reduce((a, b) => a + b, 0)
-      advance(teams.map((t) => `${t.name}: ${t.min}`).join('  ·  '), `That's your shifts sorted. I've set an opening and a closing shift for each team, take a look on the left and click any shift to change its length, hours or break.\n\nTo cover these you'll need roughly ${req} staff-hours a week.`, 'review')
+      advance(teams.map((t) => `${t.name}: ${t.min}`).join('  ·  '), `I've assigned shifts from your hours, with someone to open and someone to close each day. Take a look at the panel on the left and click any shift to adjust its length, hours or break so it matches how your business actually runs.\n\nAbout ${req} staff-hours a week will cover these. Tap "Looks good" when you're happy and we'll add your team.`, 'review')
     } catch (e) { setError(e.message) } finally { setBusy(false) }
   }
 
