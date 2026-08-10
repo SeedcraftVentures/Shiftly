@@ -37,6 +37,7 @@ export default function ReportsPage() {
   const [teams, setTeams] = useState([])
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [view, setView] = useState('labour') // 'labour' | 'leave'
 
   // Projected = next 4 weeks from this Monday, published rotas only.
   const effStart = projected ? mondayStr(0) : weekStart
@@ -64,10 +65,16 @@ export default function ReportsPage() {
     <div style={{ fontFamily: T.font, ...PAGE }}>
       <PageHeader
         title="Reports"
-        subtitle={projected ? 'Projected labour cost from your published rotas, the next 4 weeks.' : `Labour cost for ${rangeLabel}.`}
-        actions={<Segmented options={[{ value: 'actual', label: 'Actual' }, { value: 'projected', label: 'Projected' }]} value={projected ? 'projected' : 'actual'} onChange={(v) => setProjected(v === 'projected')} accent={T.pink} />}
+        subtitle={view === 'leave' ? 'Holiday and sick, per person, for the current holiday year.' : projected ? 'Projected labour cost from your published rotas, the next 4 weeks.' : `Labour cost for ${rangeLabel}.`}
+        actions={<div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Segmented options={[{ value: 'labour', label: 'Labour' }, { value: 'leave', label: 'Holidays & sick' }]} value={view} onChange={setView} accent={T.pink} />
+          {view === 'labour' && <Segmented options={[{ value: 'actual', label: 'Actual' }, { value: 'projected', label: 'Projected' }]} value={projected ? 'projected' : 'actual'} onChange={(v) => setProjected(v === 'projected')} accent={T.pink} />}
+        </div>}
       />
 
+      {view === 'leave' && <LeaveView T={T} teamColor={teamColor} teamName={teamName} />}
+
+      {view === 'labour' && (<>
       {projected ? (
         <Card pad={14} style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, background: T.pink + '0C', border: `1px solid ${T.pink}30` }}>
           <span style={{ width: 8, height: 8, borderRadius: 99, background: T.pink, flexShrink: 0 }} />
@@ -150,6 +157,67 @@ export default function ReportsPage() {
           <p style={{ fontSize: 11.5, color: T.faint, marginTop: 18, lineHeight: 1.5 }}>Hourly cost tracks hours worked; salaried &amp; annualised cost is fixed per period. Same figures as Payroll.</p>
         </Card>
       </div>
+      </>)}
     </div>
+  )
+}
+
+// ── Holidays & sick view ──────────────────────────────────────────────────────
+const leaveDate = (s) => { try { return new Date(s + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) } catch { return s } }
+
+function LeaveView({ T, teamColor, teamName }) {
+  const [leave, setLeave] = useState(null)
+  const [loading, setLoading] = useState(true)
+  useEffect(() => { setLoading(true); fetch('/api/reports/leave').then((r) => (r.ok ? r.json() : null)).then((d) => { setLeave(d); setLoading(false) }).catch(() => setLoading(false)) }, [])
+
+  if (loading) return <Card pad={22}><p style={{ fontSize: 13, color: T.muted, margin: 0 }}>Loading…</p></Card>
+  if (!leave || !(leave.staff || []).length) return <Card pad={22}><p style={{ fontSize: 13, color: T.faint, margin: 0 }}>No staff yet. Add your team to track holiday and sick.</p></Card>
+
+  const rows = [...leave.staff].sort((a, b) => b.holidayRemainingDays - a.holidayRemainingDays)
+  const showBanner = leave.weeksToEnd <= 8 && leave.summary?.staffWithUnused > 0
+  const col = '1.6fr 1fr 0.8fr 0.8fr 1.4fr 0.9fr'
+  const head = { fontSize: 11, fontWeight: 700, color: T.faint, letterSpacing: 0.4, textTransform: 'uppercase' }
+
+  return (
+    <>
+      {showBanner && (
+        <Card pad={16} style={{ marginBottom: 16, display: 'flex', alignItems: 'flex-start', gap: 12, background: T.pink + '0C', border: `1px solid ${T.pink}30` }}>
+          <span style={{ width: 8, height: 8, borderRadius: 99, background: T.pink, flexShrink: 0, marginTop: 6 }} />
+          <span style={{ fontSize: 13, color: T.body, lineHeight: 1.5 }}><b style={{ color: T.ink }}>{leave.summary.staffWithUnused} of your team have holiday to use</b> before the year ends on {leaveDate(leave.yearEnd)} ({leave.weeksToEnd} week{leave.weeksToEnd === 1 ? '' : 's'} away). Prompt them to book it in.</span>
+        </Card>
+      )}
+      <Card pad={22}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: T.faint, letterSpacing: 0.5, textTransform: 'uppercase' }}>Holiday &amp; sick · per person</div>
+          <div style={{ fontSize: 12, color: T.muted }}>Holiday year {leaveDate(leave.yearStart)} to {leaveDate(leave.yearEnd)}</div>
+        </div>
+        {/* header */}
+        <div style={{ display: 'grid', gridTemplateColumns: col, gap: 10, padding: '0 2px 10px', borderBottom: `1px solid ${T.hair}` }}>
+          <span style={head}>Name</span><span style={head}>Team</span><span style={{ ...head, textAlign: 'right' }}>Allowance</span><span style={{ ...head, textAlign: 'right' }}>Taken</span><span style={head}>Remaining</span><span style={{ ...head, textAlign: 'right' }}>Sick</span>
+        </div>
+        {rows.map((r) => {
+          const pctUsed = r.entitlementDays ? Math.round((r.holidayTakenDays / r.entitlementDays) * 100) : 0
+          const low = r.holidayRemainingDays >= 5 && leave.weeksToEnd <= 8
+          return (
+            <div key={r.staff_id} style={{ display: 'grid', gridTemplateColumns: col, gap: 10, alignItems: 'center', padding: '12px 2px', borderBottom: `1px solid ${T.hair}` }}>
+              <span style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>{r.name}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12.5, color: T.muted, minWidth: 0 }}><span style={{ width: 8, height: 8, borderRadius: 99, flexShrink: 0, background: teamColor[r.team_id] || T.muted }} /><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{teamName[r.team_id] || 'Team'}</span></span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: T.ink, textAlign: 'right' }}>{r.entitlementDays}d</span>
+              <span style={{ fontSize: 13, color: T.muted, textAlign: 'right' }}>{r.holidayTakenDays}d</span>
+              <span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ flex: 1, height: 7, borderRadius: 99, background: T.track, overflow: 'hidden' }}>
+                    <div style={{ width: `${Math.min(100, pctUsed)}%`, height: '100%', borderRadius: 99, background: teamColor[r.team_id] || T.pink }} />
+                  </div>
+                  <span style={{ fontSize: 12.5, fontWeight: 700, color: low ? T.pink : T.ink, whiteSpace: 'nowrap' }}>{r.holidayRemainingDays}d left</span>
+                </div>
+              </span>
+              <span style={{ fontSize: 13, color: T.muted, textAlign: 'right' }}>{r.sickDaysUsed}{leave.sickPaidDays ? `/${leave.sickPaidDays}` : ''}d</span>
+            </div>
+          )
+        })}
+        <p style={{ fontSize: 11.5, color: T.faint, marginTop: 14, lineHeight: 1.5 }}>Allowance is prorated by each person's working days. Taken counts approved holiday; sick is tracked separately. Set the policy in Settings, or override per person on the Staff page.</p>
+      </Card>
+    </>
   )
 }
