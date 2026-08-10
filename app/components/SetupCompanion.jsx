@@ -278,7 +278,7 @@ export default function SetupCompanion({ onWidth }) {
         {step === 'hours' && <HoursStep T={T} hours={hours} setHours={setHours} busy={busy} onNext={onHours} />}
         {step === 'team' && <TeamComposer T={T} teams={teams} setTeams={setTeams} busy={busy} onSubmit={onTeams} />}
         {step === 'coverage' && <CoverageComposer T={T} teams={teams} setTeams={setTeams} busy={busy} onSubmit={onCoverage} />}
-        {step === 'review' && <NextComposer T={T} label="Looks good, add my team" onSubmit={onReview} />}
+        {step === 'review' && <Button full arrow onClick={onReview}>Looks good, add my team</Button>}
         {step === 'staff' && <StaffComposer T={T} teams={teams} count={staffCount} reqByTeam={reqByTeam} addedByTeam={addedByTeam} onAdd={addStaff} say={say} onDone={onDone} />}
       </div>
     </Drawer>
