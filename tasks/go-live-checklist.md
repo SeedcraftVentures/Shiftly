@@ -1,7 +1,72 @@
-# Shiftly — go-live + QA checklist
+# Shiftly — launch checklist
 
-`main` is live at `69145c9` (the full release: redesign, dark mode, Inbox, employee
-app / Phase B, job board). Vercel deploys from `main`. Keep this open while you QA.
+## SOFT LAUNCH v1 — companion + billing + leave (CURRENT)
+
+Since the prior release (redesign/Inbox/jobs, documented further down), we added: the
+in-app setup companion (retired `/onboarding`), the AI companion + agent (£59 tier),
+two-tier pricing + the Founding Member offer, shift breaks, and holiday/sick
+allowances. That's the current soft-launch scope. Manager mobile is deferred to
+post-launch; staff mobile is the mobile session's lane.
+
+### Blocker status
+- Desktop is feature-complete for a founding-member soft launch.
+- The solver "honour contracted hours" change is NOT a launch blocker: the rota-builder
+  walkthrough guides the manager to add shifts by hand (baseline flex). Launch now;
+  deploy the solver upgrade after it's validated (see the last section).
+
+### Only you can do these (gating)
+1. **Clerk dev -> prod:** create a production instance; put the LIVE
+   `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` + `CLERK_SECRET_KEY` in Vercel; set
+   `NEXT_PUBLIC_APP_URL` to the real domain; set sign-in/up redirect URLs. If Clerk uses
+   a **custom domain, allow for DNS propagation** — the one item that can push a same-day
+   launch to tomorrow.
+2. **Stripe dev -> prod:**
+   - Live `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` (from the live webhook).
+   - Create **live-mode GBP prices**: Manual £49/mo + £449/yr, AI £59/mo + £549/yr. Set
+     `NEXT_PUBLIC_STRIPE_PRICE_MONTHLY`/`_ANNUAL`, `NEXT_PUBLIC_STRIPE_PRICE_AI_MONTHLY`/`_ANNUAL`,
+     and `STRIPE_AI_PRICE_IDS` (the two AI ids, comma-separated) — the last is what grants
+     the agent post-trial.
+   - **Founding Member:** create a promotion code that discounts the AI annual to £299;
+     set `NEXT_PUBLIC_STRIPE_FOUNDING_CODE` (the banner is gated on this).
+   - **Webhook:** add the live endpoint -> `POST /api/stripe/webhook`; copy its signing secret.
+   - **Trial:** 7 days is already in code (`trial_period_days: 7`). Confirm on a test checkout.
+3. **Anthropic:** `ANTHROPIC_API_KEY` in Vercel prod (companion Q&A + agent). Without it the
+   assistant soft-fails with a friendly message.
+4. **Deploy:** everything is on `companion-v1` (local, ahead of origin, and it INCLUDES the
+   mobile session's commits). Coordinate with the mobile session, merge `companion-v1 -> main`,
+   push to `SeedcraftVentures/Shiftly`; Vercel builds from `main`. Then QA the deployed build.
+
+### Discoverability / adoption (in-app)
+- **FTUE:** the setup companion auto-opens for new managers (no separate onboarding) and
+  walks name -> hours -> teams -> baseline -> review -> staff -> build. Verify it triggers
+  on a brand-new account.
+- **Post-setup nudges:** SetupCoach (build/review/publish walkthrough), SetupChecklist
+  (pay/invite/publish), LeaveNudge (year-end holiday). Confirm they render from live data.
+- **Help centre** (`/dashboard/help`) "Show the setup guide" re-opens the coach — verify.
+- **Pricing page:** unlimited-staff lead + competitor comparison + Founding banner (shows
+  once the founding code env is set).
+- Manual-tier users who ask the assistant to *do* something get an upgrade nudge to the AI plan.
+
+### QA (new flows, on the deployed build)
+- New account -> companion onboarding -> build -> publish -> dashboard checklist.
+- Billing: start a trial (test mode first) -> 7-day trial + AI-on during trial; after trial
+  `isAiTier` resolves from the price; founding coupon applies on AI annual.
+- Leave: Settings "Holidays & sick" saves; Reports "Holidays & sick" tab shows per-staff;
+  LeaveNudge appears near a year boundary.
+- AI: with the key set, Ask Shiftly answers; on the AI tier the agent stages a draft and
+  publish needs a human click.
+
+### Solver upgrade (post-validate, then deploy)
+- Edit `python-scheduler/scheduler.py` (headcount `>= required` + bounded extra +
+  overstaffing penalty). Run `test_contract.py` + `py_compile`. Push to the Render-tracked
+  branch; confirm Render redeploys and the start command targets the right entrypoint.
+
+---
+
+# Earlier release QA (redesign / Inbox / jobs) — still valid
+
+`main` was live at `69145c9` (redesign, dark mode, Inbox, employee app / Phase B, job
+board). Vercel deploys from `main`. Keep this open while you QA.
 
 ---
 
