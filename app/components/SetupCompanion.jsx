@@ -62,7 +62,7 @@ export default function SetupCompanion({ onWidth }) {
   const [msgs, setMsgs] = useState([])
   const [name, setName] = useState('')
   const [hours, setHours] = useState(defaultHours)
-  const [teams, setTeams] = useState([{ id: null, name: 'Front of house', color: PALETTE[0], min: 2 }])
+  const [teams, setTeams] = useState([]) // no default; the manager names their own team(s)
   const [staffCount, setStaffCount] = useState(0)
   const [reqByTeam, setReqByTeam] = useState({}) // required staff-hours per team id
   const [addedByTeam, setAddedByTeam] = useState({}) // contracted hours added per team id
@@ -207,7 +207,7 @@ export default function SetupCompanion({ onWidth }) {
 
   // ── step submit handlers ─────────────────────────────────────────────────────
   const onName = (v) => { setName(v); advance(v, `Nice to meet you, ${v}. When are you open? Set your hours below. Different days can be different, and there's a "copy to" shortcut.`, 'hours') }
-  const onHours = () => advance(hoursSummary(), "Got it. What do you call your team? Most places start with one, like Front of house, Bar or Kitchen. You can add more.", 'team')
+  const onHours = () => advance(hoursSummary(), "Got it. Now, what do you call your team? Name it however you do, like Front of house, Kitchen, Bar or Store team. Add more only if you split staff into separate areas. You can rename or add teams anytime in Settings.", 'team')
 
   const onTeams = async (list) => {
     setBusy(true); setError(null)
@@ -464,23 +464,26 @@ function HoursStep({ T, hours, setHours, busy, onNext }) {
 
 function TeamComposer({ T, teams, setTeams, busy, onSubmit }) {
   const [val, setVal] = useState('')
-  const add = () => { const v = val.trim(); if (!v) return; setTeams((p) => [...p, { id: null, name: v, color: PALETTE[p.length % PALETTE.length], min: 2 }]); setVal('') }
-  const remove = (name) => setTeams((p) => (p.length > 1 ? p.filter((t) => t.name !== name) : p))
+  const add = () => { const v = val.trim(); if (!v || teams.some((t) => t.name.toLowerCase() === v.toLowerCase())) { setVal(''); return } setTeams((p) => [...p, { id: null, name: v, color: PALETTE[p.length % PALETTE.length], min: 2 }]); setVal('') }
+  const remove = (name) => setTeams((p) => p.filter((t) => t.name !== name))
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-        {teams.map((t) => (
-          <span key={t.name} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '6px 8px 6px 11px', borderRadius: 999, background: T.cardSolid, border: `1px solid ${T.line}`, fontSize: 12.5, fontWeight: 700, color: T.ink }}>
-            <span style={{ width: 8, height: 8, borderRadius: 99, background: t.color }} />{t.name}
-            {teams.length > 1 && <button onClick={() => remove(t.name)} style={{ border: 'none', background: 'none', color: T.faint, cursor: 'pointer', fontSize: 15, lineHeight: 1, padding: 0 }}>×</button>}
-          </span>
-        ))}
-      </div>
+      {teams.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {teams.map((t) => (
+            <span key={t.name} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '6px 8px 6px 11px', borderRadius: 999, background: T.cardSolid, border: `1px solid ${T.line}`, fontSize: 12.5, fontWeight: 700, color: T.ink }}>
+              <span style={{ width: 8, height: 8, borderRadius: 99, background: t.color }} />{t.name}
+              <button onClick={() => remove(t.name)} title="Remove" style={{ border: 'none', background: 'none', color: T.faint, cursor: 'pointer', fontSize: 15, lineHeight: 1, padding: 0 }}>×</button>
+            </span>
+          ))}
+        </div>
+      )}
       <div style={{ display: 'flex', gap: 8 }}>
-        <input value={val} onChange={(e) => setVal(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} placeholder="Add another team" style={fieldStyle(T)} />
-        <Button variant="secondary" icon={Ic.plus} onClick={add} />
+        <input autoFocus value={val} onChange={(e) => setVal(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} placeholder={teams.length ? 'Add another area (optional)' : 'Name your team, e.g. Kitchen, Bar, Store team'} style={fieldStyle(T)} />
+        <Button variant="secondary" icon={Ic.plus} disabled={!val.trim()} onClick={add} />
       </div>
-      <Button full arrow disabled={busy} onClick={() => onSubmit(teams.map((t) => t.name))}>{busy ? 'Saving...' : "That's my teams"}</Button>
+      <div style={{ fontSize: 11.5, color: T.faint, lineHeight: 1.4 }}>One team is fine. Add more only if you rota staff in separate areas. You can rename or change these anytime in Settings.</div>
+      <Button full arrow disabled={busy || teams.length === 0} onClick={() => onSubmit(teams.map((t) => t.name))}>{busy ? 'Saving...' : teams.length ? "That's my teams" : 'Add a team to continue'}</Button>
     </div>
   )
 }
