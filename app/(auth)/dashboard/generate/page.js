@@ -445,7 +445,8 @@ export default function RotaBuilder() {
 
   return (
     <div style={{ fontFamily: T.font, color: T.body, maxWidth: 1200, margin: '0 auto', padding: '40px 32px 64px' }}>
-      <SetupCoach active={setupMode} generating={generating} hasResult={!!result} published={saveMsg === 'published'} onGenerate={generate} />
+      <SetupCoach active={setupMode} generating={generating} hasResult={!!result} published={saveMsg === 'published'} onGenerate={generate}
+        compliance={liveCompliance} contractIssues={liveContractIssues} relaxed={result?.relaxed_teams} skipped={result?.skipped} />
       <PageHeader title="Rota Builder" subtitle="Generate a schedule that meets contracted hours and respects availability." />
 
       {/* controls */}

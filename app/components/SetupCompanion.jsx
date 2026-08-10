@@ -79,12 +79,16 @@ export default function SetupCompanion({ onWidth }) {
 
   const say = (...m) => setMsgs((prev) => [...prev, ...m])
 
+  // The rota builder has its own assistant (SetupCoach); stand down there so the
+  // two don't stack in the corner.
+  const onBuilder = pathname === '/dashboard/generate'
+
   // Report our footprint so the dashboard layout can condense instead of overlap.
   useEffect(() => {
-    const w = ready && !hidden && open ? DRAWER_W : 0
+    const w = ready && !hidden && open && !onBuilder ? DRAWER_W : 0
     onWidth?.(w)
     return () => onWidth?.(0)
-  }, [ready, hidden, open, onWidth])
+  }, [ready, hidden, open, onWidth, onBuilder])
 
   // ── decide where to pick up, from live data ──────────────────────────────────
   useEffect(() => {
@@ -250,6 +254,7 @@ export default function SetupCompanion({ onWidth }) {
 
   const dismiss = () => { localStorage.setItem(DISMISS_KEY, '1'); setHidden(true) }
 
+  if (onBuilder) return null // SetupCoach owns the rota builder
   if (!ready || hidden) return null
   if (!open) return <Bubble T={T} label={mode === 'ask' ? 'Help' : 'Finish setup'} onOpen={() => setOpen(true)} />
   if (mode === 'ask') return <AskChat T={T} isAiTier={isAiTier} onMinimise={() => setOpen(false)} />
