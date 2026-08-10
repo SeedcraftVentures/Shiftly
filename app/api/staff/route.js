@@ -32,6 +32,7 @@ function toClient(row) {
     invite_status: INVITE_TO_CLIENT[row.invite_status] || 'none',
     clerk_user_id: row.user_id || null,
     created_at: row.created_at,
+    holiday_override: row.holiday_entitlement_weeks_override != null ? parseFloat(row.holiday_entitlement_weeks_override) : null,
   }
 }
 
@@ -53,6 +54,7 @@ function toInsert(body) {
     preferred_shift_lengths: pref != null && pref !== '' ? [Number(pref)] : [],
     invite_status: INVITE_TO_DB[body.invite_status] || 'Not Invited',
     availability: body.availability ?? {},
+    holiday_entitlement_weeks_override: body.holiday_override != null && body.holiday_override !== '' ? Number(body.holiday_override) : null,
   }
 }
 
@@ -76,6 +78,7 @@ function toUpdate(body) {
     u.preferred_shift_lengths = p != null && p !== '' ? [Number(p)] : []
   }
   if (body.invite_status !== undefined) u.invite_status = INVITE_TO_DB[body.invite_status] || 'Not Invited'
+  if (body.holiday_override !== undefined) u.holiday_entitlement_weeks_override = (body.holiday_override === '' || body.holiday_override === null) ? null : Number(body.holiday_override)
   return u
 }
 

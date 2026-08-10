@@ -148,6 +148,11 @@ export function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg, 
           )}
         </div>
       </div>}
+      {!hidePay && <div>
+        <Label style={{ marginBottom: 8 }}>Holiday override (weeks)</Label>
+        <Input value={s.holiday_override ?? ''} onChange={(e) => patch({ holiday_override: e.target.value === '' ? null : parseFloat(e.target.value) })} type="number" step="0.1" min="0" placeholder="Uses company default" accent={accent} />
+        <div style={{ fontSize: 12, color: T.faint, marginTop: 6 }}>Blank uses the company holiday policy from Settings.</div>
+      </div>}
       <div data-tour="staff-keyholder" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div><div style={{ fontSize: 14, fontWeight: 600, color: T.ink, letterSpacing: '-0.01em' }}>Keyholder</div><div style={{ fontSize: 12, color: T.faint }}>Can open and close</div></div>
         <Switch on={s.keyholder} onChange={() => patch({ keyholder: !s.keyholder })} accent={accent} />
@@ -403,8 +408,8 @@ export function AvailKey({ accent }) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-const fromApi = (r) => ({ id: r.id, team_id: r.team_id, name: r.name, role: r.role, contracted: r.contracted_hours, max: r.max_hours, wage: r.hourly_rate, pay_basis: r.pay_basis || 'hourly', annual_salary: r.annual_salary || 0, annualised_hours: r.annualised_hours || 0, keyholder: r.keyholder, avail: r.availability || {}, linked: !!r.clerk_user_id })
-const toApi = (s) => ({ team_id: s.team_id, name: s.name, role: s.role, contracted_hours: s.contracted, max_hours: s.max, hourly_rate: s.wage, pay_basis: s.pay_basis || 'hourly', annual_salary: s.annual_salary ?? 0, annualised_hours: s.annualised_hours ?? 0, keyholder: s.keyholder, availability: s.avail })
+const fromApi = (r) => ({ id: r.id, team_id: r.team_id, name: r.name, role: r.role, contracted: r.contracted_hours, max: r.max_hours, wage: r.hourly_rate, pay_basis: r.pay_basis || 'hourly', annual_salary: r.annual_salary || 0, annualised_hours: r.annualised_hours || 0, keyholder: r.keyholder, avail: r.availability || {}, linked: !!r.clerk_user_id, holiday_override: r.holiday_override ?? null })
+const toApi = (s) => ({ team_id: s.team_id, name: s.name, role: s.role, contracted_hours: s.contracted, max_hours: s.max, hourly_rate: s.wage, pay_basis: s.pay_basis || 'hourly', annual_salary: s.annual_salary ?? 0, annualised_hours: s.annualised_hours ?? 0, keyholder: s.keyholder, availability: s.avail, holiday_override: s.holiday_override ?? null })
 
 // Invite-by-code: the manager shares one business code; staff enter it in the
 // Team app to join and set their own availability. Shows how many have joined.
