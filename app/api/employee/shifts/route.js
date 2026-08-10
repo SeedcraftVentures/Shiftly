@@ -60,6 +60,11 @@ export async function GET() {
 
       return {
         date: a.work_date,
+        // Needed so a swap request can reference the actual shift. Without it a
+        // client has only rota_id to hand, and putting that in Requests.shift_id
+        // (both uuids, so nothing complains) records a rota as if it were a shift.
+        // Null for a custom shift, which has no pattern behind it.
+        shift_id: a.shift_id || null,
         shift_name: isCustom ? (a.custom_name || 'Custom shift') : (p?.shift_name || 'Shift'),
         start_time: hhmm(start),
         end_time: hhmm(end),
