@@ -174,12 +174,25 @@ class ShiftlyScheduler:
             for st in range(n_staff):
                 schedule[si][st] = model.NewBoolVar(f'sh{si}_st{st}_w{week_num}')
 
-        # ── Hard constraint: staff count per shift ────────────────────────────
+        # ── Staff count per shift: baseline as a MINIMUM, plus a bounded extra ──
+        # `== required` capped every shift at the baseline, so a team whose contracted
+        # hours exceed its baseline shift-supply (e.g. two 40h managers but one 1-person
+        # shift a day) could never reach contract. Allow up to `max_extra` more per shift
+        # so the solver can top people up (a second manager on a day). Extra bodies are
+        # penalised in the objective, so they only appear to reduce a real contracted
+        # shortfall, not to pad shifts. `>= required` keeps the baseline guaranteed, so
+        # this only relaxes the old constraint and can't make a feasible model infeasible.
+        max_extra = int(self._rule('max_extra_per_shift', 1) or 0)
+        overstaff_terms = []
         for si, shift in enumerate(self.shifts):
             required = shift.get('staff_required', 1)
-            model.Add(
-                sum(schedule[si][st] for st in range(n_staff)) == required
-            )
+            assigned = sum(schedule[si][st] for st in range(n_staff))
+            model.Add(assigned >= required)
+            model.Add(assigned <= required + max_extra)
+            if max_extra > 0:
+                extra = model.NewIntVar(0, max_extra, f'extra_sh{si}_w{week_num}')
+                model.Add(extra == assigned - required)
+                overstaff_terms.append(extra)
 
         # ── Hard constraint: availability ────────────────────────────────────
         for si, shift in enumerate(self.shifts):
@@ -386,6 +399,7 @@ class ShiftlyScheduler:
         objective = []
         objective += [s * 10 for s in contracted_shortfalls]
         objective += [o * 3 for o in contracted_overages]
+        objective += [e * 60 for e in overstaff_terms]    # only add an extra body if it clears real shortfall
         objective += [w * 6 for w in weekend_terms]       # rotate weekends across weeks
         objective += [v * 2 for v in week_variety_terms]  # general week-to-week variety
         objective += minimize_terms
