@@ -40,6 +40,11 @@ function ThemeChoice() {
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const CURRENCIES = [{ value: 'GBP', label: '£ GBP' }, { value: 'USD', label: '$ USD' }, { value: 'EUR', label: '€ EUR' }]
 const LOCATION_TYPES = ['Restaurant', 'Café', 'Bar', 'Takeaway', 'Hotel', 'Retail', 'Other']
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+const DEFAULT_HOL = { basis: 'calendar', startMonth: 1, weeks: 5.6, sickPaidDays: null }
+const holStart = (h) => (h.basis === 'calendar' ? 1 : h.basis === 'financial' ? 4 : (h.startMonth || 1))
+const holYearLabel = (h) => { const s = holStart(h); return `${MONTHS[s - 1]} to ${MONTHS[(s + 10) % 12]}` }
+const selectStyle = (T) => ({ width: '100%', boxSizing: 'border-box', fontFamily: T.font, fontSize: 14, fontWeight: 600, color: T.ink, background: T.card, border: `1px solid ${T.border}`, borderRadius: T.r.md, padding: '11px 13px', outline: 'none', cursor: 'pointer' })
 
 function Section({ title, desc, children, onSave, saving, saved, flush }) {
   const { T } = useTheme()
@@ -165,6 +170,7 @@ export default function SettingsPage() {
   const setOrg = (patch) => setS((p) => ({ ...p, organization: { ...p.organization, ...patch } }))
   const setLoc = (patch) => setS((p) => ({ ...p, location: { ...p.location, ...patch } }))
   const setDay = (i, patch) => setS((p) => ({ ...p, hours: { ...p.hours, [i]: { ...p.hours[i], ...patch } } }))
+  const setHol = (patch) => setS((p) => ({ ...p, location: { ...p.location, holidays: { ...(p.location.holidays || DEFAULT_HOL), ...patch } } }))
 
   if (loading || !s) {
     return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: T.font }}>
@@ -174,6 +180,7 @@ export default function SettingsPage() {
   }
 
   const loc = s.location
+  const hol = loc?.holidays || DEFAULT_HOL
   return (
     <div style={{ fontFamily: T.font, maxWidth: 880, margin: '0 auto', padding: '20px 28px 56px' }}>
       <h1 style={{ fontSize: 26, fontWeight: 800, color: T.ink, margin: '0 0 4px', letterSpacing: -0.3 }}>Settings</h1>
@@ -199,6 +206,36 @@ export default function SettingsPage() {
           </Section>
         )}
       </div>
+
+      {/* ── Holidays ── */}
+      {loc && (
+        <Section title="Holidays &amp; sick" desc="Everyone gets the same holiday allowance, prorated by their contracted hours. Override per person on the Staff page. Taken and remaining show in Reports." onSave={() => save('holidays', { location: { holidays: s.location.holidays || DEFAULT_HOL } })} saving={saving === 'holidays'} saved={saved === 'holidays'}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
+            <div>
+              <Field label="Holiday year">
+                <Segmented accent={T.pink} value={hol.basis} onChange={(v) => setHol({ basis: v, startMonth: v === 'calendar' ? 1 : v === 'financial' ? 4 : (hol.startMonth || 1) })} options={[{ value: 'calendar', label: 'Calendar' }, { value: 'financial', label: 'Financial' }, { value: 'custom', label: 'Custom' }]} />
+              </Field>
+              {hol.basis === 'custom' && (
+                <Field label="Starts in" style={{ marginTop: 14 }}>
+                  <select value={hol.startMonth} onChange={(e) => setHol({ startMonth: Number(e.target.value) })} style={selectStyle(T)}>
+                    {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+                  </select>
+                </Field>
+              )}
+              <p style={{ fontSize: 12.5, color: T.muted, margin: '10px 0 0' }}>Runs {holYearLabel(hol)}.</p>
+            </div>
+            <div>
+              <Field label="Entitlement (weeks)">
+                <Input type="number" step="0.1" min="0" value={hol.weeks} onChange={(e) => setHol({ weeks: e.target.value === '' ? '' : Number(e.target.value) })} />
+              </Field>
+              <p style={{ fontSize: 12.5, color: T.muted, margin: '6px 0 0' }}>UK statutory is 5.6 weeks (28 days for a 5-day week).</p>
+              <Field label="Paid sick days a year (optional)" style={{ marginTop: 16 }}>
+                <Input type="number" step="1" min="0" value={hol.sickPaidDays ?? ''} onChange={(e) => setHol({ sickPaidDays: e.target.value === '' ? null : Number(e.target.value) })} placeholder="Blank = just track" />
+              </Field>
+            </div>
+          </div>
+        </Section>
+      )}
 
       {/* ── Teams (above hours) ── */}
       {loc && (

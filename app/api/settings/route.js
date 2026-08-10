@@ -21,7 +21,7 @@ export async function GET() {
 
     const [{ data: org }, { data: loc }, { data: hours }] = await Promise.all([
       supabaseAdmin.from('Organizations').select('organization_name, industry, currency').eq('organization_id', orgId).maybeSingle(),
-      locationId ? supabaseAdmin.from('Locations').select('location_id, name, address, shift_lengths, currency').eq('location_id', locationId).maybeSingle() : Promise.resolve({ data: null }),
+      locationId ? supabaseAdmin.from('Locations').select('location_id, name, address, shift_lengths, currency, holiday_year_basis, holiday_year_start_month, holiday_entitlement_weeks, sick_paid_days').eq('location_id', locationId).maybeSingle() : Promise.resolve({ data: null }),
       locationId ? supabaseAdmin.from('Location Day Hours').select('day, opening_time, closing_time, start_time, end_time').eq('location_id', locationId) : Promise.resolve({ data: [] }),
     ])
 
@@ -35,7 +35,15 @@ export async function GET() {
 
     return NextResponse.json({
       organization: { name: org?.organization_name || '', industry: org?.industry || '', currency: org?.currency || 'GBP' },
-      location: loc ? { id: loc.location_id, name: loc.name || '', address: loc.address || '', shift_lengths: Array.isArray(loc.shift_lengths) ? loc.shift_lengths : [4, 6, 8], currency: loc.currency || 'GBP' } : null,
+      location: loc ? {
+        id: loc.location_id, name: loc.name || '', address: loc.address || '', shift_lengths: Array.isArray(loc.shift_lengths) ? loc.shift_lengths : [4, 6, 8], currency: loc.currency || 'GBP',
+        holidays: {
+          basis: loc.holiday_year_basis || 'calendar',
+          startMonth: loc.holiday_year_start_month || 1,
+          weeks: loc.holiday_entitlement_weeks ?? 5.6,
+          sickPaidDays: loc.sick_paid_days ?? null,
+        },
+      } : null,
       hours: days,
     })
   } catch (error) {
@@ -73,6 +81,13 @@ export async function PATCH(request) {
       if (l.address !== undefined) patch.address = l.address
       if (l.currency !== undefined) patch.currency = l.currency
       if (Array.isArray(l.shift_lengths)) patch.shift_lengths = l.shift_lengths
+      if (l.holidays) {
+        const h = l.holidays
+        if (h.basis !== undefined) patch.holiday_year_basis = h.basis
+        if (h.startMonth !== undefined) patch.holiday_year_start_month = h.startMonth
+        if (h.weeks !== undefined) patch.holiday_entitlement_weeks = h.weeks
+        if (h.sickPaidDays !== undefined) patch.sick_paid_days = (h.sickPaidDays === '' || h.sickPaidDays === null) ? null : Number(h.sickPaidDays)
+      }
       if (Object.keys(patch).length) {
         const { error } = await supabaseAdmin.from('Locations').update(patch).eq('location_id', locationId).eq('organization_id', orgId)
         if (error) throw error

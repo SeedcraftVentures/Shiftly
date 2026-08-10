@@ -40,7 +40,11 @@ create table "Locations" (
   min_wage              numeric,
   address               text              not null,
   max_consecutive_hours smallint          not null default 12,
-  currency              text              default 'GBP'
+  currency              text              default 'GBP',
+  holiday_year_basis        text     not null default 'calendar', -- 'calendar' | 'financial' | 'custom'
+  holiday_year_start_month  smallint not null default 1,          -- 1-12 (calendar=1, financial=4)
+  holiday_entitlement_weeks numeric  not null default 5.6,        -- UK statutory default
+  sick_paid_days            numeric                               -- null = track only
 );
 
 create table "Location Day Hours" (
@@ -95,7 +99,9 @@ create table "Staff" (
   preferred_shift_lengths double precision[] not null,
   is_keyholder           boolean           not null default false,
   name                   text              not null,
-  invite_email           text
+  invite_email           text,
+  holiday_entitlement_weeks_override numeric  -- null = inherit the location default
+  -- NOTE: live Staff also has availability(jsonb), pay_basis, annual_salary, annualised_hours (not reflected above)
 );
 
 create table "Staff Availability" (
