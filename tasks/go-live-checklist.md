@@ -8,6 +8,30 @@ two-tier pricing + the Founding Member offer, shift breaks, and holiday/sick
 allowances. That's the current soft-launch scope. Manager mobile is deferred to
 post-launch; staff mobile is the mobile session's lane.
 
+### Progress (resume point)
+- [x] **1. Supabase** — swapped to the new **publishable/secret** keys. Audited safe: no
+  hardcoded keys, nothing decodes the key as a JWT, supabase-js 2.81.1 supports them, the
+  secret key bypasses RLS. Kept the env-var NAMES (`NEXT_PUBLIC_SUPABASE_ANON_KEY` = publishable
+  value, `SUPABASE_SERVICE_ROLE_KEY` = secret value); secret marked Sensitive. Revoke the
+  legacy `anon`/`service_role` in Supabase only AFTER the live build is confirmed.
+- [x] **2. Clerk -> production** — instance + keys + domain done. Clerk **webhook intentionally
+  SKIPPED**: Shiftly consumes no Clerk webhooks (there's no `/api/clerk/webhook` handler), so
+  it's nice-to-have only. Optional future: a `user.deleted` cleanup route.
+- [ ] **3. Stripe live — NEXT UP.** Create GBP prices (Manual £49/£449, AI £59/£549) ->
+  `NEXT_PUBLIC_STRIPE_PRICE_MONTHLY`/`_ANNUAL` + `_AI_MONTHLY`/`_AI_ANNUAL` + `STRIPE_AI_PRICE_IDS`
+  (the two AI ids). Founding: coupon (£250 off, once) + promotion code -> `NEXT_PUBLIC_STRIPE_FOUNDING_CODE`
+  (create in Stripe BEFORE setting the env, or AI-annual checkout errors). Webhook endpoint ->
+  the 4 events -> `STRIPE_WEBHOOK_SECRET`. Live `STRIPE_SECRET_KEY`. Trial 7d is already in code.
+- [ ] **4. `ANTHROPIC_API_KEY`** (mark Sensitive).
+- [ ] **5. Python scheduler** — confirm the Render service is up. The solver contracted-hours
+  change is committed (`bb00fac`) but NOT deployed: run `python-scheduler/test_contract.py`, then
+  push to the Render-tracked branch. Not a launch blocker.
+- [ ] **6. Job board env** (optional; skip if the board isn't in this soft launch).
+- [ ] **7. Vercel** — finish Production env, mark the flagged secrets Sensitive, confirm it
+  deploys from `main`.
+- [ ] **8. Merge `companion-v1 -> main`** (after the mobile session finishes) + deploy.
+- [ ] **9. QA** the live build (new-flow list below).
+
 ### Blocker status
 - Desktop is feature-complete for a founding-member soft launch.
 - The solver "honour contracted hours" change is NOT a launch blocker: the rota-builder
