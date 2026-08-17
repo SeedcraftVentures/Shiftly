@@ -85,6 +85,28 @@ post-launch; staff mobile is the mobile session's lane.
   overstaffing penalty). Run `test_contract.py` + `py_compile`. Push to the Render-tracked
   branch; confirm Render redeploys and the start command targets the right entrypoint.
 
+### Mobile release track (parallel — NOT a web-launch blocker)
+Staff use the web app until the native app is approved, so this runs alongside the web
+launch. Manager mobile is deferred post-launch; the staff app is the mobile session's lane.
+
+- **Account deletion (built, web side):** `/delete-account` (public; performs the deletion
+  when signed in) + a "Delete account" entry in dashboard Settings + `POST /api/account/delete`
+  (org-scoped wipe + Stripe cancel + Clerk user delete). Privacy policy updated (Anthropic
+  sub-processor + self-serve deletion pointer). **NEEDS TESTING against a throwaway account
+  before relying on it — destructive and not runnable from the dev box.** The staff **mobile
+  app** still needs its own in-app "delete account" that calls the same endpoint (mobile lane).
+- **Both stores need:** the privacy URL (done), a data-disclosure form (App Store Connect
+  "App Privacy" labels / Play "Data safety") matching the policy, the deletion mechanism (done),
+  a content rating, and test login credentials for reviewers.
+- **Apple (first time):** Developer Program is paid; allow ~48h for payment processing. Then an
+  App Store Connect record + bundle id + screenshots; EAS build -> TestFlight -> submit -> 1-3
+  day review (expect a couple of back-and-forths). If you offer Google sign-in in the app, Apple
+  may require **Sign in with Apple** too. **Keep all purchasing OUT of the free staff app** (no
+  subscribe buttons / no in-app checkout links) so Apple IAP doesn't apply — the manager pays on
+  the web via Stripe. I'll walk the Apple steps click-by-click when you enrol.
+- **Android:** Play Console (you're set up); data safety form, the deletion URL
+  (`/delete-account`), content rating. Should be quick.
+
 ---
 
 # Earlier release QA (redesign / Inbox / jobs) — still valid

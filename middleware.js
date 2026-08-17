@@ -11,6 +11,7 @@ const isPublicRoute = createRouteMatcher([
   '/jobs(.*)',
   '/privacy',
   '/terms',
+  '/delete-account',
   '/invite/(.*)',
   '/api/stripe/webhook',
   '/api/clerk/webhook',

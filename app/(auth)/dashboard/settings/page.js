@@ -337,6 +337,11 @@ export default function SettingsPage() {
           </div>
         )}
       </Section>
+
+      {/* ── Danger zone ── */}
+      <Section title="Delete account" desc="Permanently delete your account and all data (business, staff, shifts, rotas, requests). Cancels any active subscription. This cannot be undone.">
+        <a href="/delete-account" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontFamily: T.font, fontSize: 13.5, fontWeight: 700, color: T.red, background: T.red + '12', border: `1px solid ${T.red}33`, borderRadius: T.r.md, padding: '10px 16px', textDecoration: 'none' }}>Delete my account</a>
+      </Section>
     </div>
   )
 }

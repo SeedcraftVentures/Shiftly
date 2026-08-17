@@ -39,7 +39,7 @@ export default function PrivacyPage() {
             The short version: we use your data to schedule rotas. Nothing else.
             We don't train AI on it. We don't sell it. We collect only what we need to make Shiftly work.
           </p>
-          <p className="text-sm text-gray-400 mt-6">Last updated 1 May 2026</p>
+          <p className="text-sm text-gray-400 mt-6">Last updated 10 August 2026</p>
         </div>
       </section>
 
@@ -228,6 +228,7 @@ export default function PrivacyPage() {
               <VendorCard name="Clerk" letter="C" role="Authentication" desc="Manages user sign-up, sign-in, and account security." href="https://clerk.com/legal/privacy" />
               <VendorCard name="Stripe" letter="$" role="Payments" desc="Processes subscriptions and one-time payments. We never see your card details." href="https://stripe.com/privacy" />
               <VendorCard name="Railway" letter="R" role="Solver hosting" desc="Runs the OR-Tools scheduling engine that generates your rotas." href="https://railway.app/legal/privacy" />
+              <VendorCard name="Anthropic" letter="A" role="AI assistant" desc="Powers the setup assistant and rota agent. Processes the workspace details you send to the assistant so it can answer or act. It does not train its models on your data." href="https://www.anthropic.com/legal/privacy" />
             </div>
             <p>
               We may also disclose information if required by law or to protect the rights, safety, or property of Shiftly
@@ -264,6 +265,10 @@ export default function PrivacyPage() {
               <BulletItem><strong className="text-gray-900">Legal holds.</strong> If we're under a legal obligation to retain something, we'll keep only what's strictly required and for no longer than necessary.</BulletItem>
             </ul>
             <p>Technical logs are rotated out automatically, typically within 30 days.</p>
+            <p>
+              You can delete your account and data yourself at any time from <strong className="text-gray-900">Settings &rarr; Delete account</strong>, or directly at{' '}
+              <a href="/delete-account" className="text-pink-600 underline">shiftly.so/delete-account</a>. Deleting your account cancels any active subscription and removes your business, staff, shifts, rotas, requests and notifications.
+            </p>
           </Section>
 
           {/* 09 - Security */}
