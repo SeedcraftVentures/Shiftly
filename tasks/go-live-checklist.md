@@ -106,6 +106,14 @@ launch. Manager mobile is deferred post-launch; the staff app is the mobile sess
   the web via Stripe. I'll walk the Apple steps click-by-click when you enrol.
 - **Android:** Play Console (you're set up); data safety form, the deletion URL
   (`/delete-account`), content rating. Should be quick.
+- **Staff app audit (checked at `C:\Users\Andre\shiftly-mobile`):** bundle ids set
+  (`so.shiftly.team`), icons/splash done, v1.0.0; screens present (My Shifts, availability,
+  profile, requests, swaps, auth). **Gaps before submit:** (1) **no `eas.json`** — needed to
+  build/submit (`eas build:configure`); (2) **no in-app account deletion** — an Apple blocker;
+  add a "Delete account" action (likely `app/(staff)/profile.tsx`) that calls the web
+  `POST /api/account/delete`; (3) set `EXPO_PUBLIC_API_URL` to the prod domain for builds;
+  (4) store listing: screenshots, privacy URL, data-safety / App-Privacy labels. Push
+  notifications deferred (no expo-notifications). All mobile-lane work.
 
 ---
 
