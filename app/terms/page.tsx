@@ -39,7 +39,7 @@ export default function TermsPage() {
             This is the agreement between you and us. We've tried to write it like humans, not lawyers.
             But it's still a legal document, so please read it.
           </p>
-          <p className="text-sm text-gray-400 mt-6">Last updated 1 May 2026</p>
+          <p className="text-sm text-gray-400 mt-6">Last updated 10 August 2026</p>
         </div>
       </section>
 
@@ -152,12 +152,13 @@ export default function TermsPage() {
               <BulletItem><strong className="text-gray-900">Free trial.</strong> If a free trial is offered, you can cancel any time during the trial without being charged. We'll email you a reminder before the trial ends.</BulletItem>
               <BulletItem><strong className="text-gray-900">Renewals.</strong> Subscriptions renew automatically at the end of each billing period at the then-current price, unless you cancel beforehand.</BulletItem>
               <BulletItem><strong className="text-gray-900">Price changes.</strong> If we change the price of an existing subscription, we'll give you at least 30 days' notice by email. You can cancel before the new price applies.</BulletItem>
+              <BulletItem><strong className="text-gray-900">Plans.</strong> Shiftly is offered on a Manual plan and an AI-supported plan, each on a monthly or annual cycle. The features of each plan, and the current prices, are shown on our pricing page. Your plan includes unlimited staff; additional locations are charged separately as shown at checkout.</BulletItem>
               <BulletItem><strong className="text-gray-900">Cancellation.</strong> You can cancel any time from your account settings. You'll keep access until the end of your current billing period. We don't offer pro-rata refunds for partial periods.</BulletItem>
-              <BulletItem><strong className="text-gray-900">Lifetime Deals.</strong> If you purchased a Lifetime Deal, your access is one-time and non-refundable after 14 days, but you'll receive every feature and update for as long as Shiftly continues to operate.</BulletItem>
+              <BulletItem><strong className="text-gray-900">Introductory and Founding Member offers.</strong> We may offer a discounted introductory or first-year price to early customers. Unless we've agreed otherwise in writing, the subscription renews at the then-current standard price. Introductory offers are limited in number and may be withdrawn at any time.</BulletItem>
               <BulletItem><strong className="text-gray-900">Failed payments.</strong> If a payment fails, we'll retry over a few days and email you. If we can't collect, your account may be downgraded or paused until payment is up to date.</BulletItem>
             </ul>
             <p>
-              All payments are processed by Stripe. We never see or store your card details.
+              Subscriptions are purchased and managed on the Shiftly website. Our mobile apps are free companions and do not sell subscriptions. All payments are processed by Stripe; we never see or store your card details.
             </p>
           </Section>
 
