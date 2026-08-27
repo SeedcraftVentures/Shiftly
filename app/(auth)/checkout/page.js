@@ -9,12 +9,12 @@ import Image from 'next/image'
 // trial starts on it (sells the upgrade); a manager can drop to Manual anytime.
 const PLANS = {
   ai: {
-    key: 'ai', name: 'AI-supported', monthly: 59, annual: 549, recommended: true,
+    key: 'ai', name: 'AI-supported', monthly: 59, annual: 599, recommended: true,
     tagline: 'Everything in Manual, plus the assistant that sets up, fills gaps and builds your rota for you.',
     features: ['Unlimited staff and teams', 'AI assistant builds and fixes your rota', 'Ask it to do things in plain English', 'Approve and publish in one tap'],
   },
   manual: {
-    key: 'manual', name: 'Manual', monthly: 49, annual: 449,
+    key: 'manual', name: 'Manual', monthly: 49, annual: 499,
     tagline: 'The full rota builder with a guided setup assistant and how-to help.',
     features: ['Unlimited staff and teams', 'Smart rota generator', 'Guided setup + how-to assistant', 'Time off, availability, payroll, reports'],
   },
@@ -26,7 +26,7 @@ const PRICE_ENV = {
 }
 
 // Founding Member launch offer: first 200 AI members get £299 their first year
-// (from £549 annual), applied via a Stripe promotion code on the AI annual price.
+// (from £599 annual), applied via a Stripe promotion code on the AI annual price.
 // Active only when the code env is set, so it can be switched off after 200.
 // The "keep £299 for life for a testimonial" lock is handled manually (a re-issued
 // renewal coupon), not in code, at this scale.
@@ -125,7 +125,7 @@ function CheckoutContent() {
         {FOUNDING.active && (
           <div className="mb-4 rounded-2xl bg-gradient-to-r from-pink-500 to-pink-600 text-white p-4 text-center shadow-sm">
             <p className="text-sm font-bold">Founding Member offer</p>
-            <p className="text-xs text-white/90 mt-1">The first {FOUNDING.seats} AI members get £{FOUNDING.firstYear} their first year (from £549 annual). Keep that rate for life in exchange for a testimonial and your feedback.</p>
+            <p className="text-xs text-white/90 mt-1">The first {FOUNDING.seats} AI members get £{FOUNDING.firstYear} their first year (from £599 annual). Keep that rate for life in exchange for a testimonial and your feedback.</p>
           </div>
         )}
 
