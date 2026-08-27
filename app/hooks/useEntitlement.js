@@ -8,7 +8,10 @@ import { useState, useEffect } from 'react'
 // AI upgrade) or when subscribed to an AI price. Fails closed to manual so a
 // flaky request never leaks the paid agent.
 export function useEntitlement() {
-  const [state, setState] = useState({ loading: true, hasAccess: false, isTrialing: false, isAiTier: false })
+  const [state, setState] = useState({
+    loading: true, hasAccess: false, isTrialing: false, isAiTier: false,
+    trialExpired: false, daysLeft: 0, trialEndsAt: null,
+  })
 
   useEffect(() => {
     let cancelled = false
@@ -16,7 +19,11 @@ export function useEntitlement() {
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (cancelled || !d) { if (!cancelled) setState((s) => ({ ...s, loading: false })); return }
-        setState({ loading: false, hasAccess: !!d.hasAccess, isTrialing: !!d.isTrialing, isAiTier: !!d.isAiTier })
+        setState({
+          loading: false,
+          hasAccess: !!d.hasAccess, isTrialing: !!d.isTrialing, isAiTier: !!d.isAiTier,
+          trialExpired: !!d.trialExpired, daysLeft: d.daysLeft || 0, trialEndsAt: d.trialEndsAt || null,
+        })
       })
       .catch(() => { if (!cancelled) setState((s) => ({ ...s, loading: false })) })
     return () => { cancelled = true }

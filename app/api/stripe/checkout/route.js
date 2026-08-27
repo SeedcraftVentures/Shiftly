@@ -34,9 +34,9 @@ export async function POST(request) {
       cancel_url: `${appUrl}/checkout?cancelled=true`,
       client_reference_id: userId,
       customer_email: email,
-      subscription_data: {
-        trial_period_days: 7,
-      },
+      // No Stripe trial: the 7-day free trial is served in-app (no card). Checkout
+      // is the "subscribe now" action, so it bills immediately — otherwise a
+      // subscriber would get a second free week on top of the in-app one.
     }
 
     // If a promo code was provided, look it up and apply it
@@ -59,11 +59,6 @@ export async function POST(request) {
               promotion_code: promoCodeObj.id,
             },
           ]
-          
-          // If it's a 100% off coupon, skip the trial (they get it free anyway)
-          if (promoCodeObj.coupon.percent_off === 100) {
-            delete sessionConfig.subscription_data.trial_period_days
-          }
         } else {
           // Invalid promo code - return error
           return NextResponse.json({ 

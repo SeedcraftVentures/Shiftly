@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { supabaseAdmin, organizationIdFor } from '@/lib/db'
+import { ensureTrial } from '@/lib/entitlement'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,6 +35,11 @@ export async function POST(request) {
         { onConflict: 'organization_id' }
       )
     if (orgErr) throw orgErr
+
+    // Start the no-card 7-day trial the moment setup begins. Idempotent: never
+    // clobbers a paid row and never restarts the clock on re-onboard. Runs on
+    // both the fresh and reonboarded paths (this is before the location check).
+    await ensureTrial(userId)
 
     // 2. If the org already has a location, this is a re-onboard, update org only, don't duplicate.
     const { data: existingLocs, error: existErr } = await supabaseAdmin

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { supabaseAdmin, getOrgScope } from '@/lib/db'
+import { requireActive } from '@/lib/entitlement'
 
 export const dynamic = 'force-dynamic'
 // The OR-Tools solver can run for tens of seconds on a real week, and longer if the
@@ -113,6 +114,9 @@ export async function POST(request) {
     const { userId } = await auth()
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     if (!supabaseAdmin) return NextResponse.json({ error: 'Server not configured' }, { status: 500 })
+    // Trial/paywall gate: don't burn paid solver compute for an expired trial.
+    const denied = await requireActive(userId)
+    if (denied) return NextResponse.json({ error: 'trial_ended', ...denied }, { status: 402 })
 
     const body = await request.json()
     const weekStart = body.weekStart || body.startDate

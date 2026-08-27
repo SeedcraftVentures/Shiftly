@@ -85,7 +85,9 @@ export default function SignUpPage() {
 
       if (completeSignUp.status === 'complete') {
         await setActive({ session: completeSignUp.createdSessionId })
-        router.push('/checkout')
+        // Straight into the app — the 7-day trial is no-card and starts in-app
+        // (seeded on onboarding). Checkout is now the "subscribe" action, not a gate.
+        router.push('/dashboard')
       }
     } catch (err) {
       console.error('Verification error:', err)

@@ -1,6 +1,7 @@
 import { auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 import { supabaseAdmin, getOrgScope } from '@/lib/db'
+import { requireActive } from '@/lib/entitlement'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,6 +36,10 @@ export async function POST(request) {
   try {
     const { userId } = await auth()
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Trial/paywall gate: an expired trial can view saved rotas (GET) but cannot
+    // save, publish, or overwrite them.
+    const denied = await requireActive(userId)
+    if (denied) return NextResponse.json({ error: 'trial_ended', ...denied }, { status: 402 })
     const { locationIds } = await getOrgScope(userId)
     const locationId = locationIds[0]
     if (!locationId) return NextResponse.json({ error: 'No location. Complete onboarding first.' }, { status: 400 })

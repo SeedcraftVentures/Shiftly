@@ -5,6 +5,7 @@ import Navigation from '@/app/components/Navigation'
 import DashboardTopBar from '@/app/components/DashboardTopBar'
 import OnboardingCheck from '@/app/components/OnboardingCheck'
 import SetupCompanion from '@/app/components/SetupCompanion'
+import TrialGate from '@/app/components/TrialGate'
 import { useTheme } from '@/app/components/ui/kit'
 
 export default function DashboardLayout({ children }) {
@@ -44,6 +45,10 @@ export default function DashboardLayout({ children }) {
             only while the workspace is incomplete, else steps aside to a bubble.
             It reports its width so the app condenses beside it (wide screens). */}
         <SetupCompanion onWidth={setCompanionW} />
+        {/* Trial countdown nudge + the post-trial paywall. Self-contained: reads
+            its own entitlement, renders fixed overlays, and blocks the app when
+            the no-card trial has expired (data stays saved). */}
+        <TrialGate />
       </div>
     </OnboardingCheck>
   )
