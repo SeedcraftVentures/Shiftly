@@ -7,6 +7,7 @@ import RevealSection from '@/app/components/RevealSection'
 import FaqItem from '@/app/components/FaqItem'
 import FinalCTA from '@/app/components/FinalCTA'
 import Footer from '@/app/components/Footer'
+import CompanionChatMock from '@/app/components/CompanionChatMock'
 import { HeatGlow, SHIFTLY_PALETTE } from '@/app/components/HeatGlow'
 
 const pillarOneRules = [
@@ -25,23 +26,31 @@ const pillarTwoLines = [
   'You lock up on time and head home.',
 ]
 
-const ltdBullets = [
-  'Every feature, forever',
-  'All future updates included',
+const manualBullets = [
   'Unlimited staff and teams',
-  'Priority support',
-  'Lock in before prices rise',
+  'Mathematically fair rotas in seconds',
+  'Guided setup companion and Q&A help',
+  'Free staff apps for iPhone and Android',
+  'Reports, payroll and exports',
 ]
 
-const standardBullets = [
-  'Every feature included',
-  'Unlimited staff and teams',
-  'Employee app included',
-  '14-day free trial, no card',
-  'Cancel anytime',
+const aiBullets = [
+  'Everything in Manual, plus:',
+  'An AI assistant to query, adapt and manage it all',
+  'Ask for changes in plain English, it runs the maths',
+  'Teaches you the app as you use it',
+  'Priority support',
 ]
 
 const faqs = [
+  {
+    q: 'Is there really a free trial?',
+    a: 'Yes. 7 days free, with no card required. You get the full AI companion for the whole trial, so you can build a month of rotas before you decide. After that it is £49 or £59 a month, and you can cancel anytime.'
+  },
+  {
+    q: "What's the difference between the £49 and £59 plans?",
+    a: 'Both give you unlimited staff and the exact same scheduling engine. The rota is always built by fair maths, not AI. £49 Manual includes the guided setup companion and a Q&A helper that answers "how do I". £59 adds an AI companion that helps you run the whole thing: ask in plain English to adjust the rota, manage requests, or query anything, and it drives the scheduler for you and teaches you as you go.'
+  },
   {
     q: 'How does Shiftly actually make rotas fair?',
     a: 'We use constraint satisfaction, the same maths used to schedule airline crews, exam timetables, and hospital theatres. Every rule you set, contracted hours, weekend rotation, rest periods, is built right into the maths, so it actually holds, week after week.'
@@ -51,20 +60,16 @@ const faqs = [
     a: 'UK hospitality and retail businesses with 8 to 50 staff. Pubs, restaurants, cafés, shops. If you spend Sunday nights rebuilding the rota, Shiftly will save you the time and the arguments.'
   },
   {
-    q: "Can I still edit the rota after it's generated?",
-    a: 'Yes. Click any cell to add, edit, reassign, or remove a shift. The generated rota is your starting point. Tweak anything before publishing to your team.'
-  },
-  {
     q: 'Do staff need to download anything?',
-    a: 'No app store download needed. You invite staff by email, they create a simple account, and view their rota on their phone. Works on any device as a web app.'
+    a: 'There are free Shiftly apps for iPhone and Android, and a web app for any other device. Staff see their rota, submit availability, and request time off from their phone.'
   },
   {
-    q: 'What happens after the 200 LTD spots sell out?',
-    a: "Standard is £49/month for your first location, and £20/month for each location after that. The £249 one-time deal locks in every feature forever, including future updates. Once the 200 spots are gone, they're gone."
+    q: 'What is the Founding Member offer?',
+    a: 'The first 200 businesses on the AI plan get their first year for £299, down from £599, in exchange for a testimonial and a bit of feedback. Stay a member and you keep that price. Once the 200 are gone, they are gone.'
   },
   {
     q: 'Can I run multiple teams or locations?',
-    a: 'Yes. Each location has its own teams (kitchen, bar, front of house), each with its own staff, shifts and rules. Switch between locations from the nav, and reports roll up across all your teams.'
+    a: 'Yes. Each location has its own teams (kitchen, bar, front of house), each with its own staff, shifts and rules. Your first location is included, each extra location is £20 a month, and reports roll up across all your teams.'
   }
 ]
 
@@ -101,7 +106,7 @@ export default function LandingPage() {
           <RevealSection>
             <div className="inline-flex items-center gap-2 mb-7 px-4 py-2 bg-white/15 backdrop-blur-md border border-white/25 rounded-full">
               <span className="w-2 h-2 bg-white rounded-full shiftly-pulse-soft" />
-              <span className="text-sm font-medium text-white">Launching Summer 2026 · Waitlist Live</span>
+              <span className="text-sm font-medium text-white">Now live · 7 days free, no card</span>
             </div>
           </RevealSection>
 
@@ -116,14 +121,36 @@ export default function LandingPage() {
             </p>
           </RevealSection>
 
+          {/* Primary CTAs */}
+          <RevealSection delay={0.8}>
+            <div className="mt-9 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <Link
+                href="/sign-up"
+                className="inline-flex items-center gap-2 px-7 py-3.5 bg-white text-pink-600 text-base font-semibold rounded-xl shadow-lg hover:bg-pink-50 hover:-translate-y-0.5 transition-all"
+              >
+                Start free
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M1 7h12m0 0l-5-5m5 5l-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </Link>
+              <a
+                href="#pricing"
+                className="px-7 py-3.5 rounded-xl text-base font-semibold text-white border border-white/40 hover:bg-white/10 transition-all"
+              >
+                See pricing
+              </a>
+            </div>
+            <p className="text-sm text-white/75 mt-3">7 days free, no card. Cancel anytime.</p>
+          </RevealSection>
+
           {/* Stat strip, relocated from the standalone metrics bar, on the gradient */}
           <RevealSection delay={0.95}>
             <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-8 max-w-3xl mx-auto text-white/90">
               {[
                 { value: 'Seconds', label: 'From hit generate to finished rota' },
                 { value: '100%', label: 'Contracted hours, every week' },
-                { value: '£49', label: 'Flat monthly price, any team size' },
-                { value: 'Zero', label: 'Per-seat charges. Ever.' },
+                { value: 'Unlimited', label: 'Staff and teams, one flat price' },
+                { value: 'Zero', label: 'Per-seat charges, ever' },
               ].map((stat) => (
                 <div key={stat.label}>
                   <div className="font-cal text-3xl lg:text-4xl text-white">{stat.value}</div>
@@ -202,13 +229,13 @@ export default function LandingPage() {
       <section className="px-6 lg:px-8 py-20 lg:py-28 bg-white">
         <div className="max-w-6xl mx-auto">
           <RevealSection>
-            <div className="text-center max-w-3xl mx-auto mb-16">
+            <div className="max-w-3xl mb-16">
               <p className="inline-block text-xs font-bold uppercase tracking-widest text-pink-600 mb-3">Fairness, built in</p>
-              <h2 className="font-cal text-4xl lg:text-6xl text-gray-900 leading-[1.05] max-w-3xl mx-auto tracking-tight">
+              <h2 className="font-cal text-4xl lg:text-6xl text-gray-900 leading-[1.05] tracking-tight">
                 A rota that can&apos;t be wrong.
               </h2>
-              <p className="text-lg lg:text-xl text-gray-500 mt-6 max-w-2xl mx-auto leading-relaxed">
-                Shiftly uses constraint satisfaction. The same maths that schedules airline crews, exam timetables, and hospital theatres. You set the rules. The maths makes sure every rule holds, every week, without exception.
+              <p className="text-lg lg:text-xl text-gray-500 mt-6 leading-relaxed">
+                Shiftly uses constraint satisfaction, the same maths that schedules airline crews, exam timetables, and hospital theatres. You set the rules, and the maths makes sure every rule holds, every week, without exception. No AI, no guesswork.
               </p>
             </div>
           </RevealSection>
@@ -306,6 +333,53 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ═══════════ AI COMPANION ═══════════ */}
+      <section id="ai-companion" className="px-6 lg:px-8 py-20 lg:py-28 bg-white overflow-hidden">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid lg:grid-cols-[1fr_1.05fr] gap-12 lg:gap-16 items-center">
+            <RevealSection>
+              <div>
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-pink-50 border border-pink-100 rounded-full text-xs font-semibold text-pink-600 mb-5">
+                  <span className="w-1.5 h-1.5 bg-pink-500 rounded-full" /> New · AI companion
+                </div>
+                <h2 className="font-cal text-4xl lg:text-6xl text-gray-900 leading-[1.05] tracking-tight mb-6">
+                  The rota is maths.<br />The help is AI.
+                </h2>
+                <p className="text-lg lg:text-xl text-gray-500 leading-relaxed mb-6 max-w-xl">
+                  Your rota is never written by a chatbot. The same fair maths builds it every time, so it is always correct. The £59 companion sits on top: ask in plain English to add cover, move hours around, or clear a request, and it makes the change, runs the scheduler, and shows you the result. It teaches you as you go, so you learn Shiftly just by using it.
+                </p>
+                <div className="space-y-3 mb-8">
+                  {[
+                    'The scheduling is always mathematical, never guessed by AI',
+                    'Ask in plain English to add cover, adjust hours, or clear a request',
+                    'It makes the change, runs the maths, and shows you the result',
+                    'It teaches you while you use it, so setup is the tutorial',
+                    'Nothing publishes without your say-so. You always approve',
+                  ].map((line) => (
+                    <div key={line} className="flex items-start gap-3">
+                      <span className="w-6 h-6 mt-0.5 rounded-full bg-pink-100 flex items-center justify-center flex-shrink-0">
+                        <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 7l3.5 3.5L12 4" stroke="#FF1F7D" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                      </span>
+                      <span className="text-gray-700 leading-relaxed">{line}</span>
+                    </div>
+                  ))}
+                </div>
+                <a href="#pricing" className="inline-flex items-center gap-2 text-pink-600 font-semibold hover:gap-3 transition-all">
+                  See the AI plan
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 7h12m0 0l-5-5m5 5l-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
+                </a>
+              </div>
+            </RevealSection>
+            <RevealSection delay={0.15}>
+              <div className="relative">
+                <div className="absolute -inset-4 bg-pink-100/50 rounded-[2rem] blur-3xl" />
+                <div className="relative"><CompanionChatMock /></div>
+              </div>
+            </RevealSection>
+          </div>
+        </div>
+      </section>
+
       {/* ═══════════ PRICING ═══════════ */}
       <section id="pricing" className="px-6 lg:px-8 py-20 lg:py-28 bg-gray-50">
         <div className="max-w-5xl mx-auto">
@@ -313,60 +387,46 @@ export default function LandingPage() {
             <div className="text-center max-w-3xl mx-auto mb-16">
               <p className="inline-block text-xs font-bold uppercase tracking-widest text-pink-600 mb-3">Pricing</p>
               <h2 className="font-cal text-4xl lg:text-5xl text-gray-900 leading-[1.05] tracking-tight">
-                One price. Every feature. However big you grow.
+                Simple pricing. Unlimited staff.
               </h2>
               <p className="text-lg text-gray-500 mt-5 max-w-xl mx-auto">
-                You won&apos;t pay more for taking on more people, and nothing good is hidden behind a pricier tier. One price, the lot.
+                Tools like 7shifts and Homebase charge per employee, so your bill climbs every time you hire. Shiftly is one flat price, unlimited staff and teams, on both plans.
               </p>
             </div>
           </RevealSection>
 
-          <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-            <RevealSection>
-              <div className="relative bg-white border-2 border-pink-500 rounded-2xl p-8 overflow-hidden h-full shadow-lg shadow-pink-100">
-                <div className="absolute top-0 right-0 w-40 h-40 bg-pink-100/70 rounded-full blur-3xl" />
-                <div className="relative z-10">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-pink-500 text-white rounded-full text-xs font-bold mb-6">
-                    LAUNCH SPECIAL · 200 SPOTS
-                  </div>
-                  <div className="mb-6">
-                    <div className="font-cal text-5xl font-bold text-gray-900">£249</div>
-                    <p className="text-gray-500 mt-1">One-time payment. Lifetime access.</p>
-                  </div>
-                  <div className="space-y-3 mb-8">
-                    {ltdBullets.map((item) => (
-                      <div key={item} className="flex items-center gap-2.5">
-                        <svg className="w-4 h-4 text-pink-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                        </svg>
-                        <span className="text-sm text-gray-700">{item}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <Link
-                    href="/waitlist"
-                    className="block w-full py-3.5 rounded-xl font-semibold text-white text-center transition-all bg-pink-500 hover:bg-pink-600 hover:shadow-lg"
-                  >
-                    Join Waitlist for LTD Access
-                  </Link>
+          {/* Founding Member scarcity band */}
+          <RevealSection>
+            <div className="max-w-4xl mx-auto mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-5 bg-gray-900 rounded-2xl">
+              <div className="flex items-center gap-3 text-center sm:text-left">
+                <span className="hidden sm:flex w-10 h-10 rounded-full bg-pink-500 items-center justify-center flex-shrink-0">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7.4-6.3-4.6L5.7 21.4 8 14 2 9.4h7.6z" /></svg>
+                </span>
+                <div>
+                  <p className="text-white font-semibold">Founding Member, first 200 businesses</p>
+                  <p className="text-white/70 text-sm">£299 for your first year on AI, down from £599, for a testimonial and a bit of feedback.</p>
                 </div>
               </div>
-            </RevealSection>
+              <span className="px-3 py-1.5 bg-pink-500/20 text-pink-300 rounded-full text-xs font-bold whitespace-nowrap">Limited</span>
+            </div>
+          </RevealSection>
 
-            <RevealSection delay={0.1}>
-              <div className="bg-white rounded-2xl p-8 border border-pink-200 shadow-md shadow-pink-100/40 h-full flex flex-col">
+          <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+            {/* Manual */}
+            <RevealSection>
+              <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-sm h-full flex flex-col">
                 <div className="mb-6">
-                  <p className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Standard</p>
+                  <p className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">Manual</p>
                   <div className="flex items-baseline gap-1">
                     <span className="font-cal text-5xl font-bold text-gray-900">£49</span>
                     <span className="text-gray-500">/month</span>
                   </div>
-                  <p className="text-gray-500 mt-2 text-sm leading-relaxed">First location included. Each extra location is £20/month.</p>
+                  <p className="text-gray-500 mt-2 text-sm leading-relaxed">Or £499 a year. Everything you need to build fair rotas yourself.</p>
                 </div>
                 <div className="space-y-3 mb-8 flex-1">
-                  {standardBullets.map((item) => (
-                    <div key={item} className="flex items-center gap-2.5">
-                      <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  {manualBullets.map((item) => (
+                    <div key={item} className="flex items-start gap-2.5">
+                      <svg className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                       </svg>
                       <span className="text-sm text-gray-600">{item}</span>
@@ -374,14 +434,56 @@ export default function LandingPage() {
                   ))}
                 </div>
                 <Link
-                  href="/waitlist"
+                  href="/sign-up"
                   className="block w-full py-3.5 rounded-xl font-semibold text-gray-700 text-center border border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all"
                 >
-                  Join Waitlist
+                  Start free
                 </Link>
               </div>
             </RevealSection>
+
+            {/* AI */}
+            <RevealSection delay={0.1}>
+              <div className="relative bg-white border-2 border-pink-500 rounded-2xl p-8 overflow-hidden h-full flex flex-col shadow-lg shadow-pink-100">
+                <div className="absolute top-0 right-0 w-40 h-40 bg-pink-100/70 rounded-full blur-3xl" />
+                <div className="relative z-10 flex flex-col h-full">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-sm font-semibold text-pink-600 uppercase tracking-wider">AI companion</p>
+                    <span className="px-3 py-1 bg-pink-500 text-white rounded-full text-xs font-bold">Most popular</span>
+                  </div>
+                  <div className="mb-6">
+                    <div className="flex items-baseline gap-1">
+                      <span className="font-cal text-5xl font-bold text-gray-900">£59</span>
+                      <span className="text-gray-500">/month</span>
+                    </div>
+                    <p className="text-gray-500 mt-2 text-sm leading-relaxed">Or £599 a year. The companion builds and fixes the rota for you.</p>
+                  </div>
+                  <div className="space-y-3 mb-8 flex-1">
+                    {aiBullets.map((item) => (
+                      <div key={item} className="flex items-start gap-2.5">
+                        <svg className="w-4 h-4 text-pink-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span className="text-sm text-gray-700">{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <Link
+                    href="/sign-up"
+                    className="block w-full py-3.5 rounded-xl font-semibold text-white text-center transition-all bg-pink-500 hover:bg-pink-600 hover:shadow-lg"
+                  >
+                    Start free
+                  </Link>
+                </div>
+              </div>
+            </RevealSection>
           </div>
+
+          <RevealSection>
+            <p className="text-center text-sm text-gray-500 mt-8 max-w-xl mx-auto">
+              Every plan starts with a 7-day free trial, no card required, with the AI companion switched on. First location included, each extra location is £20 a month. Cancel anytime.
+            </p>
+          </RevealSection>
         </div>
       </section>
 

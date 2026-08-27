@@ -15,15 +15,20 @@ export default function FinalCTA({ subhead = 'Give your team a rota they can cou
           <p className="text-xl text-white/85 mb-10 max-w-xl mx-auto leading-relaxed">
             {subhead}
           </p>
-          <Link
-            href="/waitlist"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-white text-pink-600 text-lg font-semibold rounded-xl shadow-lg hover:bg-pink-50 hover:-translate-y-0.5 transition-all"
-          >
-            Join the Waitlist
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M1 7h12m0 0l-5-5m5 5l-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-          </Link>
+          <div className="flex flex-col items-center gap-4">
+            <Link
+              href="/sign-up"
+              className="inline-flex items-center gap-2 px-8 py-4 bg-white text-pink-600 text-lg font-semibold rounded-xl shadow-lg hover:bg-pink-50 hover:-translate-y-0.5 transition-all"
+            >
+              Start free
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <path d="M1 7h12m0 0l-5-5m5 5l-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </Link>
+            <p className="text-sm text-white/80">
+              7 days free, no card. Or <Link href="/sign-in" className="underline underline-offset-2 hover:text-white">log in</Link>.
+            </p>
+          </div>
         </RevealSection>
       </div>
     </HeatGlow>

@@ -6,11 +6,13 @@ import Nav from '@/app/components/Nav'
 import RevealSection from '@/app/components/RevealSection'
 import FinalCTA from '@/app/components/FinalCTA'
 import Footer from '@/app/components/Footer'
+import CompanionChatMock from '@/app/components/CompanionChatMock'
 
 const tocGroups = [
   {
     title: 'Scheduling',
     items: [
+      { id: 'ai-companion', label: 'AI Companion' },
       { id: 'rota-generation', label: 'Rota Generation' },
       { id: 'manual-editing', label: 'Manual Editing' },
       { id: 'fairness-rules', label: 'Fairness Rules' },
@@ -30,6 +32,7 @@ const tocGroups = [
       { id: 'reports', label: 'Reports' },
       { id: 'payroll', label: 'Payroll' },
       { id: 'inbox', label: 'Team Inbox' },
+      { id: 'holidays', label: 'Holidays & Sick' },
       { id: 'exports', label: 'CSV & PDF Export' },
     ],
   },
@@ -186,6 +189,40 @@ function InboxCard() {
   )
 }
 
+function HolidaysCard() {
+  const rows = [
+    { name: 'Sarah H.', taken: 18, total: 28 },
+    { name: 'James M.', taken: 25, total: 28 },
+    { name: 'Emma P.', taken: 9, total: 20 },
+  ]
+  return (
+    <div className="bg-gray-50 rounded-2xl border border-gray-200 p-8">
+      <div className="flex items-center justify-between mb-5">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Holiday allowance · 2026</p>
+        <span className="text-xs text-gray-400">days</span>
+      </div>
+      <div className="space-y-4">
+        {rows.map((r) => {
+          const pct = Math.round((r.taken / r.total) * 100)
+          return (
+            <div key={r.name}>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-sm font-medium text-gray-900">{r.name}</span>
+                <span className="text-sm text-gray-500">
+                  {r.taken} of {r.total} taken · <span className="text-pink-600 font-semibold">{r.total - r.taken} left</span>
+                </span>
+              </div>
+              <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
+                <div className="h-full rounded-full bg-pink-500" style={{ width: `${pct}%` }} />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function ExportTiles() {
   const downloadIcon = (
     <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -265,6 +302,16 @@ export default function FeaturesPage() {
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
     </svg>
   )
+  const sparkle = (
+    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-15l2.4 5.6L21 11l-5.6 2.4L13 19l-2.4-5.6L5 11l5.6-2.4z" />
+    </svg>
+  )
+  const calendar = (
+    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+  )
   const pencil = (
     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -325,7 +372,7 @@ export default function FeaturesPage() {
               Everything Shiftly does, <span className="text-pink-500">in detail.</span>
             </h1>
             <p className="text-lg lg:text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed">
-              Nine tools, one tight workflow. Built so you set up once and run rotas forever.
+              Every tool, one tight workflow. Built so you set up once and run rotas forever.
             </p>
           </RevealSection>
         </div>
@@ -370,6 +417,28 @@ export default function FeaturesPage() {
             {/* ═══ GROUP 1: SCHEDULING ═══ */}
             <div>
               <GroupHeader kicker="Group 01 · Scheduling" headline="The rota itself." />
+
+              {/* AI Companion */}
+              <section id="ai-companion" className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center mb-24 scroll-mt-24">
+                <RevealSection>
+                  <div>
+                    <Eyebrow icon={sparkle}>AI Companion · £59 plan</Eyebrow>
+                    <h3 className="font-cal text-3xl lg:text-4xl text-gray-900 mb-4 tracking-tight">AI Companion</h3>
+                    <p className="text-lg text-gray-500 leading-relaxed mb-6">
+                      The scheduling itself is always mathematical, the AI never guesses a rota. The companion is the assistant on top: ask in plain English to adjust the rota, manage requests, or query anything, and it makes the change, runs the scheduler, and shows you the result. It teaches you as you go, so setup doubles as your tutorial.
+                    </p>
+                    <div className="space-y-3">
+                      <Bullet>Scheduling stays mathematical, the AI never invents a rota</Bullet>
+                      <Bullet>Ask in plain English to adjust cover, hours, or requests</Bullet>
+                      <Bullet>It makes the change, runs the maths, and shows you the result</Bullet>
+                      <Bullet>Teaches you the app as you use it, so setup is the tutorial</Bullet>
+                    </div>
+                  </div>
+                </RevealSection>
+                <RevealSection delay={0.15}>
+                  <CompanionChatMock />
+                </RevealSection>
+              </section>
 
               {/* Rota Generation */}
               <section id="rota-generation" className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center mb-24 scroll-mt-24">
@@ -493,7 +562,7 @@ export default function FeaturesPage() {
                     <Eyebrow icon={phone}>Mobile-First</Eyebrow>
                     <h3 className="font-cal text-3xl lg:text-4xl text-gray-900 mb-4 tracking-tight">Employee App</h3>
                     <p className="text-lg text-gray-500 leading-relaxed mb-6">
-                      Staff see their rota, submit availability, and request time off from their phone. No app store download. Works on any device as a web app.
+                      Staff get their own free app for iPhone and Android, with a web app for any other device. They see their rota, submit availability, and request time off from their phone.
                     </p>
                     <div className="space-y-3">
                       <Bullet>View upcoming shifts and full week schedule</Bullet>
@@ -576,6 +645,28 @@ export default function FeaturesPage() {
                 </RevealSection>
                 <RevealSection delay={0.15}>
                   <ScreenshotPanel src="/screenshots/inbox.png" alt="Team inbox: swap and time-off requests" />
+                </RevealSection>
+              </section>
+
+              {/* Holidays & Sick */}
+              <section id="holidays" className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center mb-24 scroll-mt-24">
+                <RevealSection className="order-2 lg:order-1">
+                  <HolidaysCard />
+                </RevealSection>
+                <RevealSection delay={0.15} className="order-1 lg:order-2">
+                  <div>
+                    <Eyebrow icon={calendar}>Time off, tracked</Eyebrow>
+                    <h3 className="font-cal text-3xl lg:text-4xl text-gray-900 mb-4 tracking-tight">Holidays &amp; Sick</h3>
+                    <p className="text-lg text-gray-500 leading-relaxed mb-6">
+                      Set a holiday allowance once and Shiftly tracks it per person, prorated for part-timers. Sick days too. Everyone sees what they have left, and you get a nudge before the year turns over.
+                    </p>
+                    <div className="space-y-3">
+                      <Bullet>Standard allowance, prorated by contracted hours</Bullet>
+                      <Bullet>Holidays and sick tracked separately, per person</Bullet>
+                      <Bullet>Calendar, financial, or custom holiday year</Bullet>
+                      <Bullet>Year-end nudge so nothing is left unbooked</Bullet>
+                    </div>
+                  </div>
                 </RevealSection>
               </section>
 

@@ -22,7 +22,7 @@ export default function Footer() {
             <div className="inline-flex items-center gap-2 mb-6 px-3 py-1.5 border border-pink-500/40 bg-pink-500/5 rounded-full">
               <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#FF1F7D' }} />
               <span className="text-[11px] font-bold tracking-wider uppercase" style={{ color: '#FF1F7D' }}>
-                AI-Free, Always
+                Scheduling is maths, not AI
               </span>
             </div>
 

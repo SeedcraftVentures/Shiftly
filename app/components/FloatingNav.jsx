@@ -8,6 +8,7 @@ const featureGroups = [
   {
     title: 'Scheduling',
     items: [
+      { name: 'AI Companion', desc: 'Ask in plain English, it runs the maths', anchor: 'ai-companion' },
       { name: 'Rota Generation', desc: 'Mathematically fair rotas in seconds', anchor: 'rota-generation' },
       { name: 'Manual Editing', desc: 'Tweak any shift in one click', anchor: 'manual-editing' },
       { name: 'Fairness Rules', desc: 'No clopenings, even weekends, max days', anchor: 'fairness-rules' },
@@ -26,6 +27,7 @@ const featureGroups = [
     items: [
       { name: 'Reports & Payroll', desc: 'Hours, costs, and overtime at a glance', anchor: 'reports' },
       { name: 'Team Inbox', desc: 'Requests, announcements, alerts', anchor: 'inbox' },
+      { name: 'Holidays & Sick', desc: 'Allowances, tracked and prorated', anchor: 'holidays' },
       { name: 'CSV & PDF Export', desc: 'Send to your accountant in one click', anchor: 'exports' },
     ]
   }
@@ -157,15 +159,21 @@ export default function FloatingNav({ currentPage = null }) {
             </svg>
           </button>
 
-          {/* CTA, same glass pill as the others, set apart with a pink outline
-              so it reads as the action without going dark/heavy. Works on both
-              the pink hero and the light sections you scroll past. */}
+          {/* Log in (quiet glass link) + Start free (solid pink action). Works on
+              both the pink hero and the light sections you scroll past. */}
           <Link
-            href="/waitlist"
+            href="/sign-in"
             onClick={closeMenus}
-            className="px-4 sm:px-5 py-2.5 rounded-full font-semibold transition-all text-sm whitespace-nowrap bg-white/70 backdrop-blur-md border-2 border-pink-500 text-gray-900 shadow-[0_8px_30px_rgba(0,0,0,0.08)] hover:bg-white/90 hover:border-pink-600 hover:text-pink-600 hover:-translate-y-0.5"
+            className={`hidden sm:inline-flex items-center px-4 py-2.5 rounded-full font-semibold transition-all text-sm whitespace-nowrap text-gray-900 hover:text-pink-600 ${GLASS}`}
           >
-            Join Waitlist
+            Log in
+          </Link>
+          <Link
+            href="/sign-up"
+            onClick={closeMenus}
+            className="px-4 sm:px-5 py-2.5 rounded-full font-semibold transition-all text-sm whitespace-nowrap bg-pink-500 text-white shadow-[0_8px_30px_rgba(255,31,125,0.28)] hover:bg-pink-600 hover:-translate-y-0.5"
+          >
+            Start free
           </Link>
         </div>
       </div>
@@ -181,7 +189,8 @@ export default function FloatingNav({ currentPage = null }) {
           )}
           <Link href="/jobs" onClick={closeMenus} className="block w-full text-left px-4 py-2.5 text-gray-700 font-medium rounded-xl hover:bg-white/60">Job Board</Link>
           <Link href="/about" onClick={closeMenus} className="block w-full text-left px-4 py-2.5 text-gray-700 font-medium rounded-xl hover:bg-white/60">About</Link>
-          <Link href="/waitlist" onClick={closeMenus} className="block w-full px-4 py-2.5 font-semibold rounded-xl text-center bg-white/70 border-2 border-pink-500 text-gray-900 hover:text-pink-600">Join Waitlist</Link>
+          <Link href="/sign-in" onClick={closeMenus} className="block w-full text-left px-4 py-2.5 text-gray-700 font-medium rounded-xl hover:bg-white/60">Log in</Link>
+          <Link href="/sign-up" onClick={closeMenus} className="block w-full px-4 py-2.5 font-semibold rounded-xl text-center bg-pink-500 text-white hover:bg-pink-600">Start free</Link>
         </div>
       )}
     </nav>
