@@ -96,7 +96,7 @@ export default function SetupCompanion({ onWidth }) {
 
   // Report our footprint so the dashboard layout can condense instead of overlap.
   useEffect(() => {
-    const w = ready && !hidden && open && !onBuilder ? DRAWER_W : 0
+    const w = 0 // bottom-docked panel overlays the page; no horizontal condensing
     onWidth?.(w)
     return () => onWidth?.(0)
   }, [ready, hidden, open, onWidth, onBuilder])
@@ -283,7 +283,7 @@ export default function SetupCompanion({ onWidth }) {
       }))
       setReqByTeam(rbt)
       const req = Object.values(rbt).reduce((a, b) => a + b, 0)
-      advance(teams.map((t) => `${t.name}: ${t.min}`).join('  ·  '), `I've built your shifts from your hours: someone opens, someone closes, and cover in between, on each day's real times. Take a look at the panel on the left and click any shift to adjust its length, hours or break.\n\nAbout ${req} staff-hours a week will cover these. Tap "Looks good" when you're happy and we'll add your team.`, 'review')
+      advance(teams.map((t) => `${t.name}: ${t.min}`).join('  ·  '), `I've built your shifts from your hours: someone opens, someone closes, and cover in between, on each day's real times. Take a look at the panel above and click any shift to adjust its length, hours or break.\n\nAbout ${req} staff-hours a week will cover these. Tap "Looks good" when you're happy and we'll add your team.`, 'review')
     } catch (e) { setError(e.message) } finally { setBusy(false) }
   }
 
@@ -330,8 +330,10 @@ export default function SetupCompanion({ onWidth }) {
 
 // ── the fixed drawer shell (shared by setup + ask) ────────────────────────────
 function Drawer({ T, children }) {
+  // Docked at the bottom like an IDE terminal: reads left-to-right, doesn't wedge
+  // space between the nav and the content, and floats centred over the page.
   return (
-    <div style={{ position: 'fixed', top: 16, right: 16, bottom: 16, width: 384, maxWidth: 'calc(100vw - 24px)', zIndex: 60, display: 'flex', flexDirection: 'column', fontFamily: T.font, background: T.cardSolid, border: `1px solid ${T.line}`, borderRadius: 20, overflow: 'hidden', boxShadow: T.shadow.lg }}>{children}</div>
+    <div style={{ position: 'fixed', left: '50%', transform: 'translateX(-50%)', bottom: 14, width: 'min(920px, calc(100vw - 28px))', height: 'min(56vh, 520px)', zIndex: 60, display: 'flex', flexDirection: 'column', fontFamily: T.font, background: T.cardSolid, border: `1px solid ${T.line}`, borderRadius: 18, overflow: 'hidden', boxShadow: T.shadow.lg }}>{children}</div>
   )
 }
 
