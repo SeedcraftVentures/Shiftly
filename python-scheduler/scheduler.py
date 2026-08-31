@@ -245,9 +245,14 @@ class ShiftlyScheduler:
                         for st in range(n_staff):
                             model.Add(schedule[si1][st] + schedule[si2][st] <= 1)
 
-        # ── Hard constraint: no clopening ─────────────────────────────────────
+        # ── Soft (strong): minimum rest between shifts / no clopening ─────────
+        # A penalty, not a hard block: a hard rule turns the WHOLE constraint off the moment
+        # it can't be met (the relaxation ladder jumps min_rest to 0), so a single tight day
+        # produced a flood of clopenings. Penalising each one instead makes the solver
+        # minimise them — it only clopens when coverage genuinely forces it.
         min_rest_hours = self._rule('min_rest_hours', 11)
         min_rest_minutes = min_rest_hours * 60
+        rest_terms = []
 
         day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
         for d_idx in range(len(day_order) - 1):
@@ -266,14 +271,19 @@ class ShiftlyScheduler:
                     gap = start_o - end_c
                     if gap < min_rest_minutes:
                         for st in range(n_staff):
-                            model.Add(schedule[si_c][st] + schedule[si_o][st] <= 1)
+                            clopen = model.NewBoolVar(f'clopen_{si_c}_{si_o}_{st}_w{week_num}')
+                            model.Add(clopen >= schedule[si_c][st] + schedule[si_o][st] - 1)
+                            rest_terms.append(clopen)
 
-        # ── Hard constraint: max consecutive working days (ACROSS the week seam) ──
-        # Weeks are solved one at a time, so a within-week-only window let someone work the
-        # tail of one week and the head of the next unchecked. Seed the window with the
-        # previous week's trailing days (as known 0/1 constants) so a run that crosses
-        # Sunday→Monday is still capped.
+        # ── Soft (strong): max consecutive working days, ACROSS the week seam ──
+        # Penalty, not a hard cap: a hard rule flips to "7 days allowed" the instant a tight
+        # team can't satisfy it (the relaxation ladder), producing a flood of long runs.
+        # Penalising the OVERAGE per window makes the solver minimise days-in-a-row — it only
+        # runs someone past the limit when coverage/contract genuinely forces it. Weeks are
+        # solved one at a time, so seed each window with the previous week's trailing days
+        # (as 0/1 constants) so a run crossing Sunday→Monday still counts.
         max_consec = self._rule('max_consecutive_days', 5)
+        consec_terms = []
         if max_consec and max_consec < 7:
             prev = previous_solutions[-1] if previous_solutions else None
             shifts_by_day = {day: [si for si, s in enumerate(self.shifts) if s['day'] == day] for day in day_order}
@@ -298,7 +308,9 @@ class ShiftlyScheduler:
                     consts = sum(v for t, v in window if t == 'const')
                     vars_ = [v for t, v in window if t == 'var']
                     if vars_:
-                        model.Add(sum(vars_) <= max_consec - consts)
+                        over = model.NewIntVar(0, max_consec + 1, f'consec_over_{st}_{i}_w{week_num}')
+                        model.Add(over >= sum(vars_) + consts - max_consec)
+                        consec_terms.append(over)
 
         # ── Max hours = HARD cap · contracted hours = SOFT target ─────────────
         # Contracted is a target, not a wall: penalise any shortfall so the rota
@@ -478,6 +490,8 @@ class ShiftlyScheduler:
         objective += [o * 3 for o in contracted_overages]
         objective += [e * 60 for e in overstaff_terms]           # extra body only to clear real shortfall
         objective += [e * 30 for e in overstaff_busy_terms]      # cheaper on busier days → top-up lands there
+        objective += [r * 3000 for r in rest_terms]              # avoid clopening unless coverage forces it
+        objective += [c * 3000 for c in consec_terms]            # minimise days-in-a-row over the limit
         objective += [w * 6 for w in weekend_terms]              # rotate weekends across weeks
         objective += [v * 8 for v in week_variety_terms]         # rotate non-consistent staff week to week
         objective += minimize_terms
