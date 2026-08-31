@@ -397,7 +397,7 @@ class ShiftlyScheduler:
         # a lighter one for spilling into max hours (both in minutes, so they dominate
         # the small fairness/preference terms, which act only as tie-breakers).
         objective = []
-        objective += [s * 10 for s in contracted_shortfalls]
+        objective += [s * 30 for s in contracted_shortfalls]  # near-hard: hitting contracted hours dominates the soft objective
         objective += [o * 3 for o in contracted_overages]
         objective += [e * 60 for e in overstaff_terms]    # only add an extra body if it clears real shortfall
         objective += [w * 6 for w in weekend_terms]       # rotate weekends across weeks
