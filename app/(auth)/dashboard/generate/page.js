@@ -252,6 +252,8 @@ export default function RotaBuilder() {
   const [rotaName, setRotaName] = useState('')
   const [editCell, setEditCell] = useState(null) // { staff, day } opens the add-shift inspector
   const [showRules, setShowRules] = useState(false)
+  const [busyDays, setBusyDays] = useState([])
+  const [busyMsg, setBusyMsg] = useState(null)
   const [setupMode, setSetupMode] = useState(false) // arrived from onboarding (?setup=1): show the coach
   const dragRef = useRef(null)
 
@@ -444,6 +446,31 @@ export default function RotaBuilder() {
   if (loading) return <div style={{ fontFamily: T.font, padding: 60, textAlign: 'center', color: T.faint }}>Loading…</div>
 
   const inspectorAccent = editCell ? TEAM_COLORS[Math.max(0, teams.findIndex((t) => t.id === editCell.staff.team_id)) % TEAM_COLORS.length] : T.pink
+  const openDays = useMemo(() => [...new Set((shifts || []).flatMap((s) => (s.days || []).map((d) => (typeof d === 'number' ? d : DAY_INDEX[d]))))].sort((a, b) => a - b), [shifts])
+  // Busier days: add one extra person (a peak-time cover) on the chosen days so
+  // there are enough shift-hours for everyone to reach their contracted hours.
+  const addBusyCover = useCallback(async () => {
+    if (!busyDays.length) return
+    setBusyMsg('adding')
+    try {
+      const target = teamId === 'all' ? teams : teams.filter((t) => t.id === teamId)
+      for (const t of target) {
+        for (const d of busyDays) {
+          const ds = shifts.filter((s) => s.team_id === t.id && (s.days || []).map((x) => (typeof x === 'number' ? x : DAY_INDEX[x])).includes(d))
+          const [open, close] = ds.length ? [Math.min(...ds.map((s) => Number(s.start))), Math.max(...ds.map((s) => Number(s.end)))] : [9, 17]
+          const len = Math.min(8, close - open)
+          const start = Math.round((open + Math.max(0, (close - open - len) / 2)) * 2) / 2
+          const end = Math.min(Math.round((start + len) * 2) / 2, close)
+          await fetch('/api/shifts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ team_id: t.id, name: `${t.name} extra`, anchor_type: 'fixed', start, end, days: [d], staff: 1, keyholder: false, break_duration_mins: end - start >= 6 ? 30 : 0, break_type: 'unpaid' }) })
+        }
+      }
+      const sr = await fetch('/api/shifts')
+      const sd = sr.ok ? await sr.json() : null
+      if (Array.isArray(sd)) setShifts(sd)
+      setBusyMsg('added'); setBusyDays([])
+    } catch { setBusyMsg('error') }
+  }, [busyDays, teams, teamId, shifts])
+
   const label = { fontSize: 11.5, fontWeight: 600, color: T.faint, letterSpacing: '0.02em', textTransform: 'uppercase', marginBottom: 8 }
 
   return (
@@ -474,6 +501,18 @@ export default function RotaBuilder() {
           </div>
           <Button onClick={generate} disabled={generating} size="lg">{generating ? 'Building…' : 'Build rota'}</Button>
         </div>
+        {openDays.length > 0 && <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${T.hair}` }}>
+          <div style={{ ...label, marginBottom: 8 }}>Busier days <span style={{ fontWeight: 500, textTransform: 'none', letterSpacing: 0, color: T.faint }}>· add an extra person so everyone gets their hours</span></div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+            {openDays.map((d) => {
+              const on = busyDays.includes(d)
+              return <button key={d} onClick={() => { setBusyMsg(null); setBusyDays((b) => (on ? b.filter((x) => x !== d) : [...b, d])) }} style={{ fontFamily: T.font, fontSize: 12.5, fontWeight: 700, padding: '7px 14px', borderRadius: 999, border: 'none', cursor: 'pointer', background: on ? T.pink : T.subtle, color: on ? '#fff' : T.muted, transition: 'all .12s' }}>{DAYS[d]}</button>
+            })}
+            {busyDays.length > 0 && <Button size="sm" onClick={addBusyCover} disabled={busyMsg === 'adding'}>{busyMsg === 'adding' ? 'Adding…' : `Add cover · ${busyDays.length} day${busyDays.length > 1 ? 's' : ''}`}</Button>}
+            {busyMsg === 'added' && <span style={{ fontSize: 12.5, color: T.green, fontWeight: 600 }}>Added. Build to see it.</span>}
+            {busyMsg === 'error' && <span style={{ fontSize: 12.5, color: T.red, fontWeight: 600 }}>Couldn't add, try again.</span>}
+          </div>
+        </div>}
       </Card>
 
       {/* Rules, inline so the whole rota is shaped on one page (autosaves) */}
