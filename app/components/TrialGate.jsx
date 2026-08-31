@@ -19,7 +19,9 @@ export default function TrialGate() {
   const { T } = useTheme()
   const router = useRouter()
   const { signOut } = useAuth()
-  const { loading, trialExpired, isTrialing, daysLeft } = useEntitlement()
+  // Only the paywall lives here now. The in-trial countdown is a non-sticky
+  // banner (TrialBanner) rendered in the dashboard content flow.
+  const { loading, trialExpired } = useEntitlement()
 
   if (loading) return null
 
@@ -61,27 +63,6 @@ export default function TrialGate() {
           </button>
         </div>
       </div>
-    )
-  }
-
-  if (isTrialing && daysLeft > 0) {
-    return (
-      <button
-        onClick={() => router.push('/checkout')}
-        style={{
-          position: 'fixed', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 60,
-          display: 'inline-flex', alignItems: 'center', gap: 8,
-          background: T.cardSolid, border: `1px solid ${T.border}`, borderRadius: 999,
-          boxShadow: T.shadow?.md || '0 6px 18px rgba(0,0,0,0.12)',
-          padding: '7px 14px', cursor: 'pointer', fontFamily: T.font,
-        }}
-      >
-        <span style={{ width: 7, height: 7, borderRadius: 99, background: ACCENT, flexShrink: 0 }} />
-        <span style={{ fontSize: 12.5, fontWeight: 700, color: T.ink }}>
-          {daysLeft} day{daysLeft === 1 ? '' : 's'} left in your free trial
-        </span>
-        <span style={{ fontSize: 12.5, fontWeight: 700, color: ACCENT }}>Subscribe</span>
-      </button>
     )
   }
 

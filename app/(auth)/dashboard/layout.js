@@ -6,6 +6,7 @@ import DashboardTopBar from '@/app/components/DashboardTopBar'
 import OnboardingCheck from '@/app/components/OnboardingCheck'
 import SetupCompanion from '@/app/components/SetupCompanion'
 import TrialGate from '@/app/components/TrialGate'
+import TrialBanner from '@/app/components/TrialBanner'
 import { useTheme } from '@/app/components/ui/kit'
 
 export default function DashboardLayout({ children }) {
@@ -32,6 +33,9 @@ export default function DashboardLayout({ children }) {
       <div style={{ fontFamily: "var(--font-figtree), 'Plus Jakarta Sans', system-ui, sans-serif", background: '#FF1F7D', paddingRight: padRight, transition: 'padding-right .28s ease' }} className={`min-h-screen p-3 transition-[padding] duration-200 ${collapsed ? 'lg:pl-[4.75rem]' : 'lg:pl-52'}`}>
         <Navigation collapsed={collapsed} onToggleCollapse={toggleCollapse} />
         <div style={{ background: T.appBg }} className="min-h-[calc(100vh-1.5rem)] rounded-[1.25rem] lg:ml-1 mt-14 lg:mt-0 flex flex-col relative">
+          {/* Non-sticky trial countdown, in flow at the top of the content so it
+              scrolls away (renders nothing outside the trial). */}
+          <TrialBanner />
           {/* notifications overlay the top-right corner (in line with each page's title)
               instead of consuming their own row, so pages start near the top */}
           <div className="hidden lg:block absolute top-0 right-0 z-20">
