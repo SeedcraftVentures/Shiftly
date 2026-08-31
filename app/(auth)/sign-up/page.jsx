@@ -183,6 +183,10 @@ export default function SignUpPage() {
                 />
               </div>
 
+              {/* Clerk Smart CAPTCHA mounts here on signUp.create (custom flow).
+                  Without it, Clerk warns and falls back to Invisible CAPTCHA. */}
+              <div id="clerk-captcha" />
+
               <button
                 type="submit"
                 className="w-full bg-pink-600 hover:bg-pink-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
