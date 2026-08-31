@@ -10,11 +10,11 @@ import { Inspector as StaffInspector, AvailabilityGrid, AvailKey } from '../(aut
 //  /try-me - guided, no-sign-in demo (lead magnet).
 //  Pick an establishment → a coachmark tour walks you through the REAL builder,
 //  one control at a time (click to advance), with a spotlight + caption pointing
-//  at each thing. Shifts → Team (live availability demo) → Rules → Rota → waitlist.
+//  at each thing. Shifts → Team (live availability demo) → Rules → Rota → start free.
 // ════════════════════════════════════════════════════════════════════════════
 
 const PINK = '#FF1F7D'
-const FONT = "'Cal Sans Text', 'Plus Jakarta Sans', sans-serif"
+const FONT = "var(--font-figtree), system-ui, -apple-system, sans-serif"
 // Shown when the solver overruns or the hosted scheduler is cold.
 const SLOW_SCHEDULER = "Gosh darn it, the shifts ain't shifting. Come back shortly and we'll get a shift on fixing it up."
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -465,40 +465,17 @@ function ConfettiBurst() {
   </div>
 }
 function Finish({ est, onRestart }) {
-  const [email, setEmail] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [err, setErr] = useState(null)
-  const [sent, setSent] = useState(false)
-  const submit = async () => {
-    setBusy(true); setErr(null)
-    try {
-      const res = await fetch('/api/try-me/waitlist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) })
-      const data = await res.json()
-      if (!res.ok || data.error) { setErr(data.error || 'Try again.'); setBusy(false); return }
-      setSent(true); setBusy(false)
-    } catch { setErr('Network error, try again.'); setBusy(false) }
-  }
   const featuresLink = <a href="/features" style={{ display: 'inline-block', marginTop: 16, fontSize: 13, fontWeight: 700, color: PINK, textDecoration: 'none' }}>Take a closer look at our features →</a>
   return <div style={{ fontFamily: FONT, minHeight: '100vh', background: '#FAFAFB', color: '#1D1D1F', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, position: 'relative', overflow: 'hidden' }}>
     <style>{TM_ANIM}</style>
     <Confetti />
     <div className="tmUp" style={{ position: 'relative', zIndex: 1, maxWidth: 460, width: '100%', background: '#fff', color: '#1D1D1F', borderRadius: 22, padding: '40px 34px', textAlign: 'center', border: '1px solid #ECECEF', boxShadow: '0 24px 60px rgba(17,24,39,.14)' }}>
-      {sent ? <>
-        <div style={{ width: 56, height: 56, borderRadius: 99, background: '#16A34A', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, fontWeight: 800, margin: '0 auto 16px' }}>✓</div>
-        <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: -0.4, margin: '0 0 10px' }}>You’re on the list</h1>
-        <p style={{ fontSize: 14.5, color: '#86868B', margin: '0 0 18px', lineHeight: 1.55 }}>We’ll email you the moment Shiftly opens up, and set it up for your {est.short} from day one.</p>
-        {featuresLink}
-        <button onClick={onRestart} style={{ ...primaryBtn(false), width: '100%', marginTop: 18 }}>Try another type</button>
-      </> : <>
-        <div style={{ fontSize: 12, fontWeight: 800, color: PINK, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>That’s the whole loop</div>
-        <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.5, margin: '0 0 12px', lineHeight: 1.12 }}>Fair shifts, in a couple of clicks.</h1>
-        <p style={{ fontSize: 14.5, color: '#86868B', margin: '0 0 22px', lineHeight: 1.55 }}>That’s exactly how Shiftly builds your real rota: fair, covered and compliant. Join the waitlist and we’ll set you up for your {est.short} the moment we go live.</p>
-        <input value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && submit()} type="email" placeholder="you@business.com" autoFocus style={{ width: '100%', boxSizing: 'border-box', fontSize: 15, fontWeight: 600, fontFamily: 'inherit', padding: '13px 15px', borderRadius: 11, border: '1px solid #E5E7EB', outline: 'none', textAlign: 'center' }} />
-        {err && <div style={{ fontSize: 12.5, color: '#B91C1C', marginTop: 8 }}>{err}</div>}
-        <button onClick={submit} disabled={busy} style={{ ...primaryBtn(busy), width: '100%', fontSize: 15, marginTop: 12 }}>{busy ? 'Saving…' : 'Join the waitlist →'}</button>
-        {featuresLink}
-        <div><button onClick={onRestart} style={{ marginTop: 6, background: 'none', border: 'none', color: '#AEAEB2', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 6 }}>Try another type of place</button></div>
-      </>}
+      <div style={{ fontSize: 12, fontWeight: 800, color: PINK, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>That’s the whole loop</div>
+      <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: -0.5, margin: '0 0 12px', lineHeight: 1.12 }}>Fair shifts, in a couple of clicks.</h1>
+      <p style={{ fontSize: 14.5, color: '#86868B', margin: '0 0 22px', lineHeight: 1.55 }}>That’s exactly how Shiftly builds your real rota: fair, covered and compliant. Start free and set it up for your {est.short} in minutes.</p>
+      <a href="/sign-up" style={{ ...primaryBtn(false), display: 'block', width: '100%', boxSizing: 'border-box', fontSize: 15, textDecoration: 'none' }}>Start free today →</a>
+      {featuresLink}
+      <div><button onClick={onRestart} style={{ marginTop: 6, background: 'none', border: 'none', color: '#AEAEB2', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', padding: 6 }}>Try another type of place</button></div>
     </div>
   </div>
 }

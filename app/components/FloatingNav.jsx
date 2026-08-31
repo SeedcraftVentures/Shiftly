@@ -8,7 +8,7 @@ const featureGroups = [
   {
     title: 'Scheduling',
     items: [
-      { name: 'AI Companion', desc: 'Ask in plain English, it runs the maths', anchor: 'ai-companion' },
+      { name: 'Companion', desc: 'Ask in plain words, it helps you run things', anchor: 'ai-companion' },
       { name: 'Rota Generation', desc: 'Mathematically fair rotas in seconds', anchor: 'rota-generation' },
       { name: 'Manual Editing', desc: 'Tweak any shift in one click', anchor: 'manual-editing' },
       { name: 'Fairness Rules', desc: 'No clopenings, even weekends, max days', anchor: 'fairness-rules' },
@@ -136,10 +136,6 @@ export default function FloatingNav({ currentPage = null }) {
           <Link href="/jobs" className="px-4 py-2 text-gray-900 hover:text-pink-600 font-medium transition-colors text-sm rounded-full">
             Job Board
           </Link>
-
-          <Link href="/about" className="px-4 py-2 text-gray-900 hover:text-pink-600 font-medium transition-colors text-sm rounded-full">
-            About
-          </Link>
         </div>
 
         {/* ── Right cluster: mobile hamburger + CTA ── */}
@@ -171,7 +167,7 @@ export default function FloatingNav({ currentPage = null }) {
           <Link
             href="/sign-up"
             onClick={closeMenus}
-            className="px-4 sm:px-5 py-2.5 rounded-full font-semibold transition-all text-sm whitespace-nowrap bg-pink-500 text-white shadow-[0_8px_30px_rgba(255,31,125,0.28)] hover:bg-pink-600 hover:-translate-y-0.5"
+            className="px-4 sm:px-5 py-2.5 rounded-full font-semibold transition-all text-sm whitespace-nowrap bg-white text-pink-600 border border-pink-100 shadow-[0_8px_30px_rgba(0,0,0,0.16)] hover:bg-pink-50 hover:-translate-y-0.5"
           >
             Start free
           </Link>
@@ -188,7 +184,6 @@ export default function FloatingNav({ currentPage = null }) {
             <a href="/#pricing" onClick={closeMenus} className="block w-full text-left px-4 py-2.5 text-gray-700 font-medium rounded-xl hover:bg-white/60">Pricing</a>
           )}
           <Link href="/jobs" onClick={closeMenus} className="block w-full text-left px-4 py-2.5 text-gray-700 font-medium rounded-xl hover:bg-white/60">Job Board</Link>
-          <Link href="/about" onClick={closeMenus} className="block w-full text-left px-4 py-2.5 text-gray-700 font-medium rounded-xl hover:bg-white/60">About</Link>
           <Link href="/sign-in" onClick={closeMenus} className="block w-full text-left px-4 py-2.5 text-gray-700 font-medium rounded-xl hover:bg-white/60">Log in</Link>
           <Link href="/sign-up" onClick={closeMenus} className="block w-full px-4 py-2.5 font-semibold rounded-xl text-center bg-pink-500 text-white hover:bg-pink-600">Start free</Link>
         </div>

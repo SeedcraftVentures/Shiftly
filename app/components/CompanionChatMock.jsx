@@ -20,10 +20,10 @@ export default function CompanionChatMock() {
           </span>
           <div>
             <p className="text-sm font-semibold text-gray-900 leading-tight">Shiftly companion</p>
-            <p className="text-xs text-gray-400 leading-tight">Included on the £59 plan</p>
+            <p className="text-xs text-gray-400 leading-tight">Included on the Companion plan</p>
           </div>
         </div>
-        <span className="px-2.5 py-1 bg-pink-50 text-pink-600 rounded-full text-[11px] font-semibold">AI on</span>
+        <span className="px-2.5 py-1 bg-pink-50 text-pink-600 rounded-full text-[11px] font-semibold">On</span>
       </div>
 
       {/* conversation */}

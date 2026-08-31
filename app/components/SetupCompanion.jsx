@@ -320,7 +320,7 @@ function AskChat({ T, isAiTier, onMinimise }) {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(agent ? { message: text, history } : { question: text, history }),
       })
-      if (res.status === 403) { const d = await res.json().catch(() => ({})); setMsgs((m) => [...m, { from: 'bot', text: d.error || "That's on the AI plan.", upgrade: true }]); return }
+      if (res.status === 403) { const d = await res.json().catch(() => ({})); setMsgs((m) => [...m, { from: 'bot', text: d.error || "That's on the Companion plan.", upgrade: true }]); return }
       const data = res.ok ? await res.json() : {}
       setMsgs((m) => [...m, { from: 'bot', text: data.reply || "Sorry, I couldn't do that. Try support@shiftly.so.", actions: data.actions, draftId: data.draftId }])
     } catch { setMsgs((m) => [...m, { from: 'bot', text: 'Something went wrong. Give it another go in a moment.' }]) }
@@ -363,7 +363,7 @@ function AskChat({ T, isAiTier, onMinimise }) {
                   ))}
                 </div>
               )}
-              {bot && m.upgrade && <Button size="sm" onClick={() => router.push('/checkout')}>See the AI plan</Button>}
+              {bot && m.upgrade && <Button size="sm" onClick={() => router.push('/checkout')}>See the Companion plan</Button>}
               {bot && m.draftId && !publishedIds.has(m.draftId) && (
                 confirmDraft === m.draftId ? (
                   <div style={{ maxWidth: '88%', background: T.cardSolid, border: `1px solid ${T.line}`, borderRadius: 12, padding: 12 }}>
@@ -391,7 +391,7 @@ function AskChat({ T, isAiTier, onMinimise }) {
         </div>
         {!agent && (
           <div style={{ fontSize: 11, color: T.faint, marginTop: 8, textAlign: 'center' }}>
-            Want me to do it for you? <span onClick={() => router.push('/checkout')} style={{ color: T.pink, fontWeight: 700, cursor: 'pointer' }}>Get the AI plan</span>
+            Want me to do it for you? <span onClick={() => router.push('/checkout')} style={{ color: T.pink, fontWeight: 700, cursor: 'pointer' }}>Get the Companion plan</span>
           </div>
         )}
       </div>

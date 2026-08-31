@@ -9,7 +9,7 @@ import Image from 'next/image'
 // trial starts on it (sells the upgrade); a manager can drop to Manual anytime.
 const PLANS = {
   ai: {
-    key: 'ai', name: 'AI-supported', monthly: 59, annual: 599, recommended: true,
+    key: 'ai', name: 'Companion', monthly: 59, annual: 599, recommended: true,
     tagline: 'Everything in Manual, plus the assistant that sets up, fills gaps and builds your rota for you.',
     features: ['Unlimited staff and teams', 'AI assistant builds and fixes your rota', 'Ask it to do things in plain English', 'Approve and publish in one tap'],
   },

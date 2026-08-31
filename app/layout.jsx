@@ -8,8 +8,9 @@ const inter = Inter({
 })
 
 // Plus Jakarta Sans is retained as a fallback for the in-app dashboard.
-// Body copy across the whole site now uses Cal Sans Text (set on <body> below)
-// to rhyme with the app's typography; Figtree is kept as a graceful fallback.
+// Body copy across the public site uses Figtree (set on <body> below): Cal Sans
+// is a display face and tires as body text, so headings keep `font-cal` while
+// running copy reads in Figtree. The dashboard sets its own font stack.
 const jakarta = Plus_Jakarta_Sans({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
@@ -54,7 +55,7 @@ export default function RootLayout({ children }) {
           {/* Set the theme before first paint so there's no light-mode flash on load. */}
           <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('shiftly_theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();` }} />
         </head>
-        <body className="font-sans antialiased" style={{ fontFamily: "'Cal Sans Text', var(--font-figtree), system-ui, sans-serif" }}>
+        <body className="font-sans antialiased" style={{ fontFamily: "var(--font-figtree), system-ui, -apple-system, sans-serif" }}>
           {children}
         </body>
       </html>

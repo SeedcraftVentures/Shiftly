@@ -12,7 +12,7 @@ const tocGroups = [
   {
     title: 'Scheduling',
     items: [
-      { id: 'ai-companion', label: 'AI Companion' },
+      { id: 'ai-companion', label: 'Companion' },
       { id: 'rota-generation', label: 'Rota Generation' },
       { id: 'manual-editing', label: 'Manual Editing' },
       { id: 'fairness-rules', label: 'Fairness Rules' },
@@ -55,13 +55,10 @@ function Bullet({ children }) {
   )
 }
 
-function Eyebrow({ icon, children }) {
-  return (
-    <div className="inline-flex items-center gap-2 px-3 py-1 bg-pink-50 border border-pink-100 rounded-full text-xs font-semibold text-pink-600 mb-5">
-      {icon}
-      {children}
-    </div>
-  )
+// Eyebrow kicker labels removed site-wide (they read as AI-generic). Kept as a
+// no-op so the existing <Eyebrow> usages render nothing without editing each one.
+function Eyebrow() {
+  return null
 }
 
 function GroupHeader({ kicker, headline }) {
@@ -359,7 +356,7 @@ export default function FeaturesPage() {
   )
 
   return (
-    <div className="min-h-screen bg-white" style={{ fontFamily: "'Cal Sans Text', var(--font-figtree), system-ui, sans-serif" }}>
+    <div className="min-h-screen bg-white" style={{ fontFamily: "var(--font-figtree), system-ui, -apple-system, sans-serif" }}>
       <Nav currentPage="features" />
 
       {/* ═══════════ HERO ═══════════ */}
@@ -369,7 +366,7 @@ export default function FeaturesPage() {
           <RevealSection>
             <p className="text-sm font-semibold uppercase tracking-wider text-pink-600 mb-4">Features</p>
             <h1 className="font-cal text-5xl sm:text-6xl lg:text-7xl text-gray-900 mb-6 leading-[1.0] tracking-tight">
-              Everything Shiftly does, <span className="text-pink-500">in detail.</span>
+              Everything Shiftly does, in detail.
             </h1>
             <p className="text-lg lg:text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed">
               Every tool, one tight workflow. Built so you set up once and run rotas forever.
@@ -422,8 +419,8 @@ export default function FeaturesPage() {
               <section id="ai-companion" className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center mb-24 scroll-mt-24">
                 <RevealSection>
                   <div>
-                    <Eyebrow icon={sparkle}>AI Companion · £59 plan</Eyebrow>
-                    <h3 className="font-cal text-3xl lg:text-4xl text-gray-900 mb-4 tracking-tight">AI Companion</h3>
+                    <Eyebrow icon={sparkle}>Companion</Eyebrow>
+                    <h3 className="font-cal text-3xl lg:text-4xl text-gray-900 mb-4 tracking-tight">Companion</h3>
                     <p className="text-lg text-gray-500 leading-relaxed mb-6">
                       The scheduling itself is always mathematical, the AI never guesses a rota. The companion is the assistant on top: ask in plain English to adjust the rota, manage requests, or query anything, and it makes the change, runs the scheduler, and shows you the result. It teaches you as you go, so setup doubles as your tutorial.
                     </p>
