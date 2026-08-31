@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback, useRef, Fragment } from 'rea
 import { useTheme, Card, Field, Input, Select, TimeRange, Switch, Button, Icon, Ic, PageHeader, EASE, THEMES } from '@/app/components/ui/kit'
 import { rotaBlock } from '@/lib/rotaColors'
 import SetupCoach from '@/app/components/SetupCoach'
+import RulesPanel from '@/app/components/RulesPanel'
 
 // ════════════════════════════════════════════════════════════════════════════
 //  ROTA BUILDER (live) - pick week -> Generate (OR-Tools) -> grid -> save/publish.
@@ -250,6 +251,7 @@ export default function RotaBuilder() {
   const [rules, setRules] = useState({ min_rest_hours: 11, max_consecutive_days: 5 })
   const [rotaName, setRotaName] = useState('')
   const [editCell, setEditCell] = useState(null) // { staff, day } opens the add-shift inspector
+  const [showRules, setShowRules] = useState(false)
   const [setupMode, setSetupMode] = useState(false) // arrived from onboarding (?setup=1): show the coach
   const dragRef = useRef(null)
 
@@ -472,6 +474,17 @@ export default function RotaBuilder() {
           </div>
           <Button onClick={generate} disabled={generating} size="lg">{generating ? 'Building…' : 'Build rota'}</Button>
         </div>
+      </Card>
+
+      {/* Rules, inline so the whole rota is shaped on one page (autosaves) */}
+      <Card pad={0} style={{ marginBottom: 18, overflow: 'hidden' }}>
+        <button onClick={() => setShowRules((v) => !v)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '15px 22px', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: T.font, textAlign: 'left' }}>
+          <Icon path={Ic.rules} size={16} stroke={1.8} color={T.muted} />
+          <span style={{ fontSize: 14.5, fontWeight: 700, color: T.ink }}>Scheduling rules</span>
+          <span style={{ fontSize: 12.5, color: T.faint, fontWeight: 500 }}>applied to every build</span>
+          <Icon path={Ic.chevron} size={16} stroke={2.2} color={T.faint} style={{ marginLeft: 'auto', transform: showRules ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
+        </button>
+        {showRules && <div style={{ padding: '2px 22px 20px' }}><RulesPanel compact /></div>}
       </Card>
 
       {error && <Card pad={18} style={{ marginBottom: 18, background: T.red + '12', border: `1px solid ${T.red}33` }}>

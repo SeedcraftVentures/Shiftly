@@ -29,7 +29,6 @@ const MAIN_ITEMS = [
   { id: 'nav-dashboard', name: 'Home', path: '/dashboard', icon: 'home' },
   { id: 'nav-shifts', name: 'Shifts', path: '/dashboard/shifts', icon: 'shifts' },
   { id: 'nav-staff', name: 'Staff', path: '/dashboard/staff', icon: 'staff' },
-  { id: 'nav-rules', name: 'Rules', path: '/dashboard/rules', icon: 'rules' },
   { id: 'nav-generate', name: 'Rota Builder', path: '/dashboard/generate', icon: 'generate', dividerAfter: true },
   { id: 'nav-requests', name: 'Inbox', path: '/dashboard/requests', icon: 'inbox' },
   { id: 'nav-payroll', name: 'Payroll', path: '/dashboard/payroll', icon: 'payroll' },
