@@ -516,6 +516,23 @@ export default function ShiftsPage() {
   const isAll = teamId === 'all'
   const teamShifts = useMemo(() => shifts.filter((s) => s.team_id === teamId), [shifts, teamId])
   const selected = shifts.find((s) => s.id === selectedId)
+  // From the all-teams grid, jump to the shift's own team tab with it selected so
+  // its inspector opens (the all-teams view has no inspector of its own).
+  const openShift = useCallback((id) => {
+    const sh = shifts.find((s) => s.id === id)
+    if (sh) { setTeamId(sh.team_id); setSelectedId(id) }
+  }, [shifts])
+  // When the space shrinks (e.g. the companion drawer opens), drop the week glance to
+  // its own full-width row instead of letting the 3 columns wrap and jump around.
+  const rowRef = useRef(null)
+  const [stackGlance, setStackGlance] = useState(false)
+  useEffect(() => {
+    const el = rowRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(([e]) => setStackGlance(e.contentRect.width < 880))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [isAll])
   useEffect(() => { setSelectMode(false); setSelectedIds(new Set()) }, [teamId])
 
   const ANCHOR = { Opening: 'open', Closing: 'close', Regular: 'fixed' }
@@ -621,8 +638,8 @@ export default function ShiftsPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
           <AllMatrix teams={teams} shifts={shifts} expanded={expanded} setExpanded={setExpanded} onApply={applyGapForTeam} cfg={cfg} okTeams={okTeams} onToggleOk={toggleOk} />
           <Card solid pad={24}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: T.ink, marginBottom: 14, letterSpacing: '-0.01em' }}>Full rota <span style={{ color: T.faint, fontWeight: 500 }}>· all teams</span></div>
-            <TeamRotaGrid groups={teams.map((t) => ({ name: t.name, color: t.color, shifts: shifts.filter((s) => s.team_id === t.id) }))} cfg={cfg} />
+            <div style={{ fontSize: 14, fontWeight: 700, color: T.ink, marginBottom: 14, letterSpacing: '-0.01em' }}>Full rota <span style={{ color: T.faint, fontWeight: 500 }}>· all teams · click a shift to edit it</span></div>
+            <TeamRotaGrid groups={teams.map((t) => ({ name: t.name, color: t.color, shifts: shifts.filter((s) => s.team_id === t.id) }))} cfg={cfg} selectedId={selectedId} onSelect={openShift} />
           </Card>
         </div>
       ) : (
@@ -644,7 +661,7 @@ export default function ShiftsPage() {
               </div>
             </>}
           </div>
-          <div style={{ display: 'flex', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+          <div ref={rowRef} style={{ display: 'flex', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap' }}>
             {/* inspector */}
             <Card pad={24} style={{ position: 'sticky', top: 16, width: 340, flexShrink: 0, minHeight: 440 }}>
               <Inspector key={selected?.id || 'none'} shift={selected} patch={(p) => patch(selected.id, p)} onDelete={() => removeShift(selected.id)} accent={accent} cfg={cfg} />
@@ -655,7 +672,7 @@ export default function ShiftsPage() {
               {teamShifts.length === 0 && <Card style={{ textAlign: 'center', color: T.faint, fontSize: 13.5, padding: '54px 0' }}>No shifts yet. Add one to get started.</Card>}
             </div>
             {/* week glance */}
-            <Card pad={24} style={{ position: 'sticky', top: 16, width: 320, flexShrink: 0 }}>
+            <Card pad={24} style={{ position: stackGlance ? 'static' : 'sticky', top: 16, width: stackGlance ? '100%' : 320, flexShrink: 0 }}>
               <WeekGlance shifts={teamShifts} teamName={teamName} teamPct={teamPct} accent={accent} cfg={cfg} ok={teamOk} onApply={applyGap} onToggleOk={() => toggleOk(teamId)} />
             </Card>
           </div>
