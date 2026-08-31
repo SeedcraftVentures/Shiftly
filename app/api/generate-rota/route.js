@@ -191,6 +191,7 @@ export async function POST(request) {
           contracted_hours: s.contracted_hours || 0,
           max_hours: s.max_hours || s.contracted_hours || 48,
           keyholder: !!s.is_keyholder,
+          prefers_consistent: !!s.prefers_consistent_shifts,
           availability_grid: grid,
           team_id: teamId,
           team_name: teamName[teamId],

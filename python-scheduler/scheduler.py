@@ -310,19 +310,47 @@ class ShiftlyScheduler:
                 model.Add(overage >= total_minutes - target)
                 contracted_overages.append(overage)
 
+        # Staff who asked for the SAME shifts each week — their pattern is pinned below
+        # and they are excluded from the variety push (we don't reward moving someone we
+        # just pinned).
+        consistent_set = {st for st, s in enumerate(self.staff) if s.get('prefers_consistent', False)}
+
         # ── Soft: variety between weeks ───────────────────────────────────────
         # A penalty (NOT a hard constraint — the old hard "≥30% different" made multi-week
         # infeasible). Each match = an assignment identical to a previous week → penalised,
-        # so weeks differ where they can.
+        # so weeks differ where they can. Consistent-preference staff are skipped.
         week_variety_terms = []
         for pidx, prev in enumerate(previous_solutions or []):
             for si in range(n_shifts):
                 for st in range(n_staff):
+                    if st in consistent_set:
+                        continue
                     if prev.get(si, {}).get(st, 0) == 1:
                         match = model.NewBoolVar(f'match_{si}_{st}_w{week_num}_p{pidx}')
                         model.Add(schedule[si][st] == 1).OnlyEnforceIf(match)
                         model.Add(schedule[si][st] == 0).OnlyEnforceIf(match.Not())
                         week_variety_terms.append(match)
+
+        # ── Soft: shift consistency — staff who want the same shifts each week ──
+        # For these people, penalise ANY change vs the previous week (a dropped OR an added
+        # assignment), so their pattern carries forward. Chaining each week off the last one
+        # makes every week converge to the same pattern. Soft + strong weight: coverage,
+        # rest and max-hours (all hard) still win, and the weight sits in the contracted-hours
+        # band so it never leaves them short of contract. Where they're unavailable (time off
+        # narrows their grid), those shifts are already forced to 0, so no penalty fires.
+        consistency_terms = []
+        if previous_solutions and consistent_set:
+            prev = previous_solutions[-1]  # the immediately previous week
+            for st in consistent_set:
+                for si in range(n_shifts):
+                    changed = model.NewBoolVar(f'chg_{si}_{st}_w{week_num}')
+                    if prev.get(si, {}).get(st, 0) == 1:
+                        model.Add(schedule[si][st] == 0).OnlyEnforceIf(changed)
+                        model.Add(schedule[si][st] == 1).OnlyEnforceIf(changed.Not())
+                    else:
+                        model.Add(schedule[si][st] == 1).OnlyEnforceIf(changed)
+                        model.Add(schedule[si][st] == 0).OnlyEnforceIf(changed.Not())
+                    consistency_terms.append(changed)
 
         # ── Soft: weekend fairness ACROSS weeks — rotate who works Sat/Sun. Penalise
         #    giving a weekend shift to someone who has already worked weekends. ───────────
@@ -400,6 +428,7 @@ class ShiftlyScheduler:
         objective += [s * 30 for s in contracted_shortfalls]  # near-hard: hitting contracted hours dominates the soft objective
         objective += [o * 3 for o in contracted_overages]
         objective += [e * 60 for e in overstaff_terms]    # only add an extra body if it clears real shortfall
+        objective += [c * 30 for c in consistency_terms]  # keep "same each week" people on their pattern
         objective += [w * 6 for w in weekend_terms]       # rotate weekends across weeks
         objective += [v * 2 for v in week_variety_terms]  # general week-to-week variety
         objective += minimize_terms

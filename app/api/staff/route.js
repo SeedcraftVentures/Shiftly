@@ -27,6 +27,7 @@ function toClient(row) {
     annual_salary: parseFloat(row.annual_salary) || 0,
     annualised_hours: parseFloat(row.annualised_hours) || 0,
     keyholder: row.is_keyholder || false,
+    prefers_consistent: row.prefers_consistent_shifts || false,
     availability: row.availability || {},
     preferred_shift_length: Array.isArray(row.preferred_shift_lengths) ? (row.preferred_shift_lengths[0] ?? null) : null,
     invite_status: INVITE_TO_CLIENT[row.invite_status] || 'none',
@@ -51,6 +52,7 @@ function toInsert(body) {
     annual_salary: body.annual_salary ?? null,
     annualised_hours: body.annualised_hours ?? null,
     is_keyholder: body.keyholder ?? false,
+    prefers_consistent_shifts: body.prefers_consistent ?? false,
     preferred_shift_lengths: pref != null && pref !== '' ? [Number(pref)] : [],
     invite_status: INVITE_TO_DB[body.invite_status] || 'Not Invited',
     availability: body.availability ?? {},
@@ -72,6 +74,7 @@ function toUpdate(body) {
   if (body.annual_salary !== undefined) u.annual_salary = body.annual_salary
   if (body.annualised_hours !== undefined) u.annualised_hours = body.annualised_hours
   if (body.keyholder !== undefined) u.is_keyholder = body.keyholder
+  if (body.prefers_consistent !== undefined) u.prefers_consistent_shifts = !!body.prefers_consistent
   if (body.availability !== undefined) u.availability = body.availability
   if (body.preferred_shift_length !== undefined) {
     const p = body.preferred_shift_length

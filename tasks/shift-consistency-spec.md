@@ -10,8 +10,10 @@ weeks; others want variety and fair rotation. One global "fair rotation" rule ca
 serve both, which is why a multi-week build currently comes out 3 identical + 1 odd
 (no per-person intent driving it).
 
-Status: SPEC. Not started. Needs a migration (approve first), Vercel work, a Render
-solver change (auto-deploys from `main`), and the mobile app (separate repo).
+Status: BUILT (web + solver). Migration applied (prod). Web mapping (§2), manager
+toggle (§3), solver flag pass-through + consistency objective (§5) and a 2-week test
+(`test_consistency.py`) all done and promoted to `main`. Mobile toggle (§4) is the
+only remaining piece — owned by the mobile session.
 
 ---
 

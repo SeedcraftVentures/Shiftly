@@ -157,6 +157,10 @@ export function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg, 
         <div><div style={{ fontSize: 14, fontWeight: 600, color: T.ink, letterSpacing: '-0.01em' }}>Keyholder</div><div style={{ fontSize: 12, color: T.faint }}>Can open and close</div></div>
         <Switch on={s.keyholder} onChange={() => patch({ keyholder: !s.keyholder })} accent={accent} />
       </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div><div style={{ fontSize: 14, fontWeight: 600, color: T.ink, letterSpacing: '-0.01em' }}>Same shifts each week</div><div style={{ fontSize: 12, color: T.faint }}>Keep this person on the same days and shifts week to week</div></div>
+        <Switch on={s.prefers_consistent} onChange={() => patch({ prefers_consistent: !s.prefers_consistent })} accent={accent} />
+      </div>
       {shortAvail && <div style={{ fontSize: 12.5, color: T.red, background: T.red + '14', border: `1px solid ${T.red}33`, borderRadius: T.r.md, padding: '10px 12px', lineHeight: 1.45 }}>
         Available <b>{availableHours(s, cfg)}h</b> but contracted <b>{s.contracted}h</b>, so {first(s.name) || 'they'} can't reach their contract. Widen availability (in the grid) or lower the contracted hours.
       </div>}
