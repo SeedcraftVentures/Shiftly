@@ -412,8 +412,8 @@ export function AvailKey({ accent }) {
 }
 
 // ════════════════════════════════════════════════════════════════════════════
-const fromApi = (r) => ({ id: r.id, team_id: r.team_id, name: r.name, role: r.role, contracted: r.contracted_hours, max: r.max_hours, wage: r.hourly_rate, pay_basis: r.pay_basis || 'hourly', annual_salary: r.annual_salary || 0, annualised_hours: r.annualised_hours || 0, keyholder: r.keyholder, avail: r.availability || {}, linked: !!r.clerk_user_id, holiday_override: r.holiday_override ?? null })
-const toApi = (s) => ({ team_id: s.team_id, name: s.name, role: s.role, contracted_hours: s.contracted, max_hours: s.max, hourly_rate: s.wage, pay_basis: s.pay_basis || 'hourly', annual_salary: s.annual_salary ?? 0, annualised_hours: s.annualised_hours ?? 0, keyholder: s.keyholder, availability: s.avail, holiday_override: s.holiday_override ?? null })
+const fromApi = (r) => ({ id: r.id, team_id: r.team_id, name: r.name, role: r.role, contracted: r.contracted_hours, max: r.max_hours, wage: r.hourly_rate, pay_basis: r.pay_basis || 'hourly', annual_salary: r.annual_salary || 0, annualised_hours: r.annualised_hours || 0, keyholder: r.keyholder, prefers_consistent: !!r.prefers_consistent, avail: r.availability || {}, linked: !!r.clerk_user_id, holiday_override: r.holiday_override ?? null })
+const toApi = (s) => ({ team_id: s.team_id, name: s.name, role: s.role, contracted_hours: s.contracted, max_hours: s.max, hourly_rate: s.wage, pay_basis: s.pay_basis || 'hourly', annual_salary: s.annual_salary ?? 0, annualised_hours: s.annualised_hours ?? 0, keyholder: s.keyholder, prefers_consistent: !!s.prefers_consistent, availability: s.avail, holiday_override: s.holiday_override ?? null })
 
 // Invite-by-code: the manager shares one business code; staff enter it in the
 // Team app to join and set their own availability. Shows how many have joined.
