@@ -171,24 +171,22 @@ function ShiftInspector({ staff, day, existing, accent, onClose, onSave, onRemov
   </>
 }
 
-function RefinedRotaGrid({ gridTeams, staff, shifts, assignments, weekStart, weekNum, onMove, onRemove, onAddRequest, onEditRequest, dragRef }) {
+function RefinedRotaGrid({ gridTeams, staff, shifts, assignments, weekStart, weekNum, onMove, onRemove, onAddRequest, onEditRequest, dragRef, large = false, bare = false }) {
   const { T } = useTheme()
   const dark = T.name === 'dark'
   const dlabel = (d) => dateForDay(weekStart, weekNum, d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
   const di = (a) => (typeof a.day === 'number' ? a.day : (DAY_INDEX[a.day] ?? 0))
-  const RTH = { fontSize: 11, fontWeight: 700, color: T.muted, padding: '6px 6px 10px', textAlign: 'center' }
-  const RTH_STAFF = { ...RTH, textAlign: 'left', position: 'sticky', left: 0, background: T.cardSolid, minWidth: 130 }
-  const RTD = { padding: '4px 4px', verticalAlign: 'top' }
-  const RTD_STAFF = { padding: '4px 4px', verticalAlign: 'top', position: 'sticky', left: 0, background: T.cardSolid }
-  return <Card solid pad="22px 24px" style={{ marginBottom: 18 }}>
-    <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 16 }}>
-      <span style={{ fontSize: 17, fontWeight: 700, color: T.ink, letterSpacing: '-0.02em' }}>Week {weekNum}</span>
-      <span style={{ fontSize: 12.5, color: T.faint }}>{dlabel(0)} to {dlabel(6)}</span>
-    </div>
+  // Larger, more readable sizing for the full-screen editor.
+  const z = large ? { name: 15, day: 14, date: 11, sh: 14, tm: 12, rm: 17, colw: 200, blockPad: '10px 22px 10px 13px', th: 13 } : { name: 12.5, day: 13, date: 9.5, sh: 11, tm: 9.5, rm: 13, colw: 130, blockPad: '7px 18px 7px 10px', th: 11 }
+  const RTH = { fontSize: z.th, fontWeight: 700, color: T.muted, padding: '6px 6px 10px', textAlign: 'center' }
+  const RTH_STAFF = { ...RTH, textAlign: 'left', position: 'sticky', left: 0, background: T.cardSolid, minWidth: z.colw }
+  const RTD = { padding: large ? '6px 5px' : '4px 4px', verticalAlign: 'top' }
+  const RTD_STAFF = { ...RTD, position: 'sticky', left: 0, background: T.cardSolid }
+  const grid = (
     <div style={{ overflowX: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-        <colgroup><col style={{ width: 130 }} />{DAYS.map((d) => <col key={d} />)}</colgroup>
-        <thead><tr style={{ background: 'transparent' }}><th style={RTH_STAFF}></th>{DAYS.map((d, i) => <th key={d} style={RTH}><div style={{ fontWeight: 800, color: T.body }}>{d}</div><div style={{ fontSize: 9.5, fontWeight: 500, color: T.faint, marginTop: 1 }}>{dlabel(i)}</div></th>)}</tr></thead>
+        <colgroup><col style={{ width: z.colw }} />{DAYS.map((d) => <col key={d} />)}</colgroup>
+        <thead><tr style={{ background: 'transparent' }}><th style={RTH_STAFF}></th>{DAYS.map((d, i) => <th key={d} style={RTH}><div style={{ fontWeight: 800, color: T.body, fontSize: z.day }}>{d}</div><div style={{ fontSize: z.date, fontWeight: 500, color: T.faint, marginTop: 1 }}>{dlabel(i)}</div></th>)}</tr></thead>
         <tbody>
           {gridTeams.map((team, ti) => {
             const rows = staff.filter((s) => s.team_id === team.id)
@@ -207,16 +205,16 @@ function RefinedRotaGrid({ gridTeams, staff, shifts, assignments, weekStart, wee
                 const blockFg = dark ? '#fff' : blk.color
                 const blockSub = dark ? 'rgba(255,255,255,0.82)' : blk.subColor
                 return <tr key={s.id} style={{ background: 'transparent' }}>
-                  <td style={RTD_STAFF}><span style={{ fontSize: 12.5, fontWeight: 600, color: T.ink }}>{s.name}</span></td>
+                  <td style={RTD_STAFF}><span style={{ fontSize: z.name, fontWeight: 600, color: T.ink }}>{s.name}</span></td>
                   {[0, 1, 2, 3, 4, 5, 6].map((d) => {
                     const blocks = assignments.filter((a) => a.staff_id === s.id && di(a) === d)
                     return <td key={d} onDragOver={(e) => e.preventDefault()} onDrop={() => { const dr = dragRef.current; if (dr && (dr.day !== d || dr.staffId !== s.id)) onMove(dr._id, s.id, d) }} style={RTD}>
                       {blocks.length > 0
                         ? <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                            {blocks.map((a) => <div key={a._id} draggable onDragStart={() => { dragRef.current = { _id: a._id, day: d, staffId: s.id } }} onDragEnd={() => { dragRef.current = null }} onClick={() => onEditRequest(s, d, a)} title="Click to edit" style={{ position: 'relative', background: blockBg, borderRadius: 10, padding: '7px 18px 7px 10px', cursor: 'pointer', boxShadow: dark ? 'none' : blk.shadow }}>
-                              <div style={{ color: blockFg, fontWeight: 700, fontSize: 11, lineHeight: 1.25 }}>{a.shift_name}</div>
-                              <div style={{ color: blockSub, fontSize: 9.5 }}>{fmt(a.start_time)}-{fmt(a.end_time)}</div>
-                              <button onClick={(e) => { e.stopPropagation(); onRemove(a._id) }} style={{ position: 'absolute', top: 3, right: 5, color: dark ? 'rgba(255,255,255,.85)' : (blk.filled ? 'rgba(255,255,255,.9)' : T.faint), background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, lineHeight: 1, padding: 0 }}>×</button>
+                            {blocks.map((a) => <div key={a._id} draggable onDragStart={() => { dragRef.current = { _id: a._id, day: d, staffId: s.id } }} onDragEnd={() => { dragRef.current = null }} onClick={() => onEditRequest(s, d, a)} title="Click to edit" style={{ position: 'relative', background: blockBg, borderRadius: 10, padding: z.blockPad, cursor: 'pointer', boxShadow: dark ? 'none' : blk.shadow }}>
+                              <div style={{ color: blockFg, fontWeight: 700, fontSize: z.sh, lineHeight: 1.25 }}>{a.shift_name}</div>
+                              <div style={{ color: blockSub, fontSize: z.tm }}>{fmt(a.start_time)}-{fmt(a.end_time)}</div>
+                              <button onClick={(e) => { e.stopPropagation(); onRemove(a._id) }} style={{ position: 'absolute', top: 3, right: 5, color: dark ? 'rgba(255,255,255,.85)' : (blk.filled ? 'rgba(255,255,255,.9)' : T.faint), background: 'none', border: 'none', cursor: 'pointer', fontSize: z.rm, lineHeight: 1, padding: 0 }}>×</button>
                             </div>)}
                           </div>
                         : <AddCell onAdd={() => onAddRequest(s, d)} />}
@@ -229,6 +227,14 @@ function RefinedRotaGrid({ gridTeams, staff, shifts, assignments, weekStart, wee
         </tbody>
       </table>
     </div>
+  )
+  if (bare) return grid
+  return <Card solid pad="22px 24px" style={{ marginBottom: 18 }}>
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 16 }}>
+      <span style={{ fontSize: 17, fontWeight: 700, color: T.ink, letterSpacing: '-0.02em' }}>Week {weekNum}</span>
+      <span style={{ fontSize: 12.5, color: T.faint }}>{dlabel(0)} to {dlabel(6)}</span>
+    </div>
+    {grid}
     <div style={{ fontSize: 11, color: T.faint, marginTop: 10 }}>Drag a shift onto another person to reassign · × to remove · + to add. Edits save when you Save / Publish.</div>
   </Card>
 }
@@ -255,6 +261,7 @@ export default function RotaBuilder() {
   const [rotaName, setRotaName] = useState('')
   const [editCell, setEditCell] = useState(null) // { staff, day } opens the add-shift inspector
   const [showRules, setShowRules] = useState(false)
+  const [fullscreen, setFullscreen] = useState(false) // full-screen edit mode for a built rota
   const [busyDays, setBusyDays] = useState([])
   const [setupMode, setSetupMode] = useState(false) // arrived from onboarding (?setup=1): show the coach
   const dragRef = useRef(null)
@@ -481,11 +488,46 @@ export default function RotaBuilder() {
     return issues
   }, [staffRaw, shifts, location, teams])
 
+  useEffect(() => {
+    if (!fullscreen) return
+    const onKey = (e) => { if (e.key === 'Escape') setFullscreen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [fullscreen])
+
   if (loading) return <div style={{ fontFamily: T.font, padding: 60, textAlign: 'center', color: T.faint }}>Loading…</div>
 
+  const dfmt = (wk, d) => dateForDay(weekStart, wk, d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
   const inspectorAccent = editCell ? TEAM_COLORS[Math.max(0, teams.findIndex((t) => t.id === editCell.staff.team_id)) % TEAM_COLORS.length] : T.pink
 
   const label = { fontSize: 11.5, fontWeight: 600, color: T.faint, letterSpacing: '0.02em', textTransform: 'uppercase', marginBottom: 8 }
+
+  // Live compliance + contracted-hours panel, shared by the inline sidebar and the editor.
+  const compliancePanel = (
+    <>
+      <div style={{ fontSize: 13.5, fontWeight: 800, color: T.ink, marginBottom: 3 }}>Live compliance</div>
+      <div style={{ fontSize: 11.5, color: T.muted, marginBottom: 16 }}>Updates as you edit. Nothing blocks publish.</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+        {liveCompliance.map((r, i) => <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 9, fontSize: 12 }}>
+          <span style={{ width: 16, height: 16, borderRadius: 999, flexShrink: 0, marginTop: 1, background: r.ok ? T.green + '1E' : T.amber + '1E', color: r.ok ? T.green : T.warnInk, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800 }}>{r.ok ? '✓' : '!'}</span>
+          <span style={{ color: T.body }}>{r.label}{r.ok ? '' : <span style={{ color: T.faint }}>, {r.detail}</span>}</span>
+        </div>)}
+      </div>
+      <div style={{ height: 1, background: T.hair, marginBottom: 16 }} />
+      <div style={{ fontSize: 13.5, fontWeight: 800, color: T.ink, marginBottom: 12 }}>Contracted hours</div>
+      {rotaStaff.length === 0 ? <div style={{ fontSize: 12, color: T.muted }}>No contracted staff in this rota.</div> : <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {rotaStaff.map((s) => {
+          const actual = Math.round((weekHours[s.id] || 0) * 10) / 10
+          const met = actual >= s.contracted_hours - 1
+          const c = met ? T.green : T.amber
+          return <div key={s.id}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, marginBottom: 4, gap: 8 }}><span style={{ color: T.body, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span><span style={{ color: c, fontWeight: 600, flexShrink: 0 }}>{actual} / {s.contracted_hours}</span></div>
+            <div style={{ height: 6, borderRadius: 4, background: T.track, overflow: 'hidden' }}><div style={{ width: `${Math.min(100, Math.round((actual / (s.contracted_hours || 1)) * 100))}%`, height: '100%', background: c }} /></div>
+          </div>
+        })}
+      </div>}
+    </>
+  )
 
   return (
     <div style={{ fontFamily: T.font, color: T.body, maxWidth: 1200, margin: '0 auto', padding: '40px 32px 64px' }}>
@@ -567,6 +609,7 @@ export default function RotaBuilder() {
               {saveMsg === 'draft' && <span style={{ fontSize: 12.5, color: T.green, fontWeight: 600 }}>Saved draft</span>}
               {saveMsg === 'published' && <span style={{ fontSize: 12.5, color: T.green, fontWeight: 600 }}>Published</span>}
               {saveMsg === 'error' && <span style={{ fontSize: 12.5, color: T.red, fontWeight: 600 }}>Save failed</span>}
+              <Button variant="secondary" size="sm" onClick={() => setFullscreen(true)}><Icon path="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" size={14} stroke={2} />Expand to edit</Button>
               <Button variant="secondary" size="sm" onClick={() => saveRota('Draft')}>Save draft</Button>
               <Button size="sm" onClick={() => saveRota('Published')}>Publish</Button>
             </div>
@@ -619,27 +662,7 @@ export default function RotaBuilder() {
             <RefinedRotaGrid gridTeams={teams.filter((t) => (result.teams || []).some((rt) => rt.id === t.id))} staff={staff} shifts={shifts} assignments={weekAssignments} weekStart={weekStart} weekNum={selectedWeek} onMove={moveAssignment} onRemove={removeAssignment} onAddRequest={(s, d) => setEditCell({ staff: s, day: d, existing: null })} onEditRequest={(s, d, a) => setEditCell({ staff: s, day: d, existing: a })} dragRef={dragRef} />
           </div>
           <Card solid pad={20} style={{ width: 288, flexShrink: 0, position: 'sticky', top: 16 }}>
-            <div style={{ fontSize: 13.5, fontWeight: 800, color: T.ink, marginBottom: 3 }}>Live compliance</div>
-            <div style={{ fontSize: 11.5, color: T.muted, marginBottom: 16 }}>Updates as you edit. Nothing blocks publish.</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-              {liveCompliance.map((r, i) => <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 9, fontSize: 12 }}>
-                <span style={{ width: 16, height: 16, borderRadius: 999, flexShrink: 0, marginTop: 1, background: r.ok ? T.green + '1E' : T.amber + '1E', color: r.ok ? T.green : T.warnInk, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800 }}>{r.ok ? '✓' : '!'}</span>
-                <span style={{ color: T.body }}>{r.label}{r.ok ? '' : <span style={{ color: T.faint }}>, {r.detail}</span>}</span>
-              </div>)}
-            </div>
-            <div style={{ height: 1, background: T.hair, marginBottom: 16 }} />
-            <div style={{ fontSize: 13.5, fontWeight: 800, color: T.ink, marginBottom: 12 }}>Contracted hours</div>
-            {rotaStaff.length === 0 ? <div style={{ fontSize: 12, color: T.muted }}>No contracted staff in this rota.</div> : <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {rotaStaff.map((s) => {
-                const actual = Math.round((weekHours[s.id] || 0) * 10) / 10
-                const met = actual >= s.contracted_hours - 1
-                const c = met ? T.green : T.amber
-                return <div key={s.id}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11.5, marginBottom: 4, gap: 8 }}><span style={{ color: T.body, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span><span style={{ color: c, fontWeight: 600, flexShrink: 0 }}>{actual} / {s.contracted_hours}</span></div>
-                  <div style={{ height: 6, borderRadius: 4, background: T.track, overflow: 'hidden' }}><div style={{ width: `${Math.min(100, Math.round((actual / (s.contracted_hours || 1)) * 100))}%`, height: '100%', background: c }} /></div>
-                </div>
-              })}
-            </div>}
+            {compliancePanel}
           </Card>
         </div>
 
@@ -662,6 +685,41 @@ export default function RotaBuilder() {
           <div style={{ fontSize: 11.5, color: T.faint, marginTop: 8 }}>Published rotas live in the Archive.</div>
         </Card>
       })()}
+
+      {/* Full-screen editor: a big, readable canvas to drag the rota into shape, publish from here */}
+      {fullscreen && result && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: T.cardSolid, display: 'flex', flexDirection: 'column', fontFamily: T.font }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 22px', borderBottom: `1px solid ${T.border}`, flexWrap: 'wrap', flexShrink: 0 }}>
+            <div style={{ minWidth: 0, flex: '1 1 260px' }}>
+              <div style={{ fontSize: 17, fontWeight: 800, color: T.ink, letterSpacing: '-0.02em' }}>{rotaName || 'Edit rota'}</div>
+              <div style={{ fontSize: 12.5, color: T.faint, lineHeight: 1.4 }}>Drag a shift onto someone else to reassign, drag it to another day to move it, click to edit, + to add. Make it ideal, then publish.</div>
+            </div>
+            {weekCount > 1 && <div style={{ display: 'flex', gap: 6 }}>
+              {Array.from({ length: weekCount }, (_, i) => i + 1).map((w) => <button key={w} onClick={() => setSelectedWeek(w)} style={{ fontFamily: T.font, fontSize: 12.5, fontWeight: 700, padding: '7px 14px', borderRadius: 999, cursor: 'pointer', border: 'none', background: selectedWeek === w ? T.pink : T.subtle, color: selectedWeek === w ? '#fff' : T.muted }}>Week {w}</button>)}
+            </div>}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginLeft: 'auto' }}>
+              {saveMsg === 'draft' && <span style={{ fontSize: 12.5, color: T.green, fontWeight: 600 }}>Saved draft</span>}
+              {saveMsg === 'published' && <span style={{ fontSize: 12.5, color: T.green, fontWeight: 600 }}>Published</span>}
+              {saveMsg === 'error' && <span style={{ fontSize: 12.5, color: T.red, fontWeight: 600 }}>Save failed</span>}
+              <Button variant="secondary" size="sm" onClick={() => saveRota('Draft')}>Save draft</Button>
+              <Button size="sm" onClick={() => saveRota('Published')}>Publish</Button>
+              <button onClick={() => setFullscreen(false)} title="Exit full screen (Esc)" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: T.font, fontSize: 13, fontWeight: 600, color: T.muted, background: T.subtle, border: 'none', borderRadius: 999, padding: '8px 14px', cursor: 'pointer' }}><Icon path="M6 18L18 6M6 6l12 12" size={14} stroke={2} />Close</button>
+            </div>
+          </div>
+          <div style={{ flex: 1, overflow: 'auto', display: 'flex', gap: 20, padding: 22, alignItems: 'flex-start' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 14 }}>
+                <span style={{ fontSize: 18, fontWeight: 800, color: T.ink, letterSpacing: '-0.02em' }}>Week {selectedWeek}</span>
+                <span style={{ fontSize: 13, color: T.faint }}>{dfmt(selectedWeek, 0)} to {dfmt(selectedWeek, 6)}</span>
+              </div>
+              <RefinedRotaGrid large bare gridTeams={teams.filter((t) => (result.teams || []).some((rt) => rt.id === t.id))} staff={staff} shifts={shifts} assignments={weekAssignments} weekStart={weekStart} weekNum={selectedWeek} onMove={moveAssignment} onRemove={removeAssignment} onAddRequest={(s, d) => setEditCell({ staff: s, day: d, existing: null })} onEditRequest={(s, d, a) => setEditCell({ staff: s, day: d, existing: a })} dragRef={dragRef} />
+            </div>
+            <Card solid pad={20} style={{ width: 300, flexShrink: 0, position: 'sticky', top: 0 }}>
+              {compliancePanel}
+            </Card>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
