@@ -175,7 +175,7 @@ function RefinedRotaGrid({ gridTeams, staff, shifts, assignments, weekStart, wee
   const dlabel = (d) => dateForDay(weekStart, weekNum, d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
   const di = (a) => (typeof a.day === 'number' ? a.day : (DAY_INDEX[a.day] ?? 0))
   const RTH = { fontSize: 11, fontWeight: 700, color: T.muted, padding: '6px 6px 10px', textAlign: 'center' }
-  const RTH_STAFF = { ...RTH, textAlign: 'left', position: 'sticky', left: 0, background: T.cardSolid, minWidth: 160 }
+  const RTH_STAFF = { ...RTH, textAlign: 'left', position: 'sticky', left: 0, background: T.cardSolid, minWidth: 130 }
   const RTD = { padding: '4px 4px', verticalAlign: 'top' }
   const RTD_STAFF = { padding: '4px 4px', verticalAlign: 'top', position: 'sticky', left: 0, background: T.cardSolid }
   return <Card solid pad="22px 24px" style={{ marginBottom: 18 }}>
@@ -184,8 +184,8 @@ function RefinedRotaGrid({ gridTeams, staff, shifts, assignments, weekStart, wee
       <span style={{ fontSize: 12.5, color: T.faint }}>{dlabel(0)} to {dlabel(6)}</span>
     </div>
     <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 800, tableLayout: 'fixed' }}>
-        <colgroup><col style={{ width: 160 }} />{DAYS.map((d) => <col key={d} />)}</colgroup>
+      <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+        <colgroup><col style={{ width: 130 }} />{DAYS.map((d) => <col key={d} />)}</colgroup>
         <thead><tr style={{ background: 'transparent' }}><th style={RTH_STAFF}></th>{DAYS.map((d, i) => <th key={d} style={RTH}><div style={{ fontWeight: 800, color: T.body }}>{d}</div><div style={{ fontSize: 9.5, fontWeight: 500, color: T.faint, marginTop: 1 }}>{dlabel(i)}</div></th>)}</tr></thead>
         <tbody>
           {gridTeams.map((team, ti) => {
@@ -194,7 +194,6 @@ function RefinedRotaGrid({ gridTeams, staff, shifts, assignments, weekStart, wee
             return <Fragment key={team.id}>
               <tr style={{ background: 'transparent' }}><td colSpan={8} style={{ padding: ti > 0 ? '22px 0 8px' : '8px 0' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: 99, background: team.color }} />
                   <span style={{ fontSize: 12, fontWeight: 800, color: team.color, letterSpacing: 0.4, textTransform: 'uppercase' }}>{team.name}</span>
                   <div style={{ flex: 1, height: 1, background: T.hair }} />
                 </div>
@@ -206,7 +205,7 @@ function RefinedRotaGrid({ gridTeams, staff, shifts, assignments, weekStart, wee
                 const blockFg = dark ? '#fff' : blk.color
                 const blockSub = dark ? 'rgba(255,255,255,0.82)' : blk.subColor
                 return <tr key={s.id} style={{ background: 'transparent' }}>
-                  <td style={RTD_STAFF}><span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: 600, color: T.ink }}><span style={{ width: 9, height: 9, borderRadius: 99, background: team.color, flexShrink: 0 }} />{s.name}</span></td>
+                  <td style={RTD_STAFF}><span style={{ fontSize: 12.5, fontWeight: 600, color: T.ink }}>{s.name}</span></td>
                   {[0, 1, 2, 3, 4, 5, 6].map((d) => {
                     const blocks = assignments.filter((a) => a.staff_id === s.id && di(a) === d)
                     return <td key={d} onDragOver={(e) => e.preventDefault()} onDrop={() => { const dr = dragRef.current; if (dr && dr.day === d && dr.staffId !== s.id) onReassign(dr._id, s.id) }} style={RTD}>
