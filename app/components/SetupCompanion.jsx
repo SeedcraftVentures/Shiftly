@@ -103,8 +103,8 @@ export default function SetupCompanion({ onWidth }) {
 
   // ── decide where to pick up, from live data ──────────────────────────────────
   useEffect(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem(DISMISS_KEY) === '1') { setReady(true); return }
     let cancelled = false
+    const dismissed = typeof window !== 'undefined' && localStorage.getItem(DISMISS_KEY) === '1'
     ;(async () => {
       try {
         const [tRes, sRes, stRes] = await Promise.all([
@@ -118,7 +118,11 @@ export default function SetupCompanion({ onWidth }) {
         const hasShifts = Array.isArray(shiftRows) && shiftRows.length > 0
         const hasStaff = Array.isArray(staffRows) && staffRows.length > 0
 
-        if (hasShifts && hasStaff) { setMode('ask'); setHidden(false); setOpen(false); setReady(true); return } // setup done -> persistent help bubble
+        if (hasShifts && hasStaff) { setMode('ask'); setOpen(false); setHidden(!!dismissed); setReady(true); return } // setup done -> help bubble (a dismiss sticks here)
+
+        // Setup is NOT finished. A companion dismissed mid-setup is a trap, so
+        // recover it (clear the flag) rather than leaving the manager stranded.
+        if (dismissed && typeof window !== 'undefined') localStorage.removeItem(DISMISS_KEY)
 
         if (!hasTeams) {
           startAt('name', "Hey! Let's get you set up. It takes a couple of minutes, and everything happens right here so you learn the app as we go.\n\nFirst up, what's your business called?")
@@ -206,6 +210,13 @@ export default function SetupCompanion({ onWidth }) {
       const team_id = (idByName && idByName[t.name]) || t.id
       if (!team_id) continue
       const N = Math.max(1, t.min || 1)
+      const midCount = Math.max(0, N - 2)
+      const nameFor = (i) => (N === 1 ? t.name : i === 0 ? `${t.name} open` : i === N - 1 ? `${t.name} close` : midCount > 1 ? `${t.name} mid ${i}` : `${t.name} mid`)
+      const anchorFor = (i) => (N === 1 ? 'fixed' : i === 0 ? 'open' : i === N - 1 ? 'close' : 'fixed')
+      // Per position, collect the (start|end) it takes in each hours-group and
+      // merge identical times into ONE pattern spanning both days. So a 9-5 open
+      // that is the same on Sat and Sun becomes a single shift, not two.
+      const positions = Array.from({ length: N }, (_, i) => ({ name: nameFor(i), anchor: anchorFor(i), byTime: {} }))
       for (const g of groups) {
         const span = g.close - g.open
         const len = N === 1 ? span : Math.min(8, span) // solo covers the whole day; otherwise ~8h
@@ -213,11 +224,15 @@ export default function SetupCompanion({ onWidth }) {
         for (let i = 0; i < N; i++) {
           const start = N === 1 ? g.open : r2(g.open + (slack * i) / (N - 1))
           const end = Math.min(r2(start + len), g.close)
-          const anchor = N === 1 ? 'fixed' : i === 0 ? 'open' : i === N - 1 ? 'close' : 'fixed'
-          const nm = N === 1 ? t.name : anchor === 'open' ? `${t.name} open` : anchor === 'close' ? `${t.name} close` : `${t.name} mid`
+          const seg = (positions[i].byTime[`${start}|${end}`] ||= { start, end, days: [] })
+          seg.days.push(...g.days)
+        }
+      }
+      for (const p of positions) {
+        for (const seg of Object.values(p.byTime)) {
           await fetch('/api/shifts', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ team_id, name: nm, anchor_type: anchor, start, end, days: g.days, staff: 1, keyholder: false, break_duration_mins: brk(start, end), break_type: 'unpaid' }),
+            body: JSON.stringify({ team_id, name: p.name, anchor_type: p.anchor, start: seg.start, end: seg.end, days: seg.days, staff: 1, keyholder: false, break_duration_mins: brk(seg.start, seg.end), break_type: 'unpaid' }),
           })
         }
       }
@@ -276,8 +291,6 @@ export default function SetupCompanion({ onWidth }) {
 
   const onDone = () => { say({ from: 'user', text: `${staffCount} added` }); setMode('ask'); setOpen(false); router.push('/dashboard/generate?setup=1') }
 
-  const dismiss = () => { localStorage.setItem(DISMISS_KEY, '1'); setHidden(true) }
-
   if (onBuilder) return null // SetupCoach owns the rota builder
   if (!ready || hidden) return null
   if (!open) return <Bubble T={T} label={mode === 'ask' ? 'Help' : 'Finish setup'} onOpen={() => setOpen(true)} />
@@ -293,8 +306,9 @@ export default function SetupCompanion({ onWidth }) {
           <div style={{ fontSize: 11.5, color: T.faint }}>Answer here, watch it build</div>
         </div>
         <ProgressDots T={T} step={step} />
-        <button onClick={() => setOpen(false)} title="Minimise" style={iconBtn(T)}><span style={{ display: 'block', width: 12, height: 2, borderRadius: 2, background: T.faint }} /></button>
-        <button onClick={dismiss} title="Dismiss setup" style={iconBtn(T)}><Icon path="M6 6l12 12M6 18L18 6" size={13} stroke={2} color={T.faint} /></button>
+        {/* Collapse to the "Finish setup" bubble, never a dead-end dismiss: setup
+            is the FTUE, so it must always be recoverable. */}
+        <button onClick={() => setOpen(false)} title="Minimise, reopen from the Finish setup bubble" style={iconBtn(T)}><Icon path="M6 6l12 12M6 18L18 6" size={13} stroke={2} color={T.faint} /></button>
       </div>
 
       {/* transcript */}

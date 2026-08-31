@@ -218,6 +218,8 @@ export function DayTimeline({ dayIndex, shifts, height = 11, color, cfg }) {
     {!bh ? <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: T.faint }}>Closed</div> : <>
       <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${pct(bh[0])}%`, width: `${pct(bh[1]) - pct(bh[0])}%`, background: color + '2A' }} />
       {dayShifts.map((s) => <div key={s.id} style={{ position: 'absolute', top: 1.5, bottom: 1.5, left: `${pct(s.start)}%`, width: `${Math.max(2, pct(s.end) - pct(s.start))}%`, background: color, borderRadius: 999 }} title={`${s.name} ${fmt(s.start)}-${fmt(s.end)}`} />)}
+      {/* close marker: the grey past here is closed, not a gap (days close at different times) */}
+      <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${pct(bh[1])}%`, width: 2, marginLeft: -1, background: T.body, borderRadius: 2 }} title={`Closes ${fmt(bh[1])}`} />
     </>}
   </div>
 }
@@ -231,7 +233,8 @@ export function AxisTicks({ cfg, ml = 40 }) {
 }
 function Legend({ T, color }) {
   const item = (c, label) => <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5, color: T.faint }}><span style={{ width: 10, height: 10, borderRadius: 3, background: c }} />{label}</span>
-  return <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>{item(color, 'Covered')}{item(color + '2A', 'Gap')}{item(T.subtle, 'Closed')}</div>
+  const line = (label) => <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 10.5, color: T.faint }}><span style={{ width: 2, height: 11, borderRadius: 2, background: T.body }} />{label}</span>
+  return <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>{item(color, 'Covered')}{item(color + '2A', 'Gap')}{item(T.subtle, 'Closed')}{line('Close')}</div>
 }
 // smart structural gap chips + the "this looks right" escape hatch
 export function GapStrip({ shifts, onApply, accent, cfg, ok, onToggleOk }) {
@@ -358,23 +361,25 @@ export function TeamRotaGrid({ groups, cfg, selectedId, onSelect, selectMode, se
   // weekdays vs the weekend reads as one row with per-day times. The count then
   // falls out like a real rota: staff-on per day along the bottom, hours per row
   // down the right, and a grand total for the whole place.
-  const sig = (days) => [...days].sort((a, b) => a - b).join(',')
   const gross = (s) => Math.max(0, (s.end || 0) - (s.start || 0))
   const hrsFmt = (h) => { const v = Math.round(h * 2) / 2; return (Number.isInteger(v) ? v : v.toFixed(1)) + 'h' }
   const slotBase = (name) => (name && name.endsWith('s') ? name.slice(0, -1) : name || 'Staff')
 
+  // One position per shift NAME: patterns of the same slot (its weekday, Saturday
+  // and Sunday times) collapse into a single row with per-day times. Ordered by
+  // earliest start, so the opener is row 1 and the closer is last.
   const positionsFor = (shifts) => {
-    const byGroup = {}
-    for (const s of shifts) (byGroup[sig(s.days)] ||= []).push(s)
-    const arr = Object.values(byGroup).map((g) => g.slice().sort((a, b) => a.start - b.start))
-    const maxLen = arr.reduce((m, g) => Math.max(m, g.length), 0)
-    const out = []
-    for (let k = 0; k < maxLen; k++) {
-      const byDay = {}; let sample = null
-      for (const g of arr) { const s = g[k]; if (!s) continue; sample = sample || s; for (const d of s.days) byDay[d] = s }
-      out.push({ byDay, sample })
+    const byName = {}
+    for (const s of shifts) {
+      const key = s.name || `#${s.id}`
+      const p = (byName[key] ||= { byDay: {}, primaryStart: 0, maxDays: -1, anchor: null, sample: null })
+      p.sample = p.sample || s
+      // order/label off the pattern that covers the most days (the "primary" hours)
+      if ((s.days?.length || 0) > p.maxDays) { p.maxDays = s.days.length; p.primaryStart = s.start ?? 0; p.anchor = s.anchor_type || s.pin || null }
+      for (const d of s.days) p.byDay[d] = s
     }
-    return out
+    const rank = (p) => (p.anchor === 'open' ? -1 : p.anchor === 'close' ? 1 : 0)
+    return Object.values(byName).sort((a, b) => rank(a) - rank(b) || a.primaryStart - b.primaryStart)
   }
 
   const data = groups.map((g) => {
