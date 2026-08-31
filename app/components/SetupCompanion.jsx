@@ -316,13 +316,15 @@ export default function SetupCompanion({ onWidth }) {
 
       {/* composer */}
       <div style={{ borderTop: `1px solid ${T.hair}`, padding: 13, background: T.subtle }}>
-        {error && <div style={{ fontSize: 12.5, color: T.red, fontWeight: 600, marginBottom: 9 }}>{error}</div>}
-        {step === 'name' && <NameComposer T={T} onSubmit={onName} />}
-        {step === 'hours' && <HoursStep T={T} hours={hours} setHours={setHours} busy={busy} onNext={onHours} />}
-        {step === 'team' && <TeamComposer T={T} teams={teams} setTeams={setTeams} busy={busy} onSubmit={onTeams} />}
-        {step === 'coverage' && <CoverageComposer T={T} teams={teams} setTeams={setTeams} busy={busy} onSubmit={onCoverage} />}
-        {step === 'review' && <Button full arrow onClick={onReview}>Looks good, add my team</Button>}
-        {step === 'staff' && <StaffComposer T={T} teams={teams} count={staffCount} reqByTeam={reqByTeam} addedByTeam={addedByTeam} onAdd={addStaff} say={say} onDone={onDone} />}
+        <div style={{ maxWidth: 820, margin: '0 auto' }}>
+          {error && <div style={{ fontSize: 12.5, color: T.red, fontWeight: 600, marginBottom: 9 }}>{error}</div>}
+          {step === 'name' && <NameComposer T={T} onSubmit={onName} />}
+          {step === 'hours' && <HoursStep T={T} hours={hours} setHours={setHours} busy={busy} onNext={onHours} />}
+          {step === 'team' && <TeamComposer T={T} teams={teams} setTeams={setTeams} busy={busy} onSubmit={onTeams} />}
+          {step === 'coverage' && <CoverageComposer T={T} teams={teams} setTeams={setTeams} busy={busy} onSubmit={onCoverage} />}
+          {step === 'review' && <Button full arrow onClick={onReview}>Looks good, add my team</Button>}
+          {step === 'staff' && <StaffComposer T={T} teams={teams} count={staffCount} reqByTeam={reqByTeam} addedByTeam={addedByTeam} onAdd={addStaff} say={say} onDone={onDone} />}
+        </div>
       </div>
     </Drawer>
   )
@@ -330,10 +332,11 @@ export default function SetupCompanion({ onWidth }) {
 
 // ── the fixed drawer shell (shared by setup + ask) ────────────────────────────
 function Drawer({ T, children }) {
-  // Docked at the bottom like an IDE terminal: reads left-to-right, doesn't wedge
-  // space between the nav and the content, and floats centred over the page.
+  // Docked along the BOTTOM of the content like an IDE terminal: a full-width
+  // block that takes its own height in the flow, so the page shrinks to sit above
+  // it and is never overlapped. The panel above clips its corners.
   return (
-    <div style={{ position: 'fixed', left: '50%', transform: 'translateX(-50%)', bottom: 14, width: 'min(920px, calc(100vw - 28px))', height: 'min(56vh, 520px)', zIndex: 60, display: 'flex', flexDirection: 'column', fontFamily: T.font, background: T.cardSolid, border: `1px solid ${T.line}`, borderRadius: 18, overflow: 'hidden', boxShadow: T.shadow.lg }}>{children}</div>
+    <div style={{ flexShrink: 0, width: '100%', height: 'min(46vh, 440px)', display: 'flex', flexDirection: 'column', fontFamily: T.font, background: T.cardSolid, borderTop: `1px solid ${T.line}`, boxShadow: T.name === 'dark' ? '0 -8px 24px rgba(0,0,0,0.4)' : '0 -8px 24px rgba(0,0,0,0.05)' }}>{children}</div>
   )
 }
 
@@ -456,15 +459,17 @@ function Transcript({ T, msgs }) {
   const ref = useRef(null)
   useEffect(() => { const el = ref.current; if (el) el.scrollTop = el.scrollHeight }, [msgs])
   return (
-    <div ref={ref} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 15, display: 'flex', flexDirection: 'column', gap: 9 }}>
-      {msgs.map((m, i) => {
-        const bot = m.from === 'bot'
-        return (
-          <div key={i} style={{ display: 'flex', justifyContent: bot ? 'flex-start' : 'flex-end' }}>
-            <div style={{ maxWidth: '88%', whiteSpace: 'pre-wrap', fontSize: 13.5, lineHeight: 1.5, padding: '10px 13px', borderRadius: 14, ...(bot ? { background: T.subtle, color: T.body, borderBottomLeftRadius: 4 } : { background: T.pink, color: '#fff', borderBottomRightRadius: 4, fontWeight: 600 }) }}>{m.text}</div>
-          </div>
-        )
-      })}
+    <div ref={ref} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 15 }}>
+      <div style={{ maxWidth: 820, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 9 }}>
+        {msgs.map((m, i) => {
+          const bot = m.from === 'bot'
+          return (
+            <div key={i} style={{ display: 'flex', justifyContent: bot ? 'flex-start' : 'flex-end' }}>
+              <div style={{ maxWidth: 'min(90%, 620px)', whiteSpace: 'pre-wrap', fontSize: 13.5, lineHeight: 1.5, padding: '10px 13px', borderRadius: 14, ...(bot ? { background: T.subtle, color: T.body, borderBottomLeftRadius: 4 } : { background: T.pink, color: '#fff', borderBottomRightRadius: 4, fontWeight: 600 }) }}>{m.text}</div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

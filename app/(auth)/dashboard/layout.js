@@ -16,42 +16,28 @@ export default function DashboardLayout({ children }) {
   useEffect(() => { if (localStorage.getItem('shiftly_nav_collapsed') === '1') setCollapsed(true) }, [])
   const toggleCollapse = () => setCollapsed((c) => { const n = !c; localStorage.setItem('shiftly_nav_collapsed', n ? '1' : '0'); return n })
 
-  // The setup companion reports its footprint so we can condense the app to its
-  // left instead of being overlapped. Only on wide screens; it overlays on mobile.
-  const [companionW, setCompanionW] = useState(0)
-  const [wide, setWide] = useState(false)
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 1024px)')
-    const on = () => setWide(mq.matches); on()
-    mq.addEventListener('change', on)
-    return () => mq.removeEventListener('change', on)
-  }, [])
-  const padRight = wide && companionW ? companionW : undefined
-
   return (
     <OnboardingCheck>
-      <div style={{ fontFamily: "var(--font-figtree), 'Plus Jakarta Sans', system-ui, sans-serif", background: '#FF1F7D', paddingRight: padRight, transition: 'padding-right .28s ease' }} className={`min-h-screen p-3 transition-[padding] duration-200 ${collapsed ? 'lg:pl-[4.75rem]' : 'lg:pl-52'}`}>
+      <div style={{ fontFamily: "var(--font-figtree), 'Plus Jakarta Sans', system-ui, sans-serif", background: '#FF1F7D' }} className={`min-h-screen p-3 ${collapsed ? 'lg:pl-[4.75rem]' : 'lg:pl-52'}`}>
         <Navigation collapsed={collapsed} onToggleCollapse={toggleCollapse} />
-        <div style={{ background: T.appBg }} className="min-h-[calc(100vh-1.5rem)] rounded-[1.25rem] lg:ml-1 mt-14 lg:mt-0 flex flex-col relative">
-          {/* Non-sticky trial countdown, in flow at the top of the content so it
-              scrolls away (renders nothing outside the trial). */}
+        {/* Content column. On wide screens it's a fixed-height frame: the page
+            scrolls inside it and the setup companion docks along the BOTTOM like an
+            IDE terminal, so the page sits above it and is never overlapped. */}
+        <div style={{ background: T.appBg }} className="min-h-[calc(100vh-1.5rem)] lg:h-[calc(100vh-1.5rem)] lg:overflow-hidden rounded-[1.25rem] lg:ml-1 mt-14 lg:mt-0 flex flex-col relative">
+          {/* Non-sticky trial countdown at the top of the content. */}
           <TrialBanner />
-          {/* notifications overlay the top-right corner (in line with each page's title)
-              instead of consuming their own row, so pages start near the top */}
+          {/* notifications overlay the top-right corner (in line with each page's title). */}
           <div className="hidden lg:block absolute top-0 right-0 z-20">
             <DashboardTopBar />
           </div>
-          <div className="flex-1">
+          <div className="flex-1 lg:overflow-y-auto lg:min-h-0">
             {children}
           </div>
+          {/* First-run setup, docked at the bottom of the content (IDE terminal).
+              Renders nothing when complete/dismissed, a bubble when collapsed. */}
+          <SetupCompanion />
         </div>
-        {/* First-run setup, in place. Floats over every dashboard page; shows
-            only while the workspace is incomplete, else steps aside to a bubble.
-            It reports its width so the app condenses beside it (wide screens). */}
-        <SetupCompanion onWidth={setCompanionW} />
-        {/* Trial countdown nudge + the post-trial paywall. Self-contained: reads
-            its own entitlement, renders fixed overlays, and blocks the app when
-            the no-card trial has expired (data stays saved). */}
+        {/* Trial countdown paywall overlay (fixed, self-contained). */}
         <TrialGate />
       </div>
     </OnboardingCheck>
