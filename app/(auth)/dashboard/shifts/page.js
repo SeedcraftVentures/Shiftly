@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback, Fragment } from 'react'
 import { TEAM_COLORS } from '../staff/utils/staffHelpers'
-import { rotaBlock } from '@/lib/rotaColors'
 import { useTheme, Card, Button, Pill, Tag, Ring, Icon, Ic, Switch, Stepper, DayPicker, TimeRange, Segmented, Input, Label, Tip, fmtTime, EASE, THEMES } from '@/app/components/ui/kit'
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -70,7 +69,6 @@ const withPin = (s) => ({ ...s, pin: s.pin || (s.anchor_type === 'open' ? 'open'
 const pinToAnchor = (pin) => (pin === 'open' ? 'open' : pin === 'close' ? 'close' : 'fixed')
 const autoName = (pin) => (pin === 'open' ? 'Open' : pin === 'close' ? 'Close' : 'Custom')
 const isAutoName = (name) => !name || name === 'New shift' || ['Open', 'Close', 'Custom'].includes(name)
-const gridLabel = (s) => (s.pin === 'open' ? 'Open' : s.pin === 'close' ? 'Close' : (s.name || 'Custom'))
 const sameSet = (a, b) => [...a].sort((x, y) => x - y).join() === [...b].sort((x, y) => x - y).join()
 const scopeLabel = (days, cfg) => sameSet(days, cfg.openDays) ? 'Full-week' : sameSet(days, WEEKDAYS.filter((d) => cfg.openDays.includes(d))) ? 'Weekday' : sameSet(days, WEEKEND.filter((d) => cfg.openDays.includes(d))) ? 'Weekend' : days.map((d) => DAYS[d]).join(' ')
 // smart gaps, structural suggestions (full-week/weekday/weekend open or close) + interior windows
@@ -351,63 +349,104 @@ function AllMatrix({ teams, shifts, expanded, setExpanded, onApply, cfg, okTeams
 // ── team rota-grid (all-teams overview · shared with /try-me) ───────────────────
 export function TeamRotaGrid({ groups, cfg, selectedId, onSelect, selectMode, selectedIds, onToggle }) {
   const ctx = useTheme(); const T = ctx.T || LIGHT
-  const [hoverId, setHoverId] = useState(null)
-  const interactive = !!onSelect || !!selectMode
-  const cell = { padding: '4px 4px', verticalAlign: 'middle' }
-  const RTH = { fontSize: 11, fontWeight: 700, color: T.muted, padding: '6px 6px 10px', textAlign: 'center' }
+  const [hoverKey, setHoverKey] = useState(null)
+  const interactive = !!onSelect
+  const dark = T.name === 'dark'
+
+  // One row per POSITION, not per shift. The k-th shift (by start) of each
+  // day-group merges into a single line, so a role that runs different hours on
+  // weekdays vs the weekend reads as one row with per-day times. The count then
+  // falls out like a real rota: staff-on per day along the bottom, hours per row
+  // down the right, and a grand total for the whole place.
+  const sig = (days) => [...days].sort((a, b) => a - b).join(',')
+  const gross = (s) => Math.max(0, (s.end || 0) - (s.start || 0))
+  const hrsFmt = (h) => { const v = Math.round(h * 2) / 2; return (Number.isInteger(v) ? v : v.toFixed(1)) + 'h' }
+  const slotBase = (name) => (name && name.endsWith('s') ? name.slice(0, -1) : name || 'Staff')
+
+  const positionsFor = (shifts) => {
+    const byGroup = {}
+    for (const s of shifts) (byGroup[sig(s.days)] ||= []).push(s)
+    const arr = Object.values(byGroup).map((g) => g.slice().sort((a, b) => a.start - b.start))
+    const maxLen = arr.reduce((m, g) => Math.max(m, g.length), 0)
+    const out = []
+    for (let k = 0; k < maxLen; k++) {
+      const byDay = {}; let sample = null
+      for (const g of arr) { const s = g[k]; if (!s) continue; sample = sample || s; for (const d of s.days) byDay[d] = s }
+      out.push({ byDay, sample })
+    }
+    return out
+  }
+
+  const data = groups.map((g) => {
+    const positions = positionsFor(g.shifts)
+    const dayCount = (d) => positions.reduce((n, p) => n + (p.byDay[d] ? 1 : 0), 0)
+    const teamHrs = positions.reduce((sum, p) => sum + ALL.reduce((s, d) => s + (p.byDay[d] ? gross(p.byDay[d]) : 0), 0), 0)
+    return { name: g.name, color: g.color, positions, dayCount, teamHrs }
+  })
+  const grandDay = (d) => data.reduce((n, t) => n + t.dayCount(d), 0)
+  const grandHrs = data.reduce((s, t) => s + t.teamHrs, 0)
+  const anyStaff = data.some((t) => t.positions.length > 0)
+
+  const cell = { padding: '3px 4px', verticalAlign: 'middle' }
+  const RTH = { fontSize: 11, fontWeight: 700, color: T.faint, padding: '4px 6px 10px', textAlign: 'center' }
+  const totTop = `1px solid ${T.hair}`
+  const sticky = { position: 'sticky', left: 0, background: T.cardSolid }
+
   return <div style={{ overflowX: 'auto' }}>
-    <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, minWidth: 800, tableLayout: 'fixed' }}>
-      <colgroup><col style={{ width: 160 }} />{DAYS.map((d) => <col key={d} />)}</colgroup>
-      <thead><tr style={{ background: 'transparent' }}><th style={{ ...RTH, textAlign: 'left', position: 'sticky', left: 0, background: T.cardSolid, minWidth: 160 }} />{DAYS.map((d) => <th key={d} style={RTH}><div style={{ fontWeight: 800, color: T.body }}>{d}</div></th>)}</tr></thead>
+    <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, minWidth: 780, tableLayout: 'fixed' }}>
+      <colgroup><col style={{ width: 150 }} />{DAYS.map((d) => <col key={d} />)}<col style={{ width: 62 }} /></colgroup>
+      <thead><tr>
+        <th style={{ ...RTH, textAlign: 'left', ...sticky, minWidth: 150 }} />
+        {DAYS.map((d) => <th key={d} style={RTH}><span style={{ fontWeight: 800, color: T.body }}>{d}</span></th>)}
+        <th style={{ ...RTH, textTransform: 'uppercase', letterSpacing: '.04em' }}>Hrs/wk</th>
+      </tr></thead>
       <tbody>
-        {groups.map((g) => <Fragment key={g.name}>
-          {groups.length > 1 && <tr style={{ background: 'transparent' }}><td colSpan={8} style={{ padding: '6px 0 10px' }}>
+        {!anyStaff && <tr><td colSpan={9} style={{ textAlign: 'center', color: T.faint, fontSize: 13, padding: '24px 0' }}>No shifts yet, add one to see the week build up.</td></tr>}
+        {data.map((t) => <Fragment key={t.name}>
+          {groups.length > 1 && t.positions.length > 0 && <tr><td colSpan={9} style={{ padding: '14px 0 8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ width: 8, height: 8, borderRadius: 99, background: g.color }} />
-              <span style={{ fontSize: 12, fontWeight: 800, color: g.color, letterSpacing: 0.4, textTransform: 'uppercase' }}>{g.name}</span>
+              <span style={{ fontSize: 12, fontWeight: 800, color: t.color, letterSpacing: 0.4, textTransform: 'uppercase' }}>{t.name}</span>
               <div style={{ flex: 1, height: 1, background: T.hair }} />
             </div>
           </td></tr>}
-          {g.shifts.length === 0 && <tr style={{ background: 'transparent' }}><td colSpan={8} style={{ textAlign: 'center', color: T.faint, fontSize: 13, padding: '20px 0' }}>No shifts yet, add one to see the week build up.</td></tr>}
-          {g.shifts.map((s, idx) => {
-            const blk = rotaBlock(g.color, idx)
-            // rotaBlock is tuned for light mode (pale tinted blocks + dark text). In dark mode
-            // that reads as bright bands, so paint blocks in the team colour at a per-shift alpha.
-            const dark = T.name === 'dark'
-            const alphas = ['FF', 'C4', '96', '70']
-            const blockBg = dark ? g.color + alphas[idx % alphas.length] : blk.background
-            const blockFg = dark ? '#fff' : blk.color
-            const blockSub = dark ? 'rgba(255,255,255,0.82)' : blk.subColor
-            const sel = selectedId === s.id, checked = selectedIds?.has(s.id), hov = interactive && hoverId === s.id
-            const rowBg = sel && !selectMode ? g.color + '14' : (hov ? T.subtle : 'transparent')
-            const active = rowBg !== 'transparent'
-            const bar = sel && !selectMode ? g.color : (hov ? g.color + '66' : null)
-            const stickyBg = active ? `linear-gradient(0deg, ${rowBg}, ${rowBg}), ${T.cardSolid}` : T.cardSolid
-            const n = Math.max(1, s.staff || 1)
-            return Array.from({ length: n }, (_, i) => {
-              const first = i === 0, last = i === n - 1
-              return <tr key={`${s.id}-${i}`} title={interactive && first && !selectMode ? 'Click to edit this shift' : undefined} onClick={() => (interactive ? (selectMode ? onToggle?.(s.id) : onSelect?.(s.id)) : null)} onMouseEnter={() => interactive && setHoverId(s.id)} onMouseLeave={() => interactive && setHoverId(null)} style={{ background: 'transparent', cursor: interactive ? 'pointer' : 'default', transition: 'background .1s' }}>
-                <td style={{ ...cell, position: 'sticky', left: 0, background: stickyBg, borderTopLeftRadius: active && first ? 10 : 0, borderBottomLeftRadius: active && last ? 10 : 0, boxShadow: bar ? `inset 3px 0 0 ${bar}` : 'none' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, fontWeight: sel ? 800 : 600 }}>
-                    {selectMode
-                      ? (first ? <span style={{ width: 18, height: 18, borderRadius: 5, flexShrink: 0, border: `1.5px solid ${checked ? g.color : T.faint}`, background: checked ? g.color : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11, fontWeight: 800 }}>{checked ? '✓' : ''}</span> : <span style={{ width: 18, flexShrink: 0 }} />)
-                      : <span style={{ width: 9, height: 9, borderRadius: 99, flexShrink: 0, background: first ? g.color : 'transparent', border: first ? 'none' : `1.5px solid ${g.color}66` }} />}
-                    {first ? <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, color: T.ink }}>{gridLabel(s)}</span> : <span style={{ minWidth: 0 }} />}
-                    {interactive && !selectMode && hov && first && <span style={{ marginLeft: 'auto', paddingLeft: 4, color: g.color, fontSize: 14, fontWeight: 800, flexShrink: 0 }}>›</span>}
-                  </span>
+          {t.positions.map((p, i) => {
+            const hint = t.positions.length === 1 ? 'all day' : i === 0 ? 'opens' : i === t.positions.length - 1 ? 'closes' : 'mid'
+            const wk = ALL.reduce((s, d) => s + (p.byDay[d] ? gross(p.byDay[d]) : 0), 0)
+            const rowKey = `${t.name}-${i}`
+            const sel = interactive && p.sample && p.sample.id === selectedId
+            const hov = interactive && hoverKey === rowKey
+            const rowBg = sel ? t.color + '14' : (hov ? T.subtle : 'transparent')
+            const stickyBg = rowBg !== 'transparent' ? `linear-gradient(0deg,${rowBg},${rowBg}),${T.cardSolid}` : T.cardSolid
+            return <tr key={rowKey} onMouseEnter={() => interactive && setHoverKey(rowKey)} onMouseLeave={() => interactive && setHoverKey(null)} style={{ transition: 'background .1s' }}>
+              <td style={{ ...cell, ...sticky, background: stickyBg }}>
+                <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.12 }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 700, color: T.ink }}>{slotBase(t.name)} {i + 1}</span>
+                  <span style={{ fontSize: 10.5, fontWeight: 600, color: T.faint }}>{hint}</span>
+                </span>
+              </td>
+              {ALL.map((d) => {
+                const s = p.byDay[d]
+                return <td key={d} style={{ ...cell, background: rowBg }} onClick={interactive && s ? () => onSelect(s.id) : undefined} title={interactive && s ? 'Click to edit' : undefined}>
+                  {s ? <div style={{ background: t.color + (dark ? 'E0' : 'F2'), borderRadius: 9, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, cursor: interactive ? 'pointer' : 'default' }}>
+                    <span style={{ color: '#fff', fontWeight: 700, fontSize: 10.5, whiteSpace: 'nowrap' }}>{fmt(s.start)}-{fmt(s.end)}</span>
+                    {s.keyholder && <Icon path={Ic.key} size={10} stroke={2.2} color="#fff" />}
+                  </div> : null}
                 </td>
-                {ALL.map((d) => <td key={d} style={{ ...cell, background: active ? rowBg : 'transparent', borderTopRightRadius: active && first && d === 6 ? 10 : 0, borderBottomRightRadius: active && last && d === 6 ? 10 : 0 }}>
-                  {s.days.includes(d)
-                    ? <div style={{ background: blockBg, borderRadius: 9, padding: '6px 5px', boxShadow: dark ? 'none' : blk.shadow, height: 38, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-                        <div style={{ color: blockFg, fontWeight: 700, fontSize: 10.5, lineHeight: 1.2, whiteSpace: 'nowrap' }}>{fmt(s.start)}-{fmt(s.end)}</div>
-                        {first && s.keyholder && <div style={{ display: 'flex', alignItems: 'center', gap: 3, color: blockSub, fontSize: 9.5 }}><Icon path={Ic.key} size={10} stroke={2} color={blockSub} />keyholder</div>}
-                      </div>
-                    : null}
-                </td>)}
-              </tr>
-            })
+              })}
+              <td style={{ ...cell, textAlign: 'center', fontSize: 12, fontWeight: 700, color: T.muted }}>{hrsFmt(wk)}</td>
+            </tr>
           })}
+          {t.positions.length > 0 && <tr>
+            <td style={{ ...cell, ...sticky, fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.06em', color: T.muted, borderTop: totTop }}>On</td>
+            {ALL.map((d) => <td key={d} style={{ ...cell, textAlign: 'center', fontSize: 13, fontWeight: 800, color: t.dayCount(d) ? T.ink : T.faint, borderTop: totTop }}>{t.dayCount(d) || '·'}</td>)}
+            <td style={{ ...cell, textAlign: 'center', fontSize: 12, fontWeight: 800, color: T.muted, borderTop: totTop }}>{hrsFmt(t.teamHrs)}</td>
+          </tr>}
         </Fragment>)}
+        {anyStaff && <tr>
+          <td style={{ ...cell, ...sticky, fontSize: 10.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.06em', color: T.ink, borderTop: `1.5px solid ${T.line}`, paddingTop: 9 }}>Total staff</td>
+          {ALL.map((d) => <td key={d} style={{ ...cell, textAlign: 'center', fontSize: 13.5, fontWeight: 800, color: T.pink, borderTop: `1.5px solid ${T.line}`, paddingTop: 9 }}>{grandDay(d)}</td>)}
+          <td style={{ ...cell, textAlign: 'center', fontSize: 12.5, fontWeight: 800, color: T.ink, borderTop: `1.5px solid ${T.line}`, paddingTop: 9 }}>{hrsFmt(grandHrs)}</td>
+        </tr>}
       </tbody>
     </table>
   </div>
