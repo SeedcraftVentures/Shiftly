@@ -92,8 +92,8 @@ export default function SetupCoach({ active, generating, hasResult, published, o
             <div style={{ fontSize: 12.5, color: T.muted, lineHeight: 1.5, marginTop: 14 }}>
               Edit anything: click a shift to change it, drag it onto someone else to reassign, x to remove, + to add. The compliance panel on the right updates as you go.
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, fontSize: 12, color: T.faint }}>
-              <span style={{ width: 6, height: 6, borderRadius: 999, background: T.pink }} />When you're happy, hit Publish in the bar above.
+            <div style={{ marginTop: 12, fontSize: 12, color: T.faint }}>
+              When you're happy, hit Publish in the bar above.
             </div>
           </>
         )}

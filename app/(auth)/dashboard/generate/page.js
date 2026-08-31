@@ -443,10 +443,7 @@ export default function RotaBuilder() {
   })()
   const rotaStaff = result ? staff.filter((s) => (result.teams || []).some((t) => t.id === s.team_id) && s.contracted_hours > 0) : []
 
-  if (loading) return <div style={{ fontFamily: T.font, padding: 60, textAlign: 'center', color: T.faint }}>Loading…</div>
-
-  const inspectorAccent = editCell ? TEAM_COLORS[Math.max(0, teams.findIndex((t) => t.id === editCell.staff.team_id)) % TEAM_COLORS.length] : T.pink
-  const openDays = useMemo(() => [...new Set((shifts || []).flatMap((s) => (s.days || []).map((d) => (typeof d === 'number' ? d : DAY_INDEX[d]))))].sort((a, b) => a - b), [shifts])
+  const openDays = useMemo(() => [...new Set((shifts || []).flatMap((s) => (Array.isArray(s.days) ? s.days : []).map((d) => (typeof d === 'number' ? d : DAY_INDEX[d]))))].sort((a, b) => a - b), [shifts])
   // Busier days: add one extra person (a peak-time cover) on the chosen days so
   // there are enough shift-hours for everyone to reach their contracted hours.
   const addBusyCover = useCallback(async () => {
@@ -456,7 +453,7 @@ export default function RotaBuilder() {
       const target = teamId === 'all' ? teams : teams.filter((t) => t.id === teamId)
       for (const t of target) {
         for (const d of busyDays) {
-          const ds = shifts.filter((s) => s.team_id === t.id && (s.days || []).map((x) => (typeof x === 'number' ? x : DAY_INDEX[x])).includes(d))
+          const ds = shifts.filter((s) => s.team_id === t.id && (Array.isArray(s.days) ? s.days : []).map((x) => (typeof x === 'number' ? x : DAY_INDEX[x])).includes(d))
           const [open, close] = ds.length ? [Math.min(...ds.map((s) => Number(s.start))), Math.max(...ds.map((s) => Number(s.end)))] : [9, 17]
           const len = Math.min(8, close - open)
           const start = Math.round((open + Math.max(0, (close - open - len) / 2)) * 2) / 2
@@ -470,6 +467,10 @@ export default function RotaBuilder() {
       setBusyMsg('added'); setBusyDays([])
     } catch { setBusyMsg('error') }
   }, [busyDays, teams, teamId, shifts])
+
+  if (loading) return <div style={{ fontFamily: T.font, padding: 60, textAlign: 'center', color: T.faint }}>Loading…</div>
+
+  const inspectorAccent = editCell ? TEAM_COLORS[Math.max(0, teams.findIndex((t) => t.id === editCell.staff.team_id)) % TEAM_COLORS.length] : T.pink
 
   const label = { fontSize: 11.5, fontWeight: 600, color: T.faint, letterSpacing: '0.02em', textTransform: 'uppercase', marginBottom: 8 }
 
