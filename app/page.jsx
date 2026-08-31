@@ -408,7 +408,7 @@ export default function LandingPage() {
                         </div>
                       ))}
                     </div>
-                    <Link href="/sign-up" className="block w-full py-3 rounded-xl font-semibold text-gray-900 text-center bg-white hover:bg-pink-50 transition-all">
+                    <Link href="/sign-up?next=%2Fcheckout%3Fplan%3Dannual" className="block w-full py-3 rounded-xl font-semibold text-gray-900 text-center bg-white hover:bg-pink-50 transition-all">
                       Claim a spot
                     </Link>
                   </div>

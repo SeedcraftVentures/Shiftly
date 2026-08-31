@@ -51,11 +51,14 @@ function CheckoutContent() {
   const { user, isLoaded } = useUser()
   const searchParams = useSearchParams()
   const [tier, setTier] = useState('ai')
-  const [billingCycle, setBillingCycle] = useState('monthly')
+  // While the founding offer is live, default to annual so the £299 Companion deal
+  // is shown and auto-applied; monthly stays one toggle away.
+  const [billingCycle, setBillingCycle] = useState(FOUNDING.active ? 'annual' : 'monthly')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [promoCode, setPromoCode] = useState('')
   const [showPromoInput, setShowPromoInput] = useState(false)
+  const isFounding = FOUNDING.active && tier === 'ai' && billingCycle === 'annual'
 
   useEffect(() => {
     const plan = searchParams.get('plan')
@@ -105,7 +108,7 @@ function CheckoutContent() {
             <span className="text-2xl font-cal text-gray-900">Shiftly</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 font-cal">Unlimited staff. One flat price.</h1>
-          <p className="text-gray-600 mt-2">Unlimited staff at every site, and extra locations are just £20 each. Free for 7 days, cancel anytime.</p>
+          <p className="text-gray-600 mt-2">Unlimited staff at every site, and extra locations are just £20 each. Cancel anytime, from settings.</p>
         </div>
 
         {/* Billing cycle toggle */}
@@ -229,11 +232,11 @@ function CheckoutContent() {
               <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
               <span>Processing...</span>
             </span>
-          ) : `Start my free trial (${PLANS[tier].name})`}
+          ) : (isFounding ? 'Claim my founding seat' : `Subscribe · ${PLANS[tier].name}`)}
         </button>
 
         <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-          {['Free for 7 days', 'Cancel anytime in settings', 'Secure payment via Stripe'].map((t) => (
+          {['Billed today', 'Cancel anytime in settings', 'Secure payment via Stripe'].map((t) => (
             <p key={t} className="text-gray-500 text-xs flex items-center gap-1.5">
               <svg className="w-4 h-4 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
               {t}

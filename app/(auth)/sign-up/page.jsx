@@ -1,7 +1,7 @@
 'use client'
 
-import { useSignUp } from '@clerk/nextjs'
-import { useState } from 'react'
+import { useSignUp, useAuth } from '@clerk/nextjs'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 
 const badWords = [
@@ -35,6 +35,16 @@ export default function SignUpPage() {
   const [code, setCode] = useState('')
   const [error, setError] = useState('')
   const router = useRouter()
+
+  // Optional post-signup destination. The founding card sends people to
+  // `?next=/checkout?plan=annual` so they go straight to paying, skipping the
+  // trial. Only internal paths are honoured (no open redirect).
+  const { isSignedIn } = useAuth()
+  const getDest = () => {
+    const p = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('next') : null
+    return p && p.startsWith('/') && !p.startsWith('//') ? p : '/dashboard'
+  }
+  useEffect(() => { if (isSignedIn) router.replace(getDest()) }, [isSignedIn, router])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -85,9 +95,9 @@ export default function SignUpPage() {
 
       if (completeSignUp.status === 'complete') {
         await setActive({ session: completeSignUp.createdSessionId })
-        // Straight into the app — the 7-day trial is no-card and starts in-app
-        // (seeded on onboarding). Checkout is now the "subscribe" action, not a gate.
-        router.push('/dashboard')
+        // Default: straight into the app (the no-card trial seeds on onboarding).
+        // A `next` param (e.g. the founding card -> checkout) overrides this.
+        router.push(getDest())
       }
     } catch (err) {
       console.error('Verification error:', err)

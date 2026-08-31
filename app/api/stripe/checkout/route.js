@@ -18,6 +18,19 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Price ID is required' }, { status: 400 })
     }
 
+    // The founding code is only valid on the Companion annual price. Guard it
+    // server-side so neither the promo box nor a crafted request can apply the
+    // £300 off to a cheaper plan (which would make it free or negative).
+    const foundingCode = process.env.NEXT_PUBLIC_STRIPE_FOUNDING_CODE
+    const aiAnnualPrice = process.env.NEXT_PUBLIC_STRIPE_PRICE_AI_ANNUAL
+    if (
+      promoCode && foundingCode && aiAnnualPrice &&
+      promoCode.trim().toLowerCase() === foundingCode.toLowerCase() &&
+      priceId !== aiAnnualPrice
+    ) {
+      return NextResponse.json({ error: 'That code only applies to the Companion annual plan.' }, { status: 400 })
+    }
+
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://shiftly.so'
 
     // Build session config
