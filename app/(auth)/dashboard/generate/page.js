@@ -169,7 +169,7 @@ function ShiftInspector({ staff, day, existing, accent, onClose, onSave, onRemov
   </>
 }
 
-function RefinedRotaGrid({ gridTeams, staff, shifts, assignments, weekStart, weekNum, onReassign, onRemove, onAddRequest, onEditRequest, dragRef }) {
+function RefinedRotaGrid({ gridTeams, staff, shifts, assignments, weekStart, weekNum, onMove, onRemove, onAddRequest, onEditRequest, dragRef }) {
   const { T } = useTheme()
   const dark = T.name === 'dark'
   const dlabel = (d) => dateForDay(weekStart, weekNum, d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
@@ -208,7 +208,7 @@ function RefinedRotaGrid({ gridTeams, staff, shifts, assignments, weekStart, wee
                   <td style={RTD_STAFF}><span style={{ fontSize: 12.5, fontWeight: 600, color: T.ink }}>{s.name}</span></td>
                   {[0, 1, 2, 3, 4, 5, 6].map((d) => {
                     const blocks = assignments.filter((a) => a.staff_id === s.id && di(a) === d)
-                    return <td key={d} onDragOver={(e) => e.preventDefault()} onDrop={() => { const dr = dragRef.current; if (dr && dr.day === d && dr.staffId !== s.id) onReassign(dr._id, s.id) }} style={RTD}>
+                    return <td key={d} onDragOver={(e) => e.preventDefault()} onDrop={() => { const dr = dragRef.current; if (dr && (dr.day !== d || dr.staffId !== s.id)) onMove(dr._id, s.id, d) }} style={RTD}>
                       {blocks.length > 0
                         ? <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                             {blocks.map((a) => <div key={a._id} draggable onDragStart={() => { dragRef.current = { _id: a._id, day: d, staffId: s.id } }} onDragEnd={() => { dragRef.current = null }} onClick={() => onEditRequest(s, d, a)} title="Click to edit" style={{ position: 'relative', background: blockBg, borderRadius: 10, padding: '7px 18px 7px 10px', cursor: 'pointer', boxShadow: dark ? 'none' : blk.shadow }}>
@@ -310,7 +310,9 @@ export default function RotaBuilder() {
     if (p.get('setup') === '1') setSetupMode(true)
   }, [loadSaved])
 
-  const reassign = useCallback((id, staffId) => setResult((r) => ({ ...r, assignments: r.assignments.map((a) => (a._id === id ? { ...a, staff_id: staffId, staff_name: staffName(staffId) } : a)) })), [staffName])
+  // Move a shift to another person AND/OR another day (drag-and-drop). Same-day
+  // drops just reassign; cross-day drops also update the work_date.
+  const moveAssignment = useCallback((id, staffId, day) => setResult((r) => ({ ...r, assignments: r.assignments.map((a) => (a._id === id ? { ...a, staff_id: staffId, staff_name: staffName(staffId), day, work_date: dateForDay(weekStart, selectedWeek, day).toISOString().slice(0, 10) } : a)) })), [staffName, weekStart, selectedWeek])
   const removeAssignment = useCallback((id) => setResult((r) => ({ ...r, assignments: r.assignments.filter((a) => a._id !== id) })), [])
   const addAssignment = useCallback((s, day, shift) => setResult((r) => {
     if (!r) return r
@@ -535,7 +537,7 @@ export default function RotaBuilder() {
         {/* grid + live-compliance inspector on the right */}
         <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 340 }}>
-            <RefinedRotaGrid gridTeams={teams.filter((t) => (result.teams || []).some((rt) => rt.id === t.id))} staff={staff} shifts={shifts} assignments={weekAssignments} weekStart={weekStart} weekNum={selectedWeek} onReassign={reassign} onRemove={removeAssignment} onAddRequest={(s, d) => setEditCell({ staff: s, day: d, existing: null })} onEditRequest={(s, d, a) => setEditCell({ staff: s, day: d, existing: a })} dragRef={dragRef} />
+            <RefinedRotaGrid gridTeams={teams.filter((t) => (result.teams || []).some((rt) => rt.id === t.id))} staff={staff} shifts={shifts} assignments={weekAssignments} weekStart={weekStart} weekNum={selectedWeek} onMove={moveAssignment} onRemove={removeAssignment} onAddRequest={(s, d) => setEditCell({ staff: s, day: d, existing: null })} onEditRequest={(s, d, a) => setEditCell({ staff: s, day: d, existing: a })} dragRef={dragRef} />
           </div>
           <Card solid pad={20} style={{ width: 288, flexShrink: 0, position: 'sticky', top: 16 }}>
             <div style={{ fontSize: 13.5, fontWeight: 800, color: T.ink, marginBottom: 3 }}>Live compliance</div>
