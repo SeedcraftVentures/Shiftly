@@ -77,6 +77,17 @@ export default function SetupCompanion({ onWidth }) {
     return { openDays, open, close }
   }, [hours])
 
+  // Open days grouped by their exact hours, so days that open/close at different
+  // times (weekdays vs weekend) each get shifts on their own real times.
+  const groups = useMemo(() => {
+    const g = {}
+    for (const d of ALL.filter((day) => hours[day]?.open)) {
+      const [o, c] = hours[d].opening
+      ;(g[`${o}-${c}`] ||= { open: o, close: c, days: [] }).days.push(d)
+    }
+    return Object.values(g)
+  }, [hours])
+
   const say = (...m) => setMsgs((prev) => [...prev, ...m])
 
   // The rota builder has its own assistant (SetupCoach); stand down there so the
@@ -184,28 +195,31 @@ export default function SetupCompanion({ onWidth }) {
   }
 
   const commitShifts = async (idByName) => {
-    // Real days are an opening shift and a closing shift, not one long block. A
-    // person works one shift a day and ~48h a week, so a single open-to-close
-    // block (e.g. 14h) is unschedulable for a small team. Anchored ~8h open + close
-    // shifts overlap in the middle (natural lunch/peak cover) and the solver can
-    // tile them. A default unpaid break is set so pay is right from the start; the
-    // break is part of the shift span, so paid hours = span minus the break.
-    const span = cfg.close - cfg.open
-    const brk = (s, e) => (e - s >= 6 ? 30 : 0) // 30 min unpaid break on 6h+ shifts
+    // "N on a day" means N people ACROSS that day, not N per shift. Build N
+    // staggered single-person shifts from open to close, so someone opens,
+    // someone closes, and the rest sit in between (natural mid/peak cover). Each
+    // hours-group uses its own real times. One person works one shift; a default
+    // unpaid break keeps pay right (paid hours = span minus the break).
+    const brk = (s, e) => (e - s >= 6 ? 30 : 0)
+    const r2 = (h) => Math.round(h * 2) / 2 // snap to the half hour
     for (const t of teams) {
       const team_id = (idByName && idByName[t.name]) || t.id
       if (!team_id) continue
-      const segs = span > 9
-        ? [
-            { name: `${t.name} open`, start: cfg.open, end: Math.min(cfg.open + 8, cfg.close), anchor: 'open' },
-            { name: `${t.name} close`, start: Math.max(cfg.close - 8, cfg.open), end: cfg.close, anchor: 'close' },
-          ]
-        : [{ name: `${t.name} cover`, start: cfg.open, end: cfg.close, anchor: 'fixed' }]
-      for (const s of segs) {
-        await fetch('/api/shifts', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ team_id, name: s.name, anchor_type: s.anchor, start: s.start, end: s.end, days: cfg.openDays, staff: t.min, keyholder: false, break_duration_mins: brk(s.start, s.end), break_type: 'unpaid' }),
-        })
+      const N = Math.max(1, t.min || 1)
+      for (const g of groups) {
+        const span = g.close - g.open
+        const len = N === 1 ? span : Math.min(8, span) // solo covers the whole day; otherwise ~8h
+        const slack = Math.max(0, span - len)          // room to slide later shifts toward close
+        for (let i = 0; i < N; i++) {
+          const start = N === 1 ? g.open : r2(g.open + (slack * i) / (N - 1))
+          const end = Math.min(r2(start + len), g.close)
+          const anchor = N === 1 ? 'fixed' : i === 0 ? 'open' : i === N - 1 ? 'close' : 'fixed'
+          const nm = N === 1 ? t.name : anchor === 'open' ? `${t.name} open` : anchor === 'close' ? `${t.name} close` : `${t.name} mid`
+          await fetch('/api/shifts', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ team_id, name: nm, anchor_type: anchor, start, end, days: g.days, staff: 1, keyholder: false, break_duration_mins: brk(start, end), break_type: 'unpaid' }),
+          })
+        }
       }
     }
     if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('shiftly:shifts-changed'))
@@ -241,10 +255,20 @@ export default function SetupCompanion({ onWidth }) {
     setBusy(true); setError(null)
     try {
       await commitShifts(commitFoundationCache.current)
-      const rbt = Object.fromEntries(teams.map((t) => [t.id, Math.round((cfg.close - cfg.open) * t.min * cfg.openDays.length)]))
+      // Required staff-hours = the hours the new shifts actually demand (N people
+      // x shift length x days), matching how commitShifts builds them.
+      const rbt = Object.fromEntries(teams.map((t) => {
+        const N = Math.max(1, t.min || 1)
+        const hoursSum = groups.reduce((sum, g) => {
+          const span = g.close - g.open
+          const len = N === 1 ? span : Math.min(8, span)
+          return sum + N * len * g.days.length
+        }, 0)
+        return [t.id, Math.round(hoursSum)]
+      }))
       setReqByTeam(rbt)
       const req = Object.values(rbt).reduce((a, b) => a + b, 0)
-      advance(teams.map((t) => `${t.name}: ${t.min}`).join('  ·  '), `I've assigned shifts from your hours, with someone to open and someone to close each day. Take a look at the panel on the left and click any shift to adjust its length, hours or break so it matches how your business actually runs.\n\nAbout ${req} staff-hours a week will cover these. Tap "Looks good" when you're happy and we'll add your team.`, 'review')
+      advance(teams.map((t) => `${t.name}: ${t.min}`).join('  ·  '), `I've built your shifts from your hours: someone opens, someone closes, and cover in between, on each day's real times. Take a look at the panel on the left and click any shift to adjust its length, hours or break.\n\nAbout ${req} staff-hours a week will cover these. Tap "Looks good" when you're happy and we'll add your team.`, 'review')
     } catch (e) { setError(e.message) } finally { setBusy(false) }
   }
 
