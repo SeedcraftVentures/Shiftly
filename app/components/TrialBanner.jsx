@@ -28,7 +28,6 @@ export default function TrialBanner() {
         fontFamily: T.font,
       }}
     >
-      <span style={{ width: 7, height: 7, borderRadius: 99, background: ACCENT, flexShrink: 0 }} />
       <span style={{ fontSize: 13, fontWeight: 600, color: T.ink }}>
         {daysLeft} day{daysLeft === 1 ? '' : 's'} left in your free trial.
       </span>
