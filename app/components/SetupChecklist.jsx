@@ -29,6 +29,7 @@ export default function SetupChecklist() {
 
   if (dismissed || staff === null || staff.length === 0) return null
 
+  const publishedCount = rotas.filter((r) => r.status === 'Published').length
   const items = [
     {
       key: 'pay',
@@ -46,9 +47,9 @@ export default function SetupChecklist() {
     },
     {
       key: 'publish',
-      label: 'Publish your first rota',
-      hint: 'Your team sees it in their app straight away',
-      done: rotas.some((r) => r.status === 'Published'),
+      label: 'Publish 4 weeks of rota',
+      hint: `${publishedCount} of 4 published. Get a month out so your team can plan ahead.`,
+      done: publishedCount >= 4,
       go: () => router.push('/dashboard/generate'),
     },
   ]

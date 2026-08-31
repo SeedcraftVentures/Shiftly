@@ -29,7 +29,7 @@ export default function DashboardLayout({ children }) {
 
   return (
     <OnboardingCheck>
-      <div style={{ fontFamily: "'Cal Sans Text', 'Plus Jakarta Sans', sans-serif", background: '#FF1F7D', paddingRight: padRight, transition: 'padding-right .28s ease' }} className={`min-h-screen p-3 transition-[padding] duration-200 ${collapsed ? 'lg:pl-[4.75rem]' : 'lg:pl-52'}`}>
+      <div style={{ fontFamily: "var(--font-figtree), 'Plus Jakarta Sans', system-ui, sans-serif", background: '#FF1F7D', paddingRight: padRight, transition: 'padding-right .28s ease' }} className={`min-h-screen p-3 transition-[padding] duration-200 ${collapsed ? 'lg:pl-[4.75rem]' : 'lg:pl-52'}`}>
         <Navigation collapsed={collapsed} onToggleCollapse={toggleCollapse} />
         <div style={{ background: T.appBg }} className="min-h-[calc(100vh-1.5rem)] rounded-[1.25rem] lg:ml-1 mt-14 lg:mt-0 flex flex-col relative">
           {/* notifications overlay the top-right corner (in line with each page's title)

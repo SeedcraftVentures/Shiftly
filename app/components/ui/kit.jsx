@@ -14,7 +14,7 @@ import { useState, useRef, useEffect, createContext, useContext, useMemo, useCal
 
 // ── scale tokens (shared across themes, type, spacing, shape) ─────────────────
 const SCALE = {
-  font: "'Cal Sans Text', 'Plus Jakarta Sans', sans-serif",
+  font: "var(--font-figtree), 'Plus Jakarta Sans', system-ui, sans-serif",
   fontHead: "'Cal Sans Text', 'Plus Jakarta Sans', sans-serif",
   fz: { display: 39, h1: 31, h2: 25, h3: 20, body: 16, small: 13 },
   lh: { tight: 1.15, snug: 1.3, normal: 1.5 },
@@ -221,7 +221,7 @@ export function Button({ variant = 'primary', size = 'md', shape = 'pill', full,
       transition: `transform .3s ${EASE}, box-shadow .15s, background .15s`, outline: 'none',
       ...sz, padding: sz.padding, ...vr, ...style,
     }}>
-    {icon && <span style={{ display: 'inline-flex', fontSize: sz.icon, marginLeft: -2 }}>{icon}</span>}
+    {icon && <span style={{ display: 'inline-flex', fontSize: sz.icon, marginLeft: -2 }}>{typeof icon === 'string' ? <Icon path={icon} size={sz.icon} /> : icon}</span>}
     {children}
     {arrow && <span style={{ display: 'inline-flex', fontSize: sz.icon, opacity: 0.8, marginRight: -2, transform: hover ? 'translateX(2px)' : 'none', transition: 'transform .15s' }}>›</span>}
   </button>
