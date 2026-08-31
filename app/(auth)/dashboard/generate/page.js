@@ -5,6 +5,7 @@ import { useTheme, Card, Field, Input, Select, TimeRange, Switch, Button, Icon, 
 import { rotaBlock } from '@/lib/rotaColors'
 import SetupCoach from '@/app/components/SetupCoach'
 import RulesPanel from '@/app/components/RulesPanel'
+import { cfgFromLocation, mapStaffForCoverage, readiness, coverageBottlenecks, locationKeyholderGaps, availableHours } from '@/app/(auth)/dashboard/staff/utils/staffHelpers'
 
 // ════════════════════════════════════════════════════════════════════════════
 //  ROTA BUILDER (live) - pick week -> Generate (OR-Tools) -> grid -> save/publish.
@@ -247,25 +248,29 @@ export default function RotaBuilder() {
   const [saveMsg, setSaveMsg] = useState(null)
   const [saved, setSaved] = useState([])
   const [staff, setStaff] = useState([])
+  const [staffRaw, setStaffRaw] = useState([]) // raw /api/staff rows for the feasibility engine
+  const [location, setLocation] = useState(null) // for cfgFromLocation (open days + hours)
   const [shifts, setShifts] = useState([])
   const [rules, setRules] = useState({ min_rest_hours: 11, max_consecutive_days: 5 })
   const [rotaName, setRotaName] = useState('')
   const [editCell, setEditCell] = useState(null) // { staff, day } opens the add-shift inspector
   const [showRules, setShowRules] = useState(false)
   const [busyDays, setBusyDays] = useState([])
-  const [busyMsg, setBusyMsg] = useState(null)
   const [setupMode, setSetupMode] = useState(false) // arrived from onboarding (?setup=1): show the coach
   const dragRef = useRef(null)
 
   useEffect(() => {
     (async () => {
       try {
-        const [tr, sr, str, shr, rr] = await Promise.all([fetch('/api/teams'), fetch('/api/rotas'), fetch('/api/staff'), fetch('/api/shifts'), fetch('/api/rules')])
+        const [tr, sr, str, shr, rr, lr] = await Promise.all([fetch('/api/teams'), fetch('/api/rotas'), fetch('/api/staff'), fetch('/api/shifts'), fetch('/api/rules'), fetch('/api/location')])
         const td = await tr.json(), sd = await sr.json(), std = await str.json(), shd = await shr.json(), rd = await rr.json()
+        const ld = lr.ok ? await lr.json().catch(() => null) : null
         setTeams((Array.isArray(td) ? td : []).map((t, i) => ({ id: t.id, name: t.name, color: TEAM_COLORS[i % TEAM_COLORS.length] })))
         setSaved(Array.isArray(sd) ? sd : [])
+        setStaffRaw(Array.isArray(std) ? std : [])
         setStaff((Array.isArray(std) ? std : []).map((s) => ({ id: s.id, name: s.name, team_id: s.team_id, contracted_hours: s.contracted_hours || 0, is_keyholder: !!s.keyholder })))
         setShifts(Array.isArray(shd) ? shd : [])
+        setLocation(ld)
         if (Array.isArray(rd) && rd[0]?.rules) setRules(rd[0].rules)
       } catch (e) { console.error(e) } finally { setLoading(false) }
     })()
@@ -282,7 +287,7 @@ export default function RotaBuilder() {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 70000)
     try {
-      const res = await fetch('/api/generate-rota', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ weekStart, weekCount, team_id: teamId === 'all' ? null : teamId }), signal: controller.signal })
+      const res = await fetch('/api/generate-rota', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ weekStart, weekCount, team_id: teamId === 'all' ? null : teamId, busy_days: busyDays }), signal: controller.signal })
       const data = await res.json()
       if (!res.ok) { setError(data.error || SLOW_SCHEDULER); return }
       setRotaName(`Week of ${prettyDate(weekStart)}`)
@@ -290,7 +295,7 @@ export default function RotaBuilder() {
     } catch (e) {
       setError(e?.name === 'AbortError' ? SLOW_SCHEDULER : 'Could not reach the scheduler. It may be waking up, try again in a moment.')
     } finally { clearTimeout(timer); setGenerating(false) }
-  }, [weekStart, weekCount, teamId])
+  }, [weekStart, weekCount, teamId, busyDays])
 
   const loadSaved = useCallback(async (id) => {
     setError(null); setGenerating(true); setSaveMsg(null)
@@ -444,29 +449,37 @@ export default function RotaBuilder() {
   const rotaStaff = result ? staff.filter((s) => (result.teams || []).some((t) => t.id === s.team_id) && s.contracted_hours > 0) : []
 
   const openDays = useMemo(() => [...new Set((shifts || []).flatMap((s) => (Array.isArray(s.days) ? s.days : []).map((d) => (typeof d === 'number' ? d : DAY_INDEX[d]))))].sort((a, b) => a - b), [shifts])
-  // Busier days: add one extra person (a peak-time cover) on the chosen days so
-  // there are enough shift-hours for everyone to reach their contracted hours.
-  const addBusyCover = useCallback(async () => {
-    if (!busyDays.length) return
-    setBusyMsg('adding')
-    try {
-      const target = teamId === 'all' ? teams : teams.filter((t) => t.id === teamId)
-      for (const t of target) {
-        for (const d of busyDays) {
-          const ds = shifts.filter((s) => s.team_id === t.id && (Array.isArray(s.days) ? s.days : []).map((x) => (typeof x === 'number' ? x : DAY_INDEX[x])).includes(d))
-          const [open, close] = ds.length ? [Math.min(...ds.map((s) => Number(s.start))), Math.max(...ds.map((s) => Number(s.end)))] : [9, 17]
-          const len = Math.min(8, close - open)
-          const start = Math.round((open + Math.max(0, (close - open - len) / 2)) * 2) / 2
-          const end = Math.min(Math.round((start + len) * 2) / 2, close)
-          await fetch('/api/shifts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ team_id: t.id, name: `${t.name} extra`, anchor_type: 'fixed', start, end, days: [d], staff: 1, keyholder: false, break_duration_mins: end - start >= 6 ? 30 : 0, break_type: 'unpaid' }) })
-        }
-      }
-      const sr = await fetch('/api/shifts')
-      const sd = sr.ok ? await sr.json() : null
-      if (Array.isArray(sd)) setShifts(sd)
-      setBusyMsg('added'); setBusyDays([])
-    } catch { setBusyMsg('error') }
-  }, [busyDays, teams, teamId, shifts])
+
+  // Preflight: structural problems the manager should fix BEFORE building, computed from
+  // the same availability-based feasibility engine the dashboard/staff pages use.
+  const preflight = useMemo(() => {
+    if (!shifts.length || !staffRaw.length) return []
+    const cfg = cfgFromLocation(location)
+    const mapped = staffRaw.map(mapStaffForCoverage)
+    const issues = []
+    const kh = locationKeyholderGaps(mapped, shifts, cfg)
+    if (kh.noKeyholder) {
+      issues.push({ title: 'No keyholder', detail: 'No one is marked as a keyholder, so no one can open or close. Mark at least one person as a keyholder in Staff.' })
+    } else {
+      const fmt = (arr) => arr.map((d) => DAYS[d]).join(', ')
+      if (kh.openMissing?.length) issues.push({ title: 'No keyholder to open', detail: `No keyholder is free to open on ${fmt(kh.openMissing)}. Add a keyholder's availability on ${kh.openMissing.length > 1 ? 'those days' : 'that day'}, or mark someone who works the open as a keyholder.` })
+      if (kh.closeMissing?.length) issues.push({ title: 'No keyholder to close', detail: `No keyholder is free to close on ${fmt(kh.closeMissing)}. Add a keyholder's availability on ${kh.closeMissing.length > 1 ? 'those days' : 'that day'}, or mark someone who works the close as a keyholder.` })
+    }
+    for (const s of mapped) {
+      if (!s.contracted) continue
+      const avail = availableHours(s, cfg)
+      if (avail < s.contracted - 0.5) issues.push({ title: `${s.name} can't reach contract`, detail: `${s.name} is available ${Math.round(avail)}h but contracted ${s.contracted}h. Widen their availability or lower their contracted hours.` })
+    }
+    for (const t of (teams || [])) {
+      const ts = shifts.filter((sh) => sh.team_id === t.id)
+      const tp = mapped.filter((s) => s.team_id === t.id)
+      if (!ts.length || !tp.length) continue
+      const r = readiness(tp, ts, cfg)
+      if (!r.coverableAtMax) issues.push({ title: `${t.name} is short on capacity`, detail: `${t.name}'s shifts need about ${Math.round(r.req)}h but the team can supply about ${Math.round(r.maxh)}h at most. Add staff or reduce cover.` })
+      for (const b of coverageBottlenecks(tp, ts, cfg)) issues.push({ title: `${b.name} is a bottleneck`, detail: `${b.name} would have to work ${b.essential} days but can only do ${b.maxDays} within their hours. Spread availability across the team or add staff.` })
+    }
+    return issues
+  }, [staffRaw, shifts, location, teams])
 
   if (loading) return <div style={{ fontFamily: T.font, padding: 60, textAlign: 'center', color: T.faint }}>Loading…</div>
 
@@ -503,18 +516,26 @@ export default function RotaBuilder() {
           <Button onClick={generate} disabled={generating} size="lg">{generating ? 'Building…' : 'Build rota'}</Button>
         </div>
         {openDays.length > 0 && <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${T.hair}` }}>
-          <div style={{ ...label, marginBottom: 8 }}>Busier days <span style={{ fontWeight: 500, textTransform: 'none', letterSpacing: 0, color: T.faint }}>· add an extra person so everyone gets their hours</span></div>
+          <div style={{ ...label, marginBottom: 8 }}>Busier days this week</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
             {openDays.map((d) => {
               const on = busyDays.includes(d)
-              return <button key={d} onClick={() => { setBusyMsg(null); setBusyDays((b) => (on ? b.filter((x) => x !== d) : [...b, d])) }} style={{ fontFamily: T.font, fontSize: 12.5, fontWeight: 700, padding: '7px 14px', borderRadius: 999, border: 'none', cursor: 'pointer', background: on ? T.pink : T.subtle, color: on ? '#fff' : T.muted, transition: 'all .12s' }}>{DAYS[d]}</button>
+              return <button key={d} onClick={() => setBusyDays((b) => (on ? b.filter((x) => x !== d) : [...b, d]))} style={{ fontFamily: T.font, fontSize: 12.5, fontWeight: 700, padding: '7px 14px', borderRadius: 999, border: 'none', cursor: 'pointer', background: on ? T.pink : T.subtle, color: on ? '#fff' : T.muted, transition: 'all .12s' }}>{DAYS[d]}</button>
             })}
-            {busyDays.length > 0 && <Button size="sm" onClick={addBusyCover} disabled={busyMsg === 'adding'}>{busyMsg === 'adding' ? 'Adding…' : `Add cover · ${busyDays.length} day${busyDays.length > 1 ? 's' : ''}`}</Button>}
-            {busyMsg === 'added' && <span style={{ fontSize: 12.5, color: T.green, fontWeight: 600 }}>Added. Build to see it.</span>}
-            {busyMsg === 'error' && <span style={{ fontSize: 12.5, color: T.red, fontWeight: 600 }}>Couldn't add, try again.</span>}
           </div>
         </div>}
       </Card>
+
+      {/* Preflight: structural blockers to fix before building (reuses the coverage engine) */}
+      {preflight.length > 0 && <Card pad={18} style={{ marginBottom: 18, background: T.amber + '12', border: `1px solid ${T.amber}33` }}>
+        <div style={{ fontSize: 11.5, fontWeight: 700, color: T.warnInk, letterSpacing: '0.03em', textTransform: 'uppercase', marginBottom: 10 }}>Worth fixing before you build</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {preflight.map((it, i) => <div key={i}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: T.ink, marginBottom: 2 }}>{it.title}</div>
+            <div style={{ fontSize: 12.5, color: T.body, lineHeight: 1.5 }}>{it.detail}</div>
+          </div>)}
+        </div>
+      </Card>}
 
       {/* Rules, inline so the whole rota is shaped on one page (autosaves) */}
       <Card pad={0} style={{ marginBottom: 18, overflow: 'hidden' }}>
@@ -524,7 +545,12 @@ export default function RotaBuilder() {
           <span style={{ fontSize: 12.5, color: T.faint, fontWeight: 500 }}>applied to every build</span>
           <Icon path={Ic.chevron} size={16} stroke={2.2} color={T.faint} style={{ marginLeft: 'auto', transform: showRules ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />
         </button>
-        {showRules && <div style={{ padding: '2px 22px 20px' }}><RulesPanel compact /></div>}
+        {showRules && <div style={{ padding: '2px 22px 20px' }}>
+          <RulesPanel compact />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 14 }}>
+            <Button size="sm" onClick={() => setShowRules(false)}>Save</Button>
+          </div>
+        </div>}
       </Card>
 
       {error && <Card pad={18} style={{ marginBottom: 18, background: T.red + '12', border: `1px solid ${T.red}33` }}>

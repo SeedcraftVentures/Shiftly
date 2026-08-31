@@ -122,6 +122,9 @@ export async function POST(request) {
     const weekStart = body.weekStart || body.startDate
     const weekCount = body.weekCount || 1
     const onlyTeamId = body.team_id || null
+    // Day indices (0=Mon..6=Sun) the manager flagged as busier this run: the solver gets
+    // more headroom to add cover on these days.
+    const busyDays = Array.isArray(body.busy_days) ? body.busy_days.filter((n) => Number.isInteger(n)) : []
     if (!weekStart) return NextResponse.json({ error: 'weekStart is required' }, { status: 400 })
 
     const { locationIds, teamIds } = await getOrgScope(userId)
@@ -227,13 +230,13 @@ export async function POST(request) {
       // (keep contracted as a soft target) → drop contracted entirely (last resort).
       // Always builds something, then we flag whatever isn't fully met.
       const solveLadder = async (weeksN) => {
-        let r = await callScheduler(pythonUrl, { staff, shifts, rules: solverRules, weeks: weeksN })
+        let r = await callScheduler(pythonUrl, { staff, shifts, rules: solverRules, weeks: weeksN, busy_days: busyDays })
         if (!r.success) {
           const relaxedRules = { ...solverRules, fair_distribution: true, max_consecutive_days: 7, min_rest_hours: 0 }
-          r = await callScheduler(pythonUrl, { staff, shifts, rules: relaxedRules, weeks: weeksN })
+          r = await callScheduler(pythonUrl, { staff, shifts, rules: relaxedRules, weeks: weeksN, busy_days: busyDays })
           if (!r.success) {
             const zeroed = staff.map((s) => ({ ...s, contracted_hours: 0 }))
-            r = await callScheduler(pythonUrl, { staff: zeroed, shifts, rules: relaxedRules, weeks: weeksN })
+            r = await callScheduler(pythonUrl, { staff: zeroed, shifts, rules: relaxedRules, weeks: weeksN, busy_days: busyDays })
           }
           if (r.success) relaxedTeams.add(teamName[teamId])
         }

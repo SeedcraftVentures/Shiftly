@@ -12,6 +12,9 @@ class ShiftlyScheduler:
         self.shifts = data['shifts']
         self.rules = data.get('rules', {})
         self.weeks = data.get('weeks', 1)
+        # Day indices (0=Mon..6=Sun) the manager flagged as busier this run: the solver is
+        # allowed to add more bodies than baseline on these days (see the coverage bound).
+        self.busy_days = set(data.get('busy_days', []) or [])
         self.contract_issues = []
         self.all_solutions = []
 
@@ -182,17 +185,25 @@ class ShiftlyScheduler:
         # penalised in the objective, so they only appear to reduce a real contracted
         # shortfall, not to pad shifts. `>= required` keeps the baseline guaranteed, so
         # this only relaxes the old constraint and can't make a feasible model infeasible.
-        max_extra = int(self._rule('max_extra_per_shift', 1) or 0)
-        overstaff_terms = []
+        # Base headroom lets the solver add a body or two to reach contracted hours; busier
+        # days get extra headroom so it can concentrate more cover where it's wanted.
+        base_extra = int(self._rule('max_extra_per_shift', 2) or 0)
+        busy_bonus = int(self._rule('busy_day_extra', 2) or 0)
+        day_order_idx = {'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3, 'Friday': 4, 'Saturday': 5, 'Sunday': 6}
+        overstaff_terms = []       # extra bodies on normal days (discouraged more)
+        overstaff_busy_terms = []  # extra bodies on busier days (discouraged less → preferred spot)
         for si, shift in enumerate(self.shifts):
             required = shift.get('staff_required', 1)
+            di = day_order_idx.get(shift['day'], -1)
+            is_busy = di in self.busy_days
+            max_extra = base_extra + (busy_bonus if is_busy else 0)
             assigned = sum(schedule[si][st] for st in range(n_staff))
             model.Add(assigned >= required)
             model.Add(assigned <= required + max_extra)
             if max_extra > 0:
                 extra = model.NewIntVar(0, max_extra, f'extra_sh{si}_w{week_num}')
                 model.Add(extra == assigned - required)
-                overstaff_terms.append(extra)
+                (overstaff_busy_terms if is_busy else overstaff_terms).append(extra)
 
         # ── Hard constraint: availability ────────────────────────────────────
         for si, shift in enumerate(self.shifts):
@@ -257,21 +268,37 @@ class ShiftlyScheduler:
                         for st in range(n_staff):
                             model.Add(schedule[si_c][st] + schedule[si_o][st] <= 1)
 
-        # ── Hard constraint: max consecutive working days ─────────────────────
+        # ── Hard constraint: max consecutive working days (ACROSS the week seam) ──
+        # Weeks are solved one at a time, so a within-week-only window let someone work the
+        # tail of one week and the head of the next unchecked. Seed the window with the
+        # previous week's trailing days (as known 0/1 constants) so a run that crosses
+        # Sunday→Monday is still capped.
         max_consec = self._rule('max_consecutive_days', 5)
         if max_consec and max_consec < 7:
-            for start_d in range(len(day_order) - max_consec):
-                consec_days = day_order[start_d:start_d + max_consec + 1]
-                for st in range(n_staff):
-                    day_worked = []
-                    for day in consec_days:
-                        day_shifts = [si for si, s in enumerate(self.shifts) if s['day'] == day]
-                        if day_shifts:
-                            worked = model.NewBoolVar(f'worked_{day}_{st}_w{week_num}_{start_d}')
-                            model.AddMaxEquality(worked, [schedule[si][st] for si in day_shifts])
-                            day_worked.append(worked)
-                    if len(day_worked) == max_consec + 1:
-                        model.Add(sum(day_worked) <= max_consec)
+            prev = previous_solutions[-1] if previous_solutions else None
+            shifts_by_day = {day: [si for si, s in enumerate(self.shifts) if s['day'] == day] for day in day_order}
+            for st in range(n_staff):
+                # Walk the FULL calendar (prev week then this week) so closed days count as an
+                # off day that breaks a run. Each position is a var (day has shifts) or a known
+                # 0/1 constant (closed day, or a previous-week day already solved).
+                seq = []
+                if prev is not None:
+                    for day in day_order:
+                        worked = 1 if any(prev.get(si, {}).get(st, 0) == 1 for si in shifts_by_day[day]) else 0
+                        seq.append(('const', worked))
+                for day in day_order:
+                    if shifts_by_day[day]:
+                        w = model.NewBoolVar(f'worked_{day}_{st}_w{week_num}')
+                        model.AddMaxEquality(w, [schedule[si][st] for si in shifts_by_day[day]])
+                        seq.append(('var', w))
+                    else:
+                        seq.append(('const', 0))  # closed day = off, breaks the run
+                for i in range(len(seq) - max_consec):
+                    window = seq[i:i + max_consec + 1]
+                    consts = sum(v for t, v in window if t == 'const')
+                    vars_ = [v for t, v in window if t == 'var']
+                    if vars_:
+                        model.Add(sum(vars_) <= max_consec - consts)
 
         # ── Max hours = HARD cap · contracted hours = SOFT target ─────────────
         # Contracted is a target, not a wall: penalise any shortfall so the rota
@@ -380,23 +407,8 @@ class ShiftlyScheduler:
                 model.Add(spread == max_count - min_count)
                 minimize_terms.append(spread)
 
-        # ── Soft: balance keyholder shifts ────────────────────────────────────
-        if self._rule('balance_keyholder_shifts', True):
-            keyholder_staff = [st for st, s in enumerate(self.staff) if s.get('keyholder', False)]
-            keyholder_shifts = [si for si, s in enumerate(self.shifts) if s.get('keyholder_required', False)]
-            if len(keyholder_staff) > 1 and keyholder_shifts:
-                kh_counts = []
-                for st in keyholder_staff:
-                    kc = model.NewIntVar(0, len(keyholder_shifts), f'kh_{st}_w{week_num}')
-                    model.Add(kc == sum(schedule[si][st] for si in keyholder_shifts))
-                    kh_counts.append(kc)
-                kh_max = model.NewIntVar(0, len(keyholder_shifts), f'kh_max_w{week_num}')
-                kh_min = model.NewIntVar(0, len(keyholder_shifts), f'kh_min_w{week_num}')
-                model.AddMaxEquality(kh_max, kh_counts)
-                model.AddMinEquality(kh_min, kh_counts)
-                kh_spread = model.NewIntVar(0, len(keyholder_shifts), f'kh_spread_w{week_num}')
-                model.Add(kh_spread == kh_max - kh_min)
-                minimize_terms.append(kh_spread)
+        # (Keyholder-shift balancing removed: fair distribution across all eligible staff
+        # already spreads the load, and keyholder presence at open/close is handled above.)
 
         # ── Soft: consecutive days off ────────────────────────────────────────
         if self._rule('prefer_consecutive_days_off', True):
@@ -428,7 +440,7 @@ class ShiftlyScheduler:
         # location-wide check then decides the real warning. Uses THIS team's keyholders.
         keyholder_cover_terms = []
         keyholder_sts = [st for st, s in enumerate(self.staff) if s.get('keyholder', False)]
-        if keyholder_sts and self._rule('prefer_keyholder_cover', True):
+        if keyholder_sts:  # always on — a keyholder on open/close is a requirement, not a toggle
             for day in days:
                 day_idx = [si for si, s in enumerate(self.shifts) if s['day'] == day]
                 if not day_idx:
@@ -457,14 +469,17 @@ class ShiftlyScheduler:
         # Keep people AT their contracted hours: a HEAVY penalty for falling short and
         # a lighter one for spilling into max hours (both in minutes, so they dominate
         # the small fairness/preference terms, which act only as tie-breakers).
+        # Priority tiers, biggest weight wins: keyholder-on-open/close > static shifts >
+        # contracted hours > everything soft. Coverage/max-hours are hard, above all of this.
         objective = []
-        objective += [s * 30 for s in contracted_shortfalls]  # near-hard: hitting contracted hours dominates the soft objective
+        objective += [k * 50000 for k in keyholder_cover_terms]  # a keyholder MUST be on each day's open + close
+        objective += [c * 10000 for c in consistency_terms]      # "same shifts each week" held near-100%
+        objective += [s * 30 for s in contracted_shortfalls]     # meet contracted hours (per minute short)
         objective += [o * 3 for o in contracted_overages]
-        objective += [e * 60 for e in overstaff_terms]    # only add an extra body if it clears real shortfall
-        objective += [c * 30 for c in consistency_terms]  # keep "same each week" people on their pattern
-        objective += [k * 25 for k in keyholder_cover_terms]  # put a keyholder on each day's open + close
-        objective += [w * 6 for w in weekend_terms]       # rotate weekends across weeks
-        objective += [v * 8 for v in week_variety_terms]  # rotate non-consistent staff week to week
+        objective += [e * 60 for e in overstaff_terms]           # extra body only to clear real shortfall
+        objective += [e * 30 for e in overstaff_busy_terms]      # cheaper on busier days → top-up lands there
+        objective += [w * 6 for w in weekend_terms]              # rotate weekends across weeks
+        objective += [v * 8 for v in week_variety_terms]         # rotate non-consistent staff week to week
         objective += minimize_terms
         if objective:
             model.Minimize(sum(objective))
