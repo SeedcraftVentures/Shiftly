@@ -420,6 +420,39 @@ class ShiftlyScheduler:
                         model.AddBoolOr([off1.Not(), worked2.Not()]).OnlyEnforceIf(isolated_off.Not())
                         minimize_terms.append(isolated_off)
 
+        # ── Soft (strong): a keyholder on the actual open and close each day ──
+        # The compliance panel flags "no keyholder at open/close" using each day's
+        # EARLIEST start and LATEST end. Mirror that here so the solver actively puts
+        # a keyholder on those shifts rather than leaving a gap and warning afterwards.
+        # Kept SOFT (not hard) so a team with no available keyholder still builds — the
+        # location-wide check then decides the real warning. Uses THIS team's keyholders.
+        keyholder_cover_terms = []
+        keyholder_sts = [st for st, s in enumerate(self.staff) if s.get('keyholder', False)]
+        if keyholder_sts and self._rule('prefer_keyholder_cover', True):
+            for day in days:
+                day_idx = [si for si, s in enumerate(self.shifts) if s['day'] == day]
+                if not day_idx:
+                    continue
+                starts = {si: self._parse_time(self.shifts[si]['start_time']) for si in day_idx}
+                ends = {}
+                for si in day_idx:
+                    e = self._parse_time(self.shifts[si]['end_time'])
+                    if e <= starts[si]:
+                        e += 1440
+                    ends[si] = e
+                open_t, close_t = min(starts.values()), max(ends.values())
+                open_shifts = [si for si in day_idx if starts[si] == open_t]
+                close_shifts = [si for si in day_idx if ends[si] == close_t]
+                for label, group in (('open', open_shifts), ('close', close_shifts)):
+                    assigned_kh = [schedule[si][st] for si in group for st in keyholder_sts]
+                    if not assigned_kh:
+                        continue
+                    has_kh = model.NewBoolVar(f'kh_{label}_{day}_w{week_num}')
+                    model.AddMaxEquality(has_kh, assigned_kh)
+                    miss = model.NewBoolVar(f'khmiss_{label}_{day}_w{week_num}')
+                    model.Add(miss + has_kh == 1)
+                    keyholder_cover_terms.append(miss)
+
         # ── Optimise ──────────────────────────────────────────────────────────
         # Keep people AT their contracted hours: a HEAVY penalty for falling short and
         # a lighter one for spilling into max hours (both in minutes, so they dominate
@@ -429,8 +462,9 @@ class ShiftlyScheduler:
         objective += [o * 3 for o in contracted_overages]
         objective += [e * 60 for e in overstaff_terms]    # only add an extra body if it clears real shortfall
         objective += [c * 30 for c in consistency_terms]  # keep "same each week" people on their pattern
+        objective += [k * 25 for k in keyholder_cover_terms]  # put a keyholder on each day's open + close
         objective += [w * 6 for w in weekend_terms]       # rotate weekends across weeks
-        objective += [v * 2 for v in week_variety_terms]  # general week-to-week variety
+        objective += [v * 8 for v in week_variety_terms]  # rotate non-consistent staff week to week
         objective += minimize_terms
         if objective:
             model.Minimize(sum(objective))
