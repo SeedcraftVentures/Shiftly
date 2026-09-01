@@ -560,8 +560,9 @@ export default function RotaBuilder() {
         compliance={liveCompliance} contractIssues={liveContractIssues} relaxed={result?.relaxed_teams} skipped={result?.skipped} />
       <PageHeader title="Rota Builder" subtitle="Generate a schedule that meets contracted hours and respects availability." />
 
-      {/* controls */}
-      <Card pad={22} style={{ marginBottom: 18 }}>
+      {/* controls — raised stacking context so the week-picker popover isn't covered by the
+          cards below it (every Card is a backdrop-filter stacking context) */}
+      <Card pad={22} style={{ marginBottom: 18, position: 'relative', zIndex: 5 }}>
         <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <div style={{ flex: 1, minWidth: 180 }}>
             <div style={label}>Team</div>

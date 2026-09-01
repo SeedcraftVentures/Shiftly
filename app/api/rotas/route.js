@@ -52,6 +52,7 @@ export async function POST(request) {
     const now = new Date().toISOString()
     const tz = (hhmm) => (hhmm ? `${hhmm}:00+00` : null) // 'HH:MM' → timetz
     const addDays = (ymd, n) => { const d = new Date(ymd + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10) }
+    const prettyWeek = (ymd) => { try { return `Week of ${new Date(ymd + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })}` } catch { return name || 'Rota' } }
 
     // The model is one rota per location+week. A multi-week build arrives as one payload,
     // so split it into ONE rota row PER WEEK, each keyed to its own Monday — otherwise
@@ -62,18 +63,22 @@ export async function POST(request) {
       if (!byWeek.has(w)) byWeek.set(w, [])
       byWeek.get(w).push(a)
     }
-    if (byWeek.size === 0) byWeek.set(1, []) // record an (empty) rota even with no assignments
-    const multi = byWeek.size > 1
+    // Iterate the FULL span 1..maxWeek (not just weeks that happen to carry assignments), so a
+    // week can never be silently dropped from a multi-week publish. Each week is named by its
+    // own Monday so the archive reads clearly.
+    const maxWeek = assignments.reduce((m, a) => Math.max(m, a.week || 1), 1)
+    const multi = maxWeek > 1
 
     let firstId = null
     let totalSaved = 0
-    for (const [w, weekAssignments] of byWeek) {
+    for (let w = 1; w <= maxWeek; w++) {
+      const weekAssignments = byWeek.get(w) || []
       const ws = addDays(weekStart, (w - 1) * 7)
       // replace any existing rota for this location+week (assignments cascade-delete)
       await supabaseAdmin.from('Rotas').delete().eq('location_id', locationId).eq('week_start', ws)
       const { data: rota, error } = await supabaseAdmin
         .from('Rotas')
-        .insert({ location_id: locationId, name: multi ? `${name || 'Rota'} (week ${w})` : (name || null), week_start: ws, status, generated_at: now, published_at: status === 'Published' ? now : null, published_by: status === 'Published' ? userId : null })
+        .insert({ location_id: locationId, name: multi ? prettyWeek(ws) : (name || null), week_start: ws, status, generated_at: now, published_at: status === 'Published' ? now : null, published_by: status === 'Published' ? userId : null })
         .select('rota_id')
         .single()
       if (error) throw error
@@ -95,7 +100,7 @@ export async function POST(request) {
       }
     }
 
-    return NextResponse.json({ id: firstId, status, saved: totalSaved, weeks: byWeek.size })
+    return NextResponse.json({ id: firstId, status, saved: totalSaved, weeks: maxWeek })
   } catch (error) {
     console.error('Error saving rota:', error)
     return NextResponse.json({ error: 'Failed to save rota', details: error.message }, { status: 500 })
