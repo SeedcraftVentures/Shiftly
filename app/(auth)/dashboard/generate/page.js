@@ -25,7 +25,8 @@ const LIGHT = THEMES.light
 
 const fmt = (hhmm) => {
   if (!hhmm) return ''
-  const [h, m] = hhmm.split(':').map(Number)
+  let [h, m] = hhmm.split(':').map(Number)
+  h = ((h % 24) + 24) % 24 // 24:00 / 00:00 both = midnight, not 12pm
   const ap = h < 12 ? 'am' : 'pm'; let hh = h % 12; if (hh === 0) hh = 12
   return m === 0 ? `${hh}${ap}` : `${hh}:${String(m).padStart(2, '0')}${ap}`
 }
@@ -171,7 +172,7 @@ function ShiftInspector({ staff, day, existing, accent, onClose, onSave, onRemov
   </>
 }
 
-function RefinedRotaGrid({ gridTeams, staff, shifts, assignments, weekStart, weekNum, onMove, onRemove, onAddRequest, onEditRequest, dragRef, large = false, bare = false }) {
+function RefinedRotaGrid({ gridTeams, staff, shifts, assignments, weekStart, weekNum, onMove, onRemove, onAddRequest, onEditRequest, dragRef, large = false, bare = false, onExpand }) {
   const { T } = useTheme()
   const dark = T.name === 'dark'
   const dlabel = (d) => dateForDay(weekStart, weekNum, d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
@@ -191,6 +192,29 @@ function RefinedRotaGrid({ gridTeams, staff, shifts, assignments, weekStart, wee
           {gridTeams.map((team, ti) => {
             const rows = staff.filter((s) => s.team_id === team.id)
             if (rows.length === 0) return null
+            // Per-day open/close reference from this team's shift patterns, so each block can
+            // be labelled Open / Mid / Close (earliest start opens, latest end closes). The
+            // grid is grouped by team, so the team name is redundant inside the box.
+            const daysOf = (sh) => (Array.isArray(sh.days) ? sh.days : []).map((x) => (typeof x === 'number' ? x : DAY_INDEX[x]))
+            const teamShifts = (shifts || []).filter((sh) => sh.team_id === team.id)
+            const dayRef = {}
+            for (let d = 0; d < 7; d++) {
+              const ds = teamShifts.filter((sh) => daysOf(sh).includes(d))
+              if (ds.length) dayRef[d] = { open: Math.min(...ds.map((sh) => Number(sh.start))), close: Math.max(...ds.map((sh) => { const st = Number(sh.start), en = Number(sh.end); return en <= st ? en + 24 : en })) }
+            }
+            const hh = (t) => { const [h, m] = String(t || '0:0').split(':').map(Number); return (h || 0) + (m || 0) / 60 }
+            const typeOf = (a, d) => {
+              const ref = dayRef[d]
+              if (!ref) return ''
+              const st = hh(a.start_time)
+              let en = hh(a.end_time); if (en <= st) en += 24
+              const opens = Math.abs(st - ref.open) < 0.02
+              const closes = Math.abs(en - ref.close) < 0.02
+              if (opens && closes) return 'All day'
+              if (opens) return 'Open'
+              if (closes) return 'Close'
+              return 'Mid'
+            }
             return <Fragment key={team.id}>
               <tr style={{ background: 'transparent' }}><td colSpan={8} style={{ padding: ti > 0 ? '22px 0 8px' : '8px 0' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -212,8 +236,8 @@ function RefinedRotaGrid({ gridTeams, staff, shifts, assignments, weekStart, wee
                       {blocks.length > 0
                         ? <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                             {blocks.map((a) => <div key={a._id} draggable onDragStart={() => { dragRef.current = { _id: a._id, day: d, staffId: s.id } }} onDragEnd={() => { dragRef.current = null }} onClick={() => onEditRequest(s, d, a)} title="Click to edit" style={{ position: 'relative', background: blockBg, borderRadius: 10, padding: z.blockPad, cursor: 'pointer', boxShadow: dark ? 'none' : blk.shadow }}>
-                              <div style={{ color: blockFg, fontWeight: 700, fontSize: z.sh, lineHeight: 1.25 }}>{a.shift_name}</div>
-                              <div style={{ color: blockSub, fontSize: z.tm }}>{fmt(a.start_time)}-{fmt(a.end_time)}</div>
+                              <div style={{ color: blockFg, fontWeight: 700, fontSize: z.sh, lineHeight: 1.2 }}>{fmt(a.start_time)}-{fmt(a.end_time)}</div>
+                              {typeOf(a, d) && <div style={{ color: blockSub, fontSize: z.tm, fontWeight: 600, marginTop: 1 }}>{typeOf(a, d)}</div>}
                               <button onClick={(e) => { e.stopPropagation(); onRemove(a._id) }} style={{ position: 'absolute', top: 3, right: 5, color: dark ? 'rgba(255,255,255,.85)' : (blk.filled ? 'rgba(255,255,255,.9)' : T.faint), background: 'none', border: 'none', cursor: 'pointer', fontSize: z.rm, lineHeight: 1, padding: 0 }}>×</button>
                             </div>)}
                           </div>
@@ -230,9 +254,10 @@ function RefinedRotaGrid({ gridTeams, staff, shifts, assignments, weekStart, wee
   )
   if (bare) return grid
   return <Card solid pad="22px 24px" style={{ marginBottom: 18 }}>
-    <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 16 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
       <span style={{ fontSize: 17, fontWeight: 700, color: T.ink, letterSpacing: '-0.02em' }}>Week {weekNum}</span>
       <span style={{ fontSize: 12.5, color: T.faint }}>{dlabel(0)} to {dlabel(6)}</span>
+      {onExpand && <button onClick={onExpand} title="Expand to edit" style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: T.font, fontSize: 12.5, fontWeight: 600, color: T.muted, background: T.subtle, border: 'none', borderRadius: 999, padding: '7px 13px', cursor: 'pointer' }}><Icon path="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" size={13} stroke={2} />Expand to edit</button>}
     </div>
     {grid}
     <div style={{ fontSize: 11, color: T.faint, marginTop: 10 }}>Drag a shift onto another person to reassign · × to remove · + to add. Edits save when you Save / Publish.</div>
@@ -609,7 +634,6 @@ export default function RotaBuilder() {
               {saveMsg === 'draft' && <span style={{ fontSize: 12.5, color: T.green, fontWeight: 600 }}>Saved draft</span>}
               {saveMsg === 'published' && <span style={{ fontSize: 12.5, color: T.green, fontWeight: 600 }}>Published</span>}
               {saveMsg === 'error' && <span style={{ fontSize: 12.5, color: T.red, fontWeight: 600 }}>Save failed</span>}
-              <Button variant="secondary" size="sm" onClick={() => setFullscreen(true)}><Icon path="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" size={14} stroke={2} />Expand to edit</Button>
               <Button variant="secondary" size="sm" onClick={() => saveRota('Draft')}>Save draft</Button>
               <Button size="sm" onClick={() => saveRota('Published')}>Publish</Button>
             </div>
@@ -659,7 +683,7 @@ export default function RotaBuilder() {
         {/* grid + live-compliance inspector on the right */}
         <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 340 }}>
-            <RefinedRotaGrid gridTeams={teams.filter((t) => (result.teams || []).some((rt) => rt.id === t.id))} staff={staff} shifts={shifts} assignments={weekAssignments} weekStart={weekStart} weekNum={selectedWeek} onMove={moveAssignment} onRemove={removeAssignment} onAddRequest={(s, d) => setEditCell({ staff: s, day: d, existing: null })} onEditRequest={(s, d, a) => setEditCell({ staff: s, day: d, existing: a })} dragRef={dragRef} />
+            <RefinedRotaGrid gridTeams={teams.filter((t) => (result.teams || []).some((rt) => rt.id === t.id))} staff={staff} shifts={shifts} assignments={weekAssignments} weekStart={weekStart} weekNum={selectedWeek} onMove={moveAssignment} onRemove={removeAssignment} onAddRequest={(s, d) => setEditCell({ staff: s, day: d, existing: null })} onEditRequest={(s, d, a) => setEditCell({ staff: s, day: d, existing: a })} dragRef={dragRef} onExpand={() => setFullscreen(true)} />
           </div>
           <Card solid pad={20} style={{ width: 288, flexShrink: 0, position: 'sticky', top: 16 }}>
             {compliancePanel}
