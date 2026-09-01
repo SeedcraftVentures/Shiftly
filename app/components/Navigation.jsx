@@ -25,15 +25,19 @@ const ICON = {
 }
 const Icon = ({ k, cls = 'w-5 h-5' }) => <svg className={cls} fill="none" viewBox="0 0 24 24" stroke="currentColor">{ICON[k]}</svg>
 
-const MAIN_ITEMS = [
-  { id: 'nav-dashboard', name: 'Home', path: '/dashboard', icon: 'home' },
-  { id: 'nav-shifts', name: 'Shifts', path: '/dashboard/shifts', icon: 'shifts' },
-  { id: 'nav-staff', name: 'Staff', path: '/dashboard/staff', icon: 'staff' },
-  { id: 'nav-generate', name: 'Rota Builder', path: '/dashboard/generate', icon: 'generate', dividerAfter: true },
-  { id: 'nav-requests', name: 'Inbox', path: '/dashboard/requests', icon: 'inbox' },
-  { id: 'nav-payroll', name: 'Payroll', path: '/dashboard/payroll', icon: 'payroll' },
-  { id: 'nav-reports', name: 'Reports', path: '/dashboard/reports', icon: 'reports' },
-  { id: 'nav-archive', name: 'Archive', path: '/dashboard/archive', icon: 'archive' },
+const SECTIONS = [
+  { title: 'Workspace', items: [
+    { id: 'nav-dashboard', name: 'Dashboard', path: '/dashboard', icon: 'home' },
+    { id: 'nav-shifts', name: 'Shifts', path: '/dashboard/shifts', icon: 'shifts' },
+    { id: 'nav-staff', name: 'Staff', path: '/dashboard/staff', icon: 'staff' },
+    { id: 'nav-generate', name: 'Rota Builder', path: '/dashboard/generate', icon: 'generate' },
+  ] },
+  { title: 'Operations', items: [
+    { id: 'nav-requests', name: 'Inbox', path: '/dashboard/requests', icon: 'inbox' },
+    { id: 'nav-payroll', name: 'Payroll', path: '/dashboard/payroll', icon: 'payroll' },
+    { id: 'nav-reports', name: 'Reports', path: '/dashboard/reports', icon: 'reports' },
+    { id: 'nav-archive', name: 'Archive', path: '/dashboard/archive', icon: 'archive' },
+  ] },
 ]
 const BOTTOM_ITEMS = [
   { id: 'nav-settings', name: 'Settings', path: '/dashboard/settings', icon: 'settings' },
@@ -104,6 +108,23 @@ export default function Navigation({ collapsed = false, onToggleCollapse }) {
           </svg>
         )}
       </Link>
+    )
+  }
+
+  // ── a titled group of nav links (title hidden on the collapsed rail) ────────
+  const SectionTitle = ({ children }) => (
+    <div className="px-4 pb-2 pt-1 text-[11px] font-bold uppercase tracking-[0.09em] text-white/45">{children}</div>
+  )
+  const NavSection = ({ section, mobile, last }) => {
+    const rail = mini && !mobile
+    return (
+      <div className={last ? '' : (rail ? 'mb-2.5' : 'mb-6')}>
+        {!rail && <SectionTitle>{section.title}</SectionTitle>}
+        <div className="space-y-1">
+          {section.items.map((item) => <NavLink key={item.path} item={item} mobile={mobile} />)}
+        </div>
+        {rail && !last && <div className="mt-2.5 border-t border-white/20 mx-2" />}
+      </div>
     )
   }
 
@@ -200,12 +221,15 @@ export default function Navigation({ collapsed = false, onToggleCollapse }) {
       {/* ── Mobile slide-out (always full width) ── */}
       <div className={`lg:hidden fixed top-16 left-0 bottom-0 w-72 bg-[#FF1F7D] z-50 flex flex-col transform transition-transform duration-300 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="px-3 pt-4 pb-2"><Switcher mobile /></div>
-        <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          {MAIN_ITEMS.map((item) => <div key={item.path}><NavLink item={item} mobile />{item.dividerAfter && <div className="my-3 mx-4 border-t border-white/30" />}</div>)}
+        <div className="flex-1 overflow-y-auto px-3 py-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          {SECTIONS.map((section, si) => <NavSection key={section.title} section={section} mobile last={si === SECTIONS.length - 1} />)}
         </div>
-        <div className="px-3 pt-3 pb-5 border-t border-white/15 space-y-1">
-          {BOTTOM_ITEMS.map((item) => <NavLink key={item.path} item={item} mobile />)}
-          <div className="flex items-center gap-3 px-4 py-2 rounded-xl hover:bg-white/10 transition">
+        <div className="px-3 pt-3 pb-5 border-t border-white/15">
+          <SectionTitle>Configuration</SectionTitle>
+          <div className="space-y-1">
+            {BOTTOM_ITEMS.map((item) => <NavLink key={item.path} item={item} mobile />)}
+          </div>
+          <div className="flex items-center gap-3 px-4 py-2 mt-1 rounded-xl hover:bg-white/10 transition">
             <UserButton afterSignOutUrl="/" appearance={{ elements: { avatarBox: 'w-8 h-8' } }} />
             <span onClick={(e) => e.currentTarget.parentElement?.querySelector('button')?.click()} className="text-white/80 hover:text-white text-sm font-medium cursor-pointer">Your account</span>
           </div>
@@ -220,16 +244,19 @@ export default function Navigation({ collapsed = false, onToggleCollapse }) {
         <div className={`pt-5 pb-4 ${mini ? 'px-2.5' : 'px-3'}`}><Switcher /></div>
 
         {/* main nav, scrollbar hidden (still scrolls by wheel/trackpad if ever needed) */}
-        <div className={`flex-1 overflow-y-auto overflow-x-hidden py-1 space-y-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden ${mini ? 'px-2.5' : 'px-3'}`}>
-          {MAIN_ITEMS.map((item) => <div key={item.path}><NavLink item={item} />{item.dividerAfter && <div className={`my-3.5 border-t border-white/30 ${mini ? 'mx-2' : 'mx-4'}`} />}</div>)}
+        <div className={`flex-1 overflow-y-auto overflow-x-hidden py-2 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden ${mini ? 'px-2.5' : 'px-3'}`}>
+          {SECTIONS.map((section, si) => <NavSection key={section.title} section={section} last={si === SECTIONS.length - 1} />)}
         </div>
 
         {/* pinned bottom: settings, help, collapse toggle, account, lifted off the
             very bottom edge so 'Your account' reads as part of the nav, not an afterthought */}
-        <div className={`pt-3 pb-6 border-t border-white/15 space-y-1 ${mini ? 'px-2.5' : 'px-3'}`}>
-          {BOTTOM_ITEMS.map((item) => <NavLink key={item.path} item={item} />)}
+        <div className={`pt-3 pb-6 border-t border-white/15 ${mini ? 'px-2.5' : 'px-3'}`}>
+          {!mini && <SectionTitle>Configuration</SectionTitle>}
+          <div className="space-y-1">
+            {BOTTOM_ITEMS.map((item) => <NavLink key={item.path} item={item} />)}
+          </div>
           <button onClick={onToggleCollapse} title={collapsed ? 'Pin nav open' : 'Collapse nav'}
-            className={`w-full flex items-center rounded-xl text-white/80 hover:bg-white/10 hover:text-white transition ${mini ? 'justify-center py-2.5' : 'gap-3 px-4 py-2.5'}`}>
+            className={`w-full flex items-center rounded-xl text-white/80 hover:bg-white/10 hover:text-white transition mt-1 ${mini ? 'justify-center py-2.5' : 'gap-3 px-4 py-2.5'}`}>
             <svg className={`w-5 h-5 transition-transform ${collapsed ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
             {!mini && <span className="text-sm font-medium">{collapsed ? 'Pin open' : 'Collapse'}</span>}
           </button>

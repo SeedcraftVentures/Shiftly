@@ -164,7 +164,12 @@ export function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg, 
       {shortAvail && <div style={{ fontSize: 12.5, color: T.red, background: T.red + '14', border: `1px solid ${T.red}33`, borderRadius: T.r.md, padding: '10px 12px', lineHeight: 1.45 }}>
         Available <b>{availableHours(s, cfg)}h</b> but contracted <b>{s.contracted}h</b>, so {first(s.name) || 'they'} can't reach their contract. Widen availability (in the grid) or lower the contracted hours.
       </div>}
-      {!readOnly && <p style={{ fontSize: 12, color: T.faint, margin: 0, lineHeight: 1.5 }}>Set weekly availability by clicking the days in the grid. Changes save automatically.</p>}
+      {!readOnly && onSave && <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 4, paddingTop: 16, borderTop: `1px solid ${T.hair}` }}>
+        <span style={{ fontSize: 12.5, fontWeight: 600, color: saveState === 'error' ? T.red : saveState === 'saved' ? T.green : T.faint }}>
+          {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : saveState === 'error' ? "Couldn't save, retry" : 'Changes save as you go'}
+        </span>
+        <Button size="sm" accent={accent} onClick={onSave} disabled={saveState === 'saving'}>{saveState === 'saving' ? 'Saving…' : 'Save'}</Button>
+      </div>}
     </div>
   )
 }
@@ -309,9 +314,9 @@ export function AvailabilityGrid({ groups, cfg, selectedId, onSelect, selectMode
   const block = { height: 34, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10.5, fontWeight: 700, whiteSpace: 'nowrap' }
   const total = groups.reduce((n, g) => n + g.staff.length, 0)
   return <div style={{ overflowX: 'auto' }}>
-    <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, minWidth: 760, tableLayout: 'fixed' }}>
-      <colgroup><col style={{ width: 170 }} />{DAYS.map((d) => <col key={d} />)}</colgroup>
-      <thead><tr style={{ background: 'transparent' }}><th style={{ ...GRID_TH, textAlign: 'left', position: 'sticky', left: 0, background: T.cardSolid, minWidth: 170 }} />{DAYS.map((d, i) => <th key={d} style={{ ...GRID_TH, color: cfg.openDays.includes(i) ? T.body : T.faint }}>{d}</th>)}</tr></thead>
+    <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, minWidth: 604, tableLayout: 'fixed' }}>
+      <colgroup><col style={{ width: 128 }} />{DAYS.map((d) => <col key={d} />)}</colgroup>
+      <thead><tr style={{ background: 'transparent' }}><th style={{ ...GRID_TH, textAlign: 'left', position: 'sticky', left: 0, background: T.cardSolid, minWidth: 128 }} />{DAYS.map((d, i) => <th key={d} style={{ ...GRID_TH, color: cfg.openDays.includes(i) ? T.body : T.faint }}>{d}</th>)}</tr></thead>
       <tbody>
         {total === 0 && <tr style={{ background: 'transparent' }}><td colSpan={8} style={{ textAlign: 'center', color: T.faint, fontSize: 13, padding: '32px 0' }}>No staff yet, add someone to map their availability.</td></tr>}
         {groups.map((g) => <Fragment key={g.name}>
@@ -641,7 +646,7 @@ export default function StaffPage() {
           <AllTeams teams={teams} staff={staff} shifts={shifts} onFix={applyFix} cfg={cfg} />
           <Card solid pad={24}>
             <div style={{ fontSize: 14, fontWeight: 700, color: T.ink, marginBottom: 3, letterSpacing: '-0.01em' }}>All availability <span style={{ color: T.faint, fontWeight: 500 }}>· whole location</span></div>
-            <div style={{ fontSize: 12.5, color: T.faint, marginBottom: 12 }}>Everyone's week at a glance. Click a day to set availability, or a name to open their team.</div>
+            <div style={{ fontSize: 12.5, color: T.muted, marginBottom: 12, lineHeight: 1.5 }}>Everyone's week at a glance. Click any day to set availability, or a name to open their team.</div>
             <AvailabilityGrid groups={teams.map((t) => ({ name: t.name, color: t.color, staff: staff.filter((s) => s.team_id === t.id) }))} cfg={cfg} onEditDay={editDay} onSelect={(id) => { const st = staff.find((x) => x.id === id); if (st) { setTeamId(st.team_id); setSelectedId(st.id) } }} />
             <AvailKey accent={T.pink} />
           </Card>
@@ -649,10 +654,13 @@ export default function StaffPage() {
       ) : (
         <div style={{ display: 'flex', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap' }}>
           <Card pad={24} style={{ position: 'sticky', top: 16, width: 380, flexShrink: 0, minHeight: 440 }}>
-            <Inspector key={selected?.id || 'none'} s={selected} patch={(p) => patch(selected.id, p)} onDelete={() => removeStaff(selected.id)} accent={accent} cfg={cfg} />
+            <Inspector key={selected?.id || 'none'} s={selected} patch={(p) => patch(selected.id, p)} onDelete={() => removeStaff(selected.id)} accent={accent} cfg={cfg} onSave={flush} saveState={saveState} />
           </Card>
           <Card solid pad={24} style={{ flex: 1, minWidth: 320 }}>
-            {!selectMode && teamStaff.length > 0 && <div style={{ fontSize: 12.5, color: T.faint, marginBottom: 12 }}>Click a name to edit their details. Click any day to set that person's availability.</div>}
+            {!selectMode && <>
+              <div style={{ fontSize: 14, fontWeight: 700, color: T.ink, marginBottom: 3, letterSpacing: '-0.01em' }}>Availability <span style={{ color: T.faint, fontWeight: 500 }}>· {teamName}</span></div>
+              <div style={{ fontSize: 12.5, color: T.muted, marginBottom: 14, lineHeight: 1.5 }}>Click any day to set a person's hours — Off, All day, or custom times. Click a name to edit their details.</div>
+            </>}
             <AvailabilityGrid groups={[{ name: teamName, color: accent, staff: teamStaff }]} cfg={cfg} selectedId={selectedId} onSelect={setSelectedId} selectMode={selectMode} selectedIds={selectedIds} onToggle={toggleSelect} onEditDay={editDay} />
             <AvailKey accent={accent} />
             <div style={{ marginTop: 18, paddingTop: 18, borderTop: `1px solid ${T.hair}` }}>
