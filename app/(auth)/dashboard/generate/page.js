@@ -342,6 +342,13 @@ export default function RotaBuilder() {
     } catch { setError('Could not load that rota.') } finally { setGenerating(false) }
   }, [])
 
+  const deleteDraft = useCallback(async (id) => {
+    try {
+      await fetch(`/api/rotas/${id}`, { method: 'DELETE' })
+      const sd = await (await fetch('/api/rotas')).json(); setSaved(Array.isArray(sd) ? sd : [])
+    } catch {}
+  }, [])
+
   // Deep-link support: /dashboard/generate?rota=ID opens a saved rota; ?start=YYYY-MM-DD presets the week.
   useEffect(() => {
     const p = new URLSearchParams(window.location.search)
@@ -702,10 +709,15 @@ export default function RotaBuilder() {
         return <Card pad={22}>
           <div style={{ fontSize: 11.5, fontWeight: 600, color: T.faint, letterSpacing: '0.02em', textTransform: 'uppercase', marginBottom: 6 }}>Continue a draft</div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {drafts.slice(0, 10).map((r, i) => <button key={r.id} onClick={() => loadSaved(r.id)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 4px', borderTop: i ? `1px solid ${T.hair}` : 'none', background: 'none', border: 'none', cursor: 'pointer', fontFamily: T.font, textAlign: 'left' }}>
-              <span style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>{r.name || `Week of ${prettyDate(r.week_start)}`} <span style={{ color: T.faint, fontWeight: 500 }}>· w/c {prettyDate(r.week_start)}</span></span>
-              <span style={{ fontSize: 12.5, fontWeight: 700, color: T.pink }}>Continue →</span>
-            </button>)}
+            {drafts.slice(0, 10).map((r, i) => <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 4px', borderTop: i ? `1px solid ${T.hair}` : 'none' }}>
+              <button onClick={() => loadSaved(r.id)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: 'none', border: 'none', cursor: 'pointer', fontFamily: T.font, textAlign: 'left', padding: 0 }}>
+                <span style={{ fontSize: 13.5, fontWeight: 600, color: T.ink }}>{r.name || `Week of ${prettyDate(r.week_start)}`} <span style={{ color: T.faint, fontWeight: 500 }}>· w/c {prettyDate(r.week_start)}</span></span>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: T.pink }}>Continue →</span>
+              </button>
+              <button onClick={() => deleteDraft(r.id)} title="Delete draft" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 8, background: 'none', border: 'none', cursor: 'pointer', color: T.faint, flexShrink: 0 }}>
+                <Icon path="M3 6h18M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2m2 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" size={15} stroke={1.8} />
+              </button>
+            </div>)}
           </div>
           <div style={{ fontSize: 11.5, color: T.faint, marginTop: 8 }}>Published rotas live in the Archive.</div>
         </Card>

@@ -74,8 +74,11 @@ export async function POST(request) {
     for (let w = 1; w <= maxWeek; w++) {
       const weekAssignments = byWeek.get(w) || []
       const ws = addDays(weekStart, (w - 1) * 7)
-      // replace any existing rota for this location+week (assignments cascade-delete)
-      await supabaseAdmin.from('Rotas').delete().eq('location_id', locationId).eq('week_start', ws)
+      // Replace like-for-like (assignments cascade-delete). Publishing supersedes any draft
+      // OR published rota for the week; saving a draft only replaces an existing draft, so a
+      // work-in-progress draft never wipes the rota that's already live with staff.
+      const del = supabaseAdmin.from('Rotas').delete().eq('location_id', locationId).eq('week_start', ws)
+      await (status === 'Published' ? del : del.eq('status', 'Draft'))
       const { data: rota, error } = await supabaseAdmin
         .from('Rotas')
         .insert({ location_id: locationId, name: multi ? prettyWeek(ws) : (name || null), week_start: ws, status, generated_at: now, published_at: status === 'Published' ? now : null, published_by: status === 'Published' ? userId : null })
