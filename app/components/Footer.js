@@ -69,6 +69,7 @@ export default function Footer() {
           <div>
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Company</p>
             <ul className="space-y-3">
+              <li><Link href="/faq" className="text-sm text-gray-400 hover:text-white transition-colors">Help &amp; FAQ</Link></li>
               <li>
                 <a href="mailto:shiftly@seedcraft.co" className="text-sm text-gray-400 hover:text-white transition-colors">
                   Contact
@@ -97,6 +98,7 @@ export default function Footer() {
         <div className="pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm">
           <p className="text-gray-500">&copy; 2026 Shiftly · A Seedcraft Ventures product.</p>
           <div className="flex gap-6">
+            <Link href="/faq" className="text-gray-500 hover:text-white transition-colors">Help</Link>
             <Link href="/privacy" className="text-gray-500 hover:text-white transition-colors">Privacy</Link>
             <Link href="/terms" className="text-gray-500 hover:text-white transition-colors">Terms</Link>
           </div>
