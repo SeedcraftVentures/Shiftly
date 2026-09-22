@@ -4,6 +4,11 @@ import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder')
 
+// What a customer sees when Stripe fails for a reason that is ours to fix, not
+// theirs. The real error is logged server side.
+const CHECKOUT_FAILED =
+  "We couldn't start checkout just now. Please try again in a minute, and if it keeps happening, email support@shiftly.so."
+
 export async function POST(request) {
   try {
     const { userId } = await auth()
@@ -79,8 +84,12 @@ export async function POST(request) {
           }, { status: 400 })
         }
       } catch (promoError) {
+        // Fail rather than carry on without the code. Continuing used to send the
+        // customer to Stripe at full price with no promo box to fix it, because
+        // allow_promotion_codes is only set when no code was sent: a founding
+        // member would be charged £599 for a £299 seat because Stripe blinked.
         console.error('Promo code lookup error:', promoError)
-        // Continue without promo code if lookup fails
+        return NextResponse.json({ error: CHECKOUT_FAILED }, { status: 502 })
       }
     } else {
       // Only allow manual promo code entry if no code was pre-applied
@@ -91,10 +100,10 @@ export async function POST(request) {
 
     return NextResponse.json({ url: session.url })
   } catch (error) {
+    // The full Stripe error goes to the server log, never to the page. Its text is
+    // written for developers ("Invalid API key provided: mk_...") and describes our
+    // configuration, which a customer can do nothing about and should not be shown.
     console.error('Checkout error:', error)
-    return NextResponse.json(
-      { error: error.message || 'Failed to create checkout session' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: CHECKOUT_FAILED }, { status: 500 })
   }
 }

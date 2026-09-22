@@ -40,9 +40,11 @@ export async function POST() {
 
     return NextResponse.json({ url: session.url })
   } catch (error) {
+    // Same rule as checkout: Stripe's own error text describes our configuration
+    // and belongs in the server log, not in front of a customer.
     console.error('Portal error:', error)
     return NextResponse.json(
-      { error: error.message },
+      { error: "We couldn't open billing just now. Please try again in a minute, and if it keeps happening, email support@shiftly.so." },
       { status: 500 }
     )
   }
