@@ -118,31 +118,32 @@ function CheckoutContent() {
               <button key={c} onClick={() => setBillingCycle(c)}
                 className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${billingCycle === c ? 'bg-pink-500 text-white' : 'text-gray-600 hover:text-gray-900'}`}>
                 {c === 'monthly' ? 'Monthly' : 'Annual'}
-                {c === 'annual' && <span className={`ml-1.5 text-xs ${billingCycle === 'annual' ? 'text-white/90' : 'text-green-600'}`}>Best value</span>}
+                {/* With the banner gone, this is what tells a monthly visitor the
+                    founding deal exists at all. */}
+                {c === 'annual' && <span className={`ml-1.5 text-xs ${billingCycle === 'annual' ? 'text-white/90' : 'text-green-600'}`}>{FOUNDING.active ? 'Founding offer' : 'Best value'}</span>}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Founding Member banner */}
-        {FOUNDING.active && (
-          <div className="mb-4 rounded-2xl bg-gradient-to-r from-pink-500 to-pink-600 text-white p-4 text-center shadow-sm">
-            <p className="text-sm font-bold">Founding Member offer</p>
-            <p className="text-xs text-white/90 mt-1">The first {FOUNDING.seats} AI members get £{FOUNDING.firstYear} their first year (from £599 annual). Keep that rate for life in exchange for a testimonial and your feedback.</p>
-          </div>
-        )}
-
-        {/* Plan cards */}
+        {/* Plan cards. The founding offer lives on its card, not in a banner above
+            it: the banner and the card used to explain the same deal twice, in two
+            different wordings, which is what made it read as confusing. */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           {[PLANS.ai, PLANS.manual].map((p) => {
             const selected = tier === p.key
             const isFoundingCard = FOUNDING.active && p.key === 'ai' && billingCycle === 'annual'
-            const price = billingCycle === 'monthly' ? p.monthly : Math.round(p.annual / 12)
+            const annual = billingCycle === 'annual'
+            // flex-col matters: a <button> vertically centres its contents, so the
+            // shorter card's price used to sit lower than its neighbour's and the two
+            // could not be compared side by side.
             return (
               <button key={p.key} onClick={() => setTier(p.key)}
-                className={`relative text-left p-5 rounded-2xl border-2 transition-all bg-white ${selected ? 'border-pink-500 shadow-lg shadow-pink-500/10' : 'border-gray-200 hover:border-gray-300'}`}>
-                {p.recommended && (
-                  <div className="absolute -top-2.5 left-5 px-2.5 py-0.5 bg-pink-500 text-white text-xs font-bold rounded-full">Recommended</div>
+                className={`relative flex flex-col text-left p-5 rounded-2xl border-2 transition-all bg-white ${selected ? 'border-pink-500 shadow-lg shadow-pink-500/10' : 'border-gray-200 hover:border-gray-300'}`}>
+                {(isFoundingCard || p.recommended) && (
+                  <div className="absolute -top-2.5 left-5 px-2.5 py-0.5 bg-pink-500 text-white text-xs font-bold rounded-full">
+                    {isFoundingCard ? `Founding member · first ${FOUNDING.seats}` : 'Recommended'}
+                  </div>
                 )}
                 <div className="flex items-center justify-between mb-1">
                   <p className="font-bold text-gray-900">{p.name}</p>
@@ -151,21 +152,28 @@ function CheckoutContent() {
                   </span>
                 </div>
                 {isFoundingCard ? (
+                  // The usual convention: the full price struck through, the deal
+                  // beside it. One short line stays underneath on purpose. The £299 is
+                  // a first-year price that renews at £599 unless locked in, and a
+                  // struck price with no renewal term would oversell it.
                   <>
-                    <div className="flex items-baseline gap-1 mb-1">
+                    <div className="flex items-baseline gap-2 mb-1">
+                      <span className="text-2xl font-semibold text-gray-400 line-through decoration-2 decoration-pink-500/70">£{p.annual}</span>
                       <span className="text-3xl font-bold text-gray-900">£{FOUNDING.firstYear}</span>
                       <span className="text-sm text-gray-500">first year</span>
-                      <span className="text-sm text-gray-400 line-through ml-1">£{p.annual}</span>
                     </div>
-                    <p className="text-xs text-pink-600 mb-2 font-medium">Founding Member, first {FOUNDING.seats} only. Then £{p.annual}/year, or lock £{FOUNDING.firstYear} for life for a testimonial.</p>
+                    <p className="text-xs text-gray-500 mb-2">Renews at £{p.annual}, or keep £{FOUNDING.firstYear} for life with a testimonial.</p>
                   </>
                 ) : (
+                  // On annual, show what annual actually costs. A per-month figure next
+                  // to the founding card's yearly one was comparing different units,
+                  // and the full yearly price is what makes £299 read as the deal.
                   <>
                     <div className="flex items-baseline gap-1 mb-1">
-                      <span className="text-3xl font-bold text-gray-900">£{price}</span>
-                      <span className="text-sm text-gray-500">/month</span>
+                      <span className="text-3xl font-bold text-gray-900">£{annual ? p.annual : p.monthly}</span>
+                      <span className="text-sm text-gray-500">{annual ? '/year' : '/month'}</span>
                     </div>
-                    {billingCycle === 'annual' && <p className="text-xs text-green-600 mb-2">£{p.annual} billed yearly, save £{p.monthly * 12 - p.annual}</p>}
+                    {annual && <p className="text-xs text-green-600 mb-2">Save £{p.monthly * 12 - p.annual} on monthly</p>}
                   </>
                 )}
                 <p className="text-sm text-gray-600 mb-3 leading-relaxed">{p.tagline}</p>
