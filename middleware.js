@@ -18,6 +18,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/clerk/webhook',
   '/api/subscription',
   '/api/staff/invite',
+  '/api/staff/validate-code',
   '/employee(.*)',
 ])
 
