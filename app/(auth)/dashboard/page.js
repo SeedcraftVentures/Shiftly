@@ -7,6 +7,7 @@ import { Card, Button, Pill, Ring, Icon, Ic, fmtTime, useTheme, EASE } from '@/a
 import { TEAM_COLORS, cfgFromLocation, mapStaffForCoverage, readiness, scheduleCoverage, coverageBottlenecks, locationKeyholderGaps } from '@/app/(auth)/dashboard/staff/utils/staffHelpers'
 import SetupChecklist from '@/app/components/SetupChecklist'
 import LeaveNudge from '@/app/components/LeaveNudge'
+import FoundingSetupBanner from '@/app/components/FoundingSetupBanner'
 
 // ════════════════════════════════════════════════════════════════════════════
 //  DASHBOARD (live), Apple-esque. Same data/derivations as before (coverage via
@@ -141,6 +142,7 @@ export default function DashboardPage() {
         <p style={{ fontSize: 17, color: T.muted, margin: '8px 0 0', letterSpacing: '-0.01em' }}>{DAYNAMES[new Date().getDay()]}{data.locName ? <> · <span style={{ color: T.body, fontWeight: 600 }}>{data.locName}</span></> : null}</p>
       </div>
 
+      <FoundingSetupBanner />
       <SetupChecklist />
       <LeaveNudge />
 

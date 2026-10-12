@@ -38,6 +38,15 @@ export async function POST(request) {
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://shiftly.so'
 
+    // A founding purchase = the founding code on the Companion annual price. Tag the
+    // success redirect so the dashboard can offer the free in-person setup to exactly
+    // these buyers (and no one else).
+    const isFounding = !!(
+      promoCode && foundingCode && aiAnnualPrice &&
+      promoCode.trim().toLowerCase() === foundingCode.toLowerCase() &&
+      priceId === aiAnnualPrice
+    )
+
     // Build session config
     const sessionConfig = {
       mode: 'subscription',
@@ -48,7 +57,7 @@ export async function POST(request) {
           quantity: 1,
         },
       ],
-      success_url: `${appUrl}/dashboard?subscription=success`,
+      success_url: `${appUrl}/dashboard?subscription=success${isFounding ? '&founding=1' : ''}`,
       cancel_url: `${appUrl}/checkout?cancelled=true`,
       client_reference_id: userId,
       customer_email: email,
