@@ -131,11 +131,8 @@ export default function FloatingNav({ currentPage = null }) {
             </Link>
           )}
 
-          {/* The job board is a product destination, not a careers tab, so it
-              reads as "Job Board" and opens Shiftly Jobs with its own header. */}
-          <Link href="/jobs" className="px-4 py-2 text-gray-900 hover:text-pink-600 font-medium transition-colors text-sm rounded-full">
-            Job Board
-          </Link>
+          {/* Job Board is built but kept off the public nav for now (we'll reintroduce it
+              as part of the sales funnel once we can maintain it). Routes under /jobs still work. */}
         </div>
 
         {/* ── Right cluster: mobile hamburger + CTA ── */}
@@ -183,7 +180,6 @@ export default function FloatingNav({ currentPage = null }) {
           ) : (
             <a href="/#pricing" onClick={closeMenus} className="block w-full text-left px-4 py-2.5 text-gray-700 font-medium rounded-xl hover:bg-white/60">Pricing</a>
           )}
-          <Link href="/jobs" onClick={closeMenus} className="block w-full text-left px-4 py-2.5 text-gray-700 font-medium rounded-xl hover:bg-white/60">Job Board</Link>
           <Link href="/sign-in" onClick={closeMenus} className="block w-full text-left px-4 py-2.5 text-gray-700 font-medium rounded-xl hover:bg-white/60">Log in</Link>
           <Link href="/sign-up" onClick={closeMenus} className="block w-full px-4 py-2.5 font-semibold rounded-xl text-center bg-pink-500 text-white hover:bg-pink-600">Start free</Link>
         </div>
