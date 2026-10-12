@@ -95,7 +95,7 @@ const faqs = [
   },
   {
     q: 'Do you really set it up in person?',
-    a: 'Yes, for founding members. If you are in central Scotland, I will come to your venue, set up your rota and show you and your team how it all works, at no extra cost. I can reach Edinburgh, Glasgow, Dundee, Perth, Stirling and nearby, about ninety minutes by train from Gleneagles. Claim a founding spot and I will email you to arrange a time. Not sure if you are in range? Just ask.'
+    a: 'Yes, for founding members. If you are in central Scotland, I will come to your venue, set up your rota and show you and your team how it all works, at no extra cost. I can reach Edinburgh, Glasgow, Dundee, Perth, Stirling and nearby, about ninety minutes by train from Gleneagles. Claim a founding spot, then book a time with the button in the pricing section above. Not sure if you are in range? Just ask.'
   },
   {
     q: 'Can I run more than one team or shop?',
@@ -436,9 +436,15 @@ export default function LandingPage() {
                 Join as a founding member and, if you are in central Scotland, I will come to your venue in person. I will set up your rota and walk you and your team through it, so you can get cracking from day one. It is part of the deal, at no extra cost.
               </p>
               <p className="text-gray-600 leading-relaxed">
-                I can reach Edinburgh, Glasgow, Dundee, Perth, Stirling and nearby, about ninety minutes by train from Gleneagles. Claim a founding spot above and I will email you to arrange a time. Not sure if you are in range? Email{' '}
+                I can reach Edinburgh, Glasgow, Dundee, Perth, Stirling and nearby, about ninety minutes by train from Gleneagles. Join as a founding member, then pick a time below and I will come to you. Not sure if you are in range? Email{' '}
                 <a href="mailto:support@shiftly.so" className="text-pink-600 font-semibold hover:underline">support@shiftly.so</a> and ask.
               </p>
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <a href="https://calendar.app.google/GTCQtKmBgThw2u2T9" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-white bg-pink-600 hover:bg-pink-700 transition-all">
+                  Book a setup visit
+                </a>
+                <span className="text-sm text-gray-400">Founding members, central Scotland</span>
+              </div>
               <p className="text-sm text-gray-400 mt-5">Andre, founder of Shiftly</p>
             </div>
           </RevealSection>
