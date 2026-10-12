@@ -61,3 +61,6 @@ public/workbox-*.js
 __pycache__/
 *.pyc
 .shots/
+
+# Marketing video clips (local assets, recorded via Playwright)
+marketing-clips/
