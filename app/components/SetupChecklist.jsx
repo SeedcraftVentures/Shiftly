@@ -31,13 +31,8 @@ export default function SetupChecklist() {
 
   const publishedCount = rotas.filter((r) => r.status === 'Published').length
   const items = [
-    {
-      key: 'pay',
-      label: 'Add your team\'s pay',
-      hint: 'So payroll and reports are accurate',
-      done: staff.every((s) => (s.hourly_rate || 0) > 0),
-      go: () => router.push('/dashboard/staff'),
-    },
+    // Pay lives in its own persistent WagesNudge (reappears each session until pay is in),
+    // because missing pay silently breaks reports and the dismiss-forever checklist hid it.
     {
       key: 'invite',
       label: 'Invite your team to the app',

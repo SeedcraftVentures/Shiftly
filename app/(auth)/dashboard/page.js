@@ -8,6 +8,7 @@ import { TEAM_COLORS, cfgFromLocation, mapStaffForCoverage, readiness, scheduleC
 import SetupChecklist from '@/app/components/SetupChecklist'
 import LeaveNudge from '@/app/components/LeaveNudge'
 import FoundingSetupBanner from '@/app/components/FoundingSetupBanner'
+import WagesNudge from '@/app/components/WagesNudge'
 
 // ════════════════════════════════════════════════════════════════════════════
 //  DASHBOARD (live), Apple-esque. Same data/derivations as before (coverage via
@@ -143,6 +144,7 @@ export default function DashboardPage() {
       </div>
 
       <FoundingSetupBanner />
+      <WagesNudge staff={data?.staff} />
       <SetupChecklist />
       <LeaveNudge />
 
