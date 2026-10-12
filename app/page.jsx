@@ -54,6 +54,7 @@ const foundingBullets = [
   'Everything in the Companion plan',
   'First year £299, then £599 a year',
   'Keep the price as long as you stay',
+  'A free in-person setup if you are in central Scotland',
   'For a testimonial and some feedback',
 ]
 
@@ -91,6 +92,10 @@ const faqs = [
   {
     q: 'What is the Founding Member offer?',
     a: 'The first 200 businesses on the Companion plan get their first year for £299, down from £599, for a testimonial and some feedback. Stay a member and you keep that price. Once the 200 are gone, they are gone.'
+  },
+  {
+    q: 'Do you really set it up in person?',
+    a: 'Yes, for founding members. If you are in central Scotland, I will come to your venue, set up your rota and show you and your team how it all works, at no extra cost. I can reach Edinburgh, Glasgow, Dundee, Perth, Stirling and nearby, about ninety minutes by train from Gleneagles. Claim a founding spot and I will email you to arrange a time. Not sure if you are in range? Just ask.'
   },
   {
     q: 'Can I run more than one team or shop?',
@@ -421,6 +426,21 @@ export default function LandingPage() {
             <p className="text-center text-sm text-gray-500 mt-10 max-w-xl mx-auto">
               Every plan starts with 7 days free, no card, with the companion on. Your first shop is included, each extra shop is £20 a month. Cancel anytime.
             </p>
+          </RevealSection>
+
+          <RevealSection>
+            <div className="mt-14 max-w-3xl mx-auto rounded-2xl border border-pink-100 bg-pink-50/50 p-8 lg:p-10">
+              <p className="text-sm font-semibold text-pink-500 uppercase tracking-wider mb-3">Founding members</p>
+              <h3 className="font-cal text-2xl lg:text-3xl text-gray-900 tracking-tight mb-4">I&apos;ll come and set it up for you</h3>
+              <p className="text-gray-600 leading-relaxed mb-4">
+                Join as a founding member and, if you are in central Scotland, I will come to your venue in person. I will set up your rota and walk you and your team through it, so you can get cracking from day one. It is part of the deal, at no extra cost.
+              </p>
+              <p className="text-gray-600 leading-relaxed">
+                I can reach Edinburgh, Glasgow, Dundee, Perth, Stirling and nearby, about ninety minutes by train from Gleneagles. Claim a founding spot above and I will email you to arrange a time. Not sure if you are in range? Email{' '}
+                <a href="mailto:support@shiftly.so" className="text-pink-600 font-semibold hover:underline">support@shiftly.so</a> and ask.
+              </p>
+              <p className="text-sm text-gray-400 mt-5">Andre, founder of Shiftly</p>
+            </div>
           </RevealSection>
         </div>
       </section>
