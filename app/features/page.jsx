@@ -6,7 +6,6 @@ import Nav from '@/app/components/Nav'
 import RevealSection from '@/app/components/RevealSection'
 import FinalCTA from '@/app/components/FinalCTA'
 import Footer from '@/app/components/Footer'
-import CompanionChatMock from '@/app/components/CompanionChatMock'
 
 const tocGroups = [
   {
@@ -72,10 +71,24 @@ function GroupHeader({ kicker, headline }) {
   )
 }
 
-function ScreenshotPanel({ src, alt }) {
+function ScreenshotPanel({ src, alt, video, poster }) {
   return (
     <div className="rounded-2xl shadow-xl overflow-hidden border border-gray-200">
-      <Image src={src} alt={alt} width={800} height={600} className="w-full h-auto" />
+      {video ? (
+        <video
+          className="w-full h-auto block"
+          autoPlay
+          loop
+          muted
+          playsInline
+          poster={poster}
+          aria-label={alt}
+        >
+          <source src={video} type="video/webm" />
+        </video>
+      ) : (
+        <Image src={src} alt={alt} width={800} height={600} className="w-full h-auto" />
+      )}
     </div>
   )
 }
@@ -433,50 +446,65 @@ export default function FeaturesPage() {
                   </div>
                 </RevealSection>
                 <RevealSection delay={0.15}>
-                  <CompanionChatMock />
+                  {/* Animated companion (the card has its own chrome, so no ScreenshotPanel frame) */}
+                  <video
+                    className="w-full h-auto"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    poster="/screenshots/companion-poster.png"
+                    aria-label="The companion turning a plain-English request into a scheduled, approved change"
+                  >
+                    <source src="/screenshots/companion.webm" type="video/webm" />
+                  </video>
                 </RevealSection>
               </section>
 
-              {/* Rota Generation */}
-              <section id="rota-generation" className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center mb-24 scroll-mt-24">
+              {/* Rota Generation — featured full width so the build reads big */}
+              <section id="rota-generation" className="mb-24 scroll-mt-24">
                 <RevealSection>
-                  <div>
+                  <div className="max-w-2xl mb-8">
                     <Eyebrow icon={lightning}>Constraint Satisfaction</Eyebrow>
                     <h3 className="font-cal text-3xl lg:text-4xl text-gray-900 mb-4 tracking-tight">Rota Generation</h3>
-                    <p className="text-lg text-gray-500 leading-relaxed mb-6">
+                    <p className="text-lg text-gray-500 leading-relaxed">
                       Hit generate. Shiftly builds a full week&apos;s rota in seconds, with every contracted hour met, every rule respected, and shifts distributed evenly across your team.
                     </p>
-                    <div className="space-y-3">
-                      <Bullet>Contracted hours met to the minute</Bullet>
-                      <Bullet>Multi-week generation with rotation across staff</Bullet>
-                      <Bullet>Pre-generation check warns you if coverage gaps exist</Bullet>
-                      <Bullet>Approve to publish; staff see it in their app instantly</Bullet>
-                    </div>
                   </div>
                 </RevealSection>
+                <RevealSection delay={0.1}>
+                  <ScreenshotPanel video="/screenshots/rota-generation.webm" poster="/screenshots/rota-generation-poster.png" alt="Generating a full week's rota across two teams" />
+                </RevealSection>
                 <RevealSection delay={0.15}>
-                  <ScreenshotPanel src="/screenshots/rota.png" alt="Generated weekly rota" />
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-3 mt-8">
+                    <Bullet>Contracted hours met to the minute</Bullet>
+                    <Bullet>Multi-week generation with rotation across staff</Bullet>
+                    <Bullet>Pre-generation check warns you of coverage gaps</Bullet>
+                    <Bullet>Approve to publish; staff see it in their app instantly</Bullet>
+                  </div>
                 </RevealSection>
               </section>
 
-              {/* Manual Editing */}
-              <section id="manual-editing" className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center mb-24 scroll-mt-24">
-                <RevealSection className="order-2 lg:order-1">
-                  <ScreenshotPanel src="/screenshots/rota-grid.png" alt="Cell editing close-up" />
-                </RevealSection>
-                <RevealSection delay={0.15} className="order-1 lg:order-2">
-                  <div>
+              {/* Manual Editing — featured full width so the live editing reads big */}
+              <section id="manual-editing" className="mb-24 scroll-mt-24">
+                <RevealSection>
+                  <div className="max-w-2xl mb-8">
                     <Eyebrow icon={pencil}>Full Manual Control</Eyebrow>
                     <h3 className="font-cal text-3xl lg:text-4xl text-gray-900 mb-4 tracking-tight">Manual Editing</h3>
-                    <p className="text-lg text-gray-500 leading-relaxed mb-6">
-                      The generated rota is your starting point, not your ceiling. Click any cell to add, edit, reassign, or remove a shift. Override the maths whenever the day demands it.
+                    <p className="text-lg text-gray-500 leading-relaxed">
+                      The generated rota is your starting point, not your ceiling. Drag a shift onto anyone to reassign it, click an empty slot to add cover, or click a shift to change its hours. Override the maths whenever the day demands it.
                     </p>
-                    <div className="space-y-3">
-                      <Bullet>Click any cell to assign or reassign</Bullet>
-                      <Bullet>Visual flags when manual edits break a rule</Bullet>
-                      <Bullet>Add unscheduled cover or swap shifts in one click</Bullet>
-                      <Bullet>Re-run generation any time to start fresh</Bullet>
-                    </div>
+                  </div>
+                </RevealSection>
+                <RevealSection delay={0.1}>
+                  <ScreenshotPanel video="/screenshots/manual-edit.webm" poster="/screenshots/manual-edit-poster.png" alt="Dragging, adding and editing shifts in the rota builder" />
+                </RevealSection>
+                <RevealSection delay={0.15}>
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-3 mt-8">
+                    <Bullet>Drag a shift onto anyone to reassign</Bullet>
+                    <Bullet>Click an empty slot to add cover</Bullet>
+                    <Bullet>Click a shift to change its hours</Bullet>
+                    <Bullet>Visual flags when an edit breaks a rule</Bullet>
                   </div>
                 </RevealSection>
               </section>

@@ -136,7 +136,7 @@ function AddCell({ onAdd }) {
 }
 
 // Right-hand inspector to create OR edit a one-off shift for one person on one day.
-function ShiftInspector({ staff, day, existing, accent, onClose, onSave, onRemove }) {
+export function ShiftInspector({ staff, day, existing, accent, onClose, onSave, onRemove }) {
   const { T } = useTheme()
   accent = accent || T.pink
   const editing = !!existing
@@ -146,8 +146,8 @@ function ShiftInspector({ staff, day, existing, accent, onClose, onSave, onRemov
   const [keyholder, setKeyholder] = useState(existing ? !!existing.keyholder_required : false)
   const dur = Math.round((range[1] - range[0]) * 100) / 100
   return <>
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 55 }} />
-    <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: 372, maxWidth: '92vw', background: T.cardSolid, zIndex: 56, boxShadow: '-14px 0 44px rgba(0,0,0,.28)', padding: 24, fontFamily: T.font, display: 'flex', flexDirection: 'column', overflowY: 'auto', borderLeft: `1px solid ${T.border}` }}>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.28)', backdropFilter: 'blur(2px)', WebkitBackdropFilter: 'blur(2px)', zIndex: 55 }} />
+    <div style={{ position: 'fixed', top: 16, right: 16, bottom: 16, width: 384, maxWidth: 'calc(100vw - 32px)', background: T.cardSolid, zIndex: 56, borderRadius: T.r.xl, boxShadow: T.shadow.lg, border: `1px solid ${T.border}`, padding: 24, fontFamily: T.font, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontSize: 17, fontWeight: 700, color: T.ink, letterSpacing: '-0.02em' }}>{editing ? 'Edit shift' : 'Add a shift'}</span>
         <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, lineHeight: 1, color: T.faint, padding: 0 }}>×</button>
@@ -172,7 +172,7 @@ function ShiftInspector({ staff, day, existing, accent, onClose, onSave, onRemov
   </>
 }
 
-function RefinedRotaGrid({ gridTeams, staff, shifts, assignments, weekStart, weekNum, onMove, onRemove, onAddRequest, onEditRequest, dragRef, large = false, bare = false, onExpand }) {
+export function RefinedRotaGrid({ gridTeams, staff, shifts, assignments, weekStart, weekNum, onMove, onRemove, onAddRequest, onEditRequest, dragRef, large = false, bare = false, onExpand }) {
   const { T } = useTheme()
   const dark = T.name === 'dark'
   const dlabel = (d) => dateForDay(weekStart, weekNum, d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })

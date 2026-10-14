@@ -110,7 +110,7 @@ function SaveStatus({ T, state }) {
   if (!c) return null
   return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: c.c }}>{state === 'saved' && <Icon path={Ic.check} size={13} stroke={2.6} />}{c.t}</span>
 }
-export function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg, hidePay = false, readOnly = false }) {
+export function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg, hidePay = false, readOnly = false, leave = null }) {
   const { T } = useTheme()
   accent = accent || T.pink
   if (!s) return (
@@ -148,11 +148,45 @@ export function Inspector({ s, patch, onDelete, saveState, onSave, accent, cfg, 
           )}
         </div>
       </div>}
-      {!hidePay && <div>
-        <Label style={{ marginBottom: 8 }}>Holiday override (weeks)</Label>
-        <Input value={s.holiday_override ?? ''} onChange={(e) => patch({ holiday_override: e.target.value === '' ? null : parseFloat(e.target.value) })} type="number" step="0.1" min="0" placeholder="Uses company default" accent={accent} />
-        <div style={{ fontSize: 12, color: T.faint, marginTop: 6 }}>Blank uses the company holiday policy from Settings.</div>
-      </div>}
+      {!hidePay && (() => {
+        const ent = leave?.entitlementDays
+        const taken = leave?.holidayTakenDays ?? 0
+        const remaining = leave?.holidayRemainingDays
+        const hasData = typeof ent === 'number' && ent > 0
+        const pct = hasData ? Math.max(0, Math.min(1, remaining / ent)) : 0
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingTop: 18, borderTop: `1px solid ${T.hair}` }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 15, fontWeight: 700, color: T.ink, letterSpacing: '-0.01em' }}>Holiday</span>
+              <span style={{ fontSize: 12, color: T.faint }}>Current holiday year</span>
+            </div>
+            {hasData && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                <div style={{ width: '100%', height: 9, background: T.track, borderRadius: 999, overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.round(pct * 100)}%`, height: '100%', background: `linear-gradient(90deg, ${accent}99, ${accent})`, borderRadius: 999, transition: 'width .3s' }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 13.5, fontWeight: 700, color: T.ink }}>{remaining} of {ent} days left</span>
+                  <span style={{ fontSize: 12, color: T.muted }}>{taken} {taken === 1 ? 'day' : 'days'} taken</span>
+                </div>
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 12 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <Label style={{ marginBottom: 8 }}>Holiday override (weeks)</Label>
+                <Input value={s.holiday_override ?? ''} onChange={(e) => patch({ holiday_override: e.target.value === '' ? null : parseFloat(e.target.value) })} type="number" step="0.1" min="0" placeholder="Company default" accent={accent} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <Label style={{ marginBottom: 8 }}>Remaining</Label>
+                <div style={{ minHeight: 44, boxSizing: 'border-box', display: 'flex', alignItems: 'center', padding: '12px 13px', borderRadius: T.r.sm, border: `1px solid ${accent}33`, background: accent + '0E', fontSize: 14, fontWeight: 700, color: accent }}>
+                  {hasData ? `${remaining} ${remaining === 1 ? 'day' : 'days'}` : '—'}
+                </div>
+              </div>
+            </div>
+            <div style={{ fontSize: 12, color: T.faint, marginTop: -2 }}>Blank uses the company holiday policy from Settings.</div>
+          </div>
+        )
+      })()}
       <div data-tour="staff-keyholder" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div><div style={{ fontSize: 14, fontWeight: 600, color: T.ink, letterSpacing: '-0.01em' }}>Keyholder</div><div style={{ fontSize: 12, color: T.faint }}>Can open and close</div></div>
         <Switch on={s.keyholder} onChange={() => patch({ keyholder: !s.keyholder })} accent={accent} />
@@ -481,6 +515,10 @@ export default function StaffPage() {
   const [saveState, setSaveState] = useState('idle') // idle | saving | saved | error
   const [selectMode, setSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState(() => new Set())
+  // Holiday allowance per person (entitlement / taken / remaining) for the inspector.
+  // Refetched after each save so changing a holiday override updates the remaining count.
+  const [leaveByStaff, setLeaveByStaff] = useState({})
+  const [leaveNonce, setLeaveNonce] = useState(0)
   const staffRef = useRef(staff); useEffect(() => { staffRef.current = staff }, [staff])
   const saveTimer = useRef(null), pending = useRef(null)
 
@@ -498,6 +536,17 @@ export default function StaffPage() {
       } catch (e) { console.error('Failed to load staff page', e) } finally { setLoading(false) }
     })()
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/reports/leave').then((r) => (r.ok ? r.json() : null)).then((d) => {
+      if (cancelled || !Array.isArray(d?.staff)) return
+      const map = {}
+      for (const row of d.staff) map[row.staff_id] = row
+      setLeaveByStaff(map)
+    }).catch(() => {})
+    return () => { cancelled = true }
+  }, [leaveNonce])
 
   // Live populate during setup: when the companion adds people/shifts it emits
   // this event; refetch so they appear without a manual reload. Skips the staff
@@ -539,6 +588,7 @@ export default function StaffPage() {
       if (!res.ok) throw new Error('save failed')
       const saved = fromApi(await res.json())
       setStaff((prev) => prev.map((x) => (x.id === s.id && !(pending.current && pending.current.id === s.id) ? saved : x)))
+      setLeaveNonce((n) => n + 1) // refresh holiday remaining after an override change
       setSaveState((x) => (pending.current ? x : 'saved')); setTimeout(() => setSaveState((x) => (x === 'saved' ? 'idle' : x)), 1400)
     } catch { setSaveState('error') }
   }, [])
@@ -654,7 +704,7 @@ export default function StaffPage() {
       ) : (
         <div style={{ display: 'flex', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap' }}>
           <Card pad={24} style={{ position: 'sticky', top: 16, width: 380, flexShrink: 0, minHeight: 440 }}>
-            <Inspector key={selected?.id || 'none'} s={selected} patch={(p) => patch(selected.id, p)} onDelete={() => removeStaff(selected.id)} accent={accent} cfg={cfg} onSave={flush} saveState={saveState} />
+            <Inspector key={selected?.id || 'none'} s={selected} patch={(p) => patch(selected.id, p)} onDelete={() => removeStaff(selected.id)} accent={accent} cfg={cfg} onSave={flush} saveState={saveState} leave={selected ? leaveByStaff[selected.id] : null} />
           </Card>
           <Card solid pad={24} style={{ flex: 1, minWidth: 320 }}>
             {!selectMode && <>
