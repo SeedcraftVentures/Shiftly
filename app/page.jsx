@@ -52,8 +52,7 @@ const aiBullets = [
 
 const foundingBullets = [
   'Everything in the Companion plan',
-  'First year £299, then £599 a year',
-  'Keep the price as long as you stay',
+  'Keep £299 a year for as long as you stay',
   'A free in-person setup if you are in central Scotland',
   'For a testimonial and some feedback',
 ]
@@ -91,7 +90,7 @@ const faqs = [
   },
   {
     q: 'What is the Founding Member offer?',
-    a: 'The first 200 businesses on the Companion plan get their first year for £299, down from £599, for a testimonial and some feedback. Stay a member and you keep that price. Once the 200 are gone, they are gone.'
+    a: 'The first 200 businesses on the Companion plan get it for £299 a year, down from £599, for a testimonial and some feedback. Stay a member and you keep that price. Once the 200 are gone, they are gone.'
   },
   {
     q: 'Do you really set it up in person?',
@@ -400,11 +399,12 @@ export default function LandingPage() {
                   <div className="absolute top-0 right-0 w-40 h-40 bg-pink-500/20 rounded-full blur-3xl" />
                   <div className="relative z-10 flex flex-col h-full">
                     <p className="text-sm font-semibold text-pink-400 uppercase tracking-wider mb-4">Founding Member</p>
-                    <div className="flex items-baseline gap-1 mb-1">
+                    <div className="flex items-baseline gap-2 mb-1">
+                      <span className="font-cal text-2xl font-bold text-white/40 line-through">£599</span>
                       <span className="font-cal text-4xl font-bold text-white">£299</span>
-                      <span className="text-white/60 text-sm">first year</span>
+                      <span className="text-white/60 text-sm">/year</span>
                     </div>
-                    <p className="text-white/60 text-sm mb-6">Then £599 a year. First 200 only.</p>
+                    <p className="text-white/60 text-sm mb-6">First 200 only.</p>
                     <div className="space-y-2.5 mb-7 flex-1">
                       {foundingBullets.map((item) => (
                         <div key={item} className="flex items-start gap-2.5">
