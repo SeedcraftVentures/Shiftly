@@ -1,6 +1,10 @@
 import { ClerkProvider } from '@clerk/nextjs'
+import { Suspense } from 'react'
 import './globals.css'
 import { Inter, Plus_Jakarta_Sans, Figtree } from 'next/font/google'
+import PostHogAnalytics from './components/analytics/PostHogAnalytics'
+import ConsentBanner from './components/analytics/ConsentBanner'
+import MarketingAnalytics from './components/analytics/MarketingAnalytics'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -57,6 +61,15 @@ export default function RootLayout({ children }) {
         </head>
         <body className="font-sans antialiased" style={{ fontFamily: "var(--font-figtree), system-ui, -apple-system, sans-serif" }}>
           {children}
+          {/* Cookieless, marketing-only page analytics (Vercel). No cookies, no consent
+              needed, never runs on the authenticated dashboard. This is what's live today. */}
+          <MarketingAnalytics />
+          {/* Dormant until a PostHog key is set: richer product analytics + session replay,
+              consent-gated. No-op (renders nothing, sets nothing) without a key. */}
+          <Suspense fallback={null}>
+            <PostHogAnalytics />
+          </Suspense>
+          <ConsentBanner />
         </body>
       </html>
     </ClerkProvider>

@@ -39,7 +39,7 @@ export default function PrivacyPage() {
             The short version: we use your data to schedule rotas. Nothing else.
             We don't train AI on it. We don't sell it. We collect only what we need to make Shiftly work.
           </p>
-          <p className="text-sm text-gray-400 mt-6">Last updated 10 August 2026</p>
+          <p className="text-sm text-gray-400 mt-6">Last updated 5 November 2026</p>
         </div>
       </section>
 
@@ -223,7 +223,7 @@ export default function PrivacyPage() {
               that help us run Shiftly, each bound by a data processing agreement.
             </p>
             <div className="space-y-2 my-6">
-              <VendorCard name="Vercel" letter="V" role="Hosting" desc="Serves the Shiftly website and handles request logging." href="https://vercel.com/legal/privacy-policy" />
+              <VendorCard name="Vercel" letter="V" role="Hosting & analytics" desc="Serves the Shiftly website and handles request logging. Also provides privacy-friendly, cookieless analytics on our public pages: aggregate page views, referrers and country only. No cookies, no cross-site tracking, and it never runs inside your logged-in dashboard." href="https://vercel.com/legal/privacy-policy" />
               <VendorCard name="Supabase" letter="S" role="Database" desc="Stores your account, staff records, and rotas. EU-hosted." href="https://supabase.com/privacy" />
               <VendorCard name="Clerk" letter="C" role="Authentication" desc="Manages user sign-up, sign-in, and account security." href="https://clerk.com/legal/privacy" />
               <VendorCard name="Stripe" letter="$" role="Payments" desc="Processes subscriptions and one-time payments. We never see your card details." href="https://stripe.com/privacy" />
@@ -342,11 +342,19 @@ export default function PrivacyPage() {
           {/* 12 - Cookies */}
           <Section number="12" title="Cookies & similar things">
             <p>
-              We use a small number of cookies to keep you signed in, remember your preferences, and measure basic site performance.
-              We don't use advertising cookies, cross-site trackers, or third-party analytics tools that build profiles on you.
+              The only cookies we set are the essential ones that keep you signed in and remember your preferences.
+              To understand how our public marketing pages are used, we use Vercel Web Analytics, which is cookieless:
+              it sets no cookies, counts only aggregate page views, referrers and country, does not track you across
+              other sites, and does not build a profile of you. Because it uses no cookies, there is nothing here to
+              consent to.
             </p>
             <p>
-              You can block or delete cookies through your browser settings. If you do, some parts of Shiftly may stop working properly.
+              We don't use advertising cookies or cross-site ad trackers, and our analytics never run inside your
+              logged-in dashboard, so your staff data is never part of them.
+            </p>
+            <p>
+              You can block or delete cookies through your browser settings. If you do, some parts of Shiftly may stop
+              working properly.
             </p>
           </Section>
 
