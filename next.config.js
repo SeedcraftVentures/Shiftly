@@ -26,6 +26,8 @@ const nextConfig = {
       { source: '/cafes', destination: '/' },
       { source: '/shops', destination: '/' },
       { source: '/care', destination: '/' },
+      { source: '/christmas', destination: '/' },
+      { source: '/christmas-gift', destination: '/' },
     ]
   },
   webpack: (config, { isServer }) => {
