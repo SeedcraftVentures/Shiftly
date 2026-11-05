@@ -15,6 +15,19 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   turbopack: {},
+  // Clean, friendly vanity URLs for outreach. Each serves the homepage unchanged
+  // (the URL in the bar stays e.g. /pubs, so there are no utm_ tags screaming
+  // "mass campaign"), while Vercel Web Analytics still attributes the visit by path.
+  // These must also be whitelisted in middleware.js isPublicRoute, or Clerk gates them.
+  async rewrites() {
+    return [
+      { source: '/hello', destination: '/' },
+      { source: '/pubs', destination: '/' },
+      { source: '/cafes', destination: '/' },
+      { source: '/shops', destination: '/' },
+      { source: '/care', destination: '/' },
+    ]
+  },
   webpack: (config, { isServer }) => {
     if (!config.ignoreWarnings) {
       config.ignoreWarnings = [];

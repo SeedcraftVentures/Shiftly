@@ -3,6 +3,13 @@ import { NextResponse } from 'next/server'
 
 const isPublicRoute = createRouteMatcher([
   '/',
+  // Vanity outreach URLs: rewritten to the homepage in next.config.js. Public so
+  // Clerk doesn't 307 them to sign-in before the rewrite serves home.
+  '/hello',
+  '/pubs',
+  '/cafes',
+  '/shops',
+  '/care',
   '/features',
   '/sign-in(.*)',
   '/sign-up(.*)',
